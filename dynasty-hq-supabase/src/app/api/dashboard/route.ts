@@ -5,6 +5,7 @@ import { getDashboardData } from '@/lib/dashboard';
 // as the original, which re-read the spreadsheet on every doGet().
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET() {
   try {
