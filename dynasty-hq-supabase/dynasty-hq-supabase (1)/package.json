@@ -1,0 +1,24 @@
+{
+  "name": "dynasty-hq-nextjs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dynasty HQ — Next.js dashboard backed by Supabase (Postgres). Same tab components and CSS as the original Sheets-backed build; only the data layer (src/lib/supabaseClient.ts + src/lib/dashboard.ts) talks to Supabase instead of the Sheets API.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "next": "14.2.35",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.5.3"
+  }
+}
