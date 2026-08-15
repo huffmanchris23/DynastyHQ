@@ -26,6 +26,18 @@ export function getSupabase(): SupabaseClient {
         '"service_role" secret key, not the "anon public" key.'
     );
   }
-  cached = createClient(url, key, { auth: { persistSession: false } });
+  cached = createClient(url, key, {
+    auth: { persistSession: false },
+    // Belt-and-suspenders against stale data: force every request this client
+    // makes to skip Next.js's fetch cache, rather than relying solely on the
+    // route's `dynamic = 'force-dynamic'` export. That setting governs
+    // whether the route itself is statically rendered, but supabase-js's
+    // internal fetch calls have been observed still returning a cached
+    // response on Vercel — explicitly passing cache: 'no-store' on every
+    // request closes that gap regardless of route-level config.
+    global: {
+      fetch: (input: RequestInfo | URL, init?: RequestInit) => fetch(input, { ...init, cache: 'no-store' }),
+    },
+  });
   return cached;
 }
