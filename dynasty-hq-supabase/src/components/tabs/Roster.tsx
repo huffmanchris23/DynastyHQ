@@ -19,12 +19,7 @@ function LinkBlock({ label, link }: { label: string; link: string | null }) {
             style={{ width: '100%', height: 'auto', borderRadius: 8, display: 'block' }}
             onError={() => setBroken(true)}
           />
-          
-            href={link}
-            target="_blank"
-            rel="noreferrer"
-            style={{ display: 'block', textAlign: 'center', padding: '10px 0 4px', fontSize: 11, color: 'rgba(255,255,255,0.4)' }}
-          >
+          <a href={link} target="_blank" rel="noreferrer" style={{ display: 'block', textAlign: 'center', padding: '10px 0 4px', fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
             Open full size
           </a>
         </div>
