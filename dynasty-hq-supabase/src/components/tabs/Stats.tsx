@@ -1,5 +1,5 @@
 import type { DashboardData } from '@/lib/types';
-import { numOr, isMine as isMineFn } from '@/lib/format';
+import { numOr, isMine as isMineFn, logoFor } from '@/lib/format';
 import { Row, Thead } from '@/components/shared/Row';
 import Badge from '@/components/shared/Badge';
 import SectionLabel from '@/components/shared/SectionLabel';
@@ -46,7 +46,7 @@ export function TeamStats({ d }: { d: DashboardData }) {
                   {r.rank}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
-                  <Badge text={r.team} size={20} mine={isMineFn(myTeamName, r.team)} />
+                  <Badge text={r.team} size={20} mine={isMineFn(myTeamName, r.team)} logoUrl={logoFor(d.assets, r.team)} />
                   <span className="truncate" style={{ fontWeight: 500 }}>
                     {r.team}
                   </span>
@@ -71,6 +71,29 @@ const STAT_TYPES = [
   { id: 'receiving', label: 'Receiving' },
 ] as const;
 
+function TeamLeadersRow({ d }: { d: DashboardData }) {
+  const ps = d.playerStats || ({} as DashboardData['playerStats']);
+  const passing = (ps.passing?.leaders || [])[0];
+  const rushing = (ps.rushing?.leaders || [])[0];
+  const receiving = (ps.receiving?.leaders || [])[0];
+  if (!passing && !rushing && !receiving) return null;
+  return (
+    <div className="grid-3" style={{ marginBottom: 16 }}>
+      {[
+        { label: 'Passing', l: passing },
+        { label: 'Rushing', l: rushing },
+        { label: 'Receiving', l: receiving },
+      ].map((c, i) => (
+        <div className="card center" key={i}>
+          <div className="stat-label">{c.label}</div>
+          <div className="stat-name">{c.l ? c.l.name : '—'}</div>
+          <div className="stat-sub">{c.l ? `${numOr(c.l.yards)} YDS · ${numOr(c.l.td)} TD` : ''}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function PlayerStats({
   d,
   statType,
@@ -82,12 +105,12 @@ export function PlayerStats({
 }) {
   const key = (statType || 'passing') as keyof DashboardData['playerStats'];
   const block = (d.playerStats && d.playerStats[key]) || { national: [], leaders: [] };
-  const leaders = block.leaders || [];
   const myTeamName = d.team && d.team.TEAM_NAME;
   const cols = '26px 1fr 1fr 70px';
 
   return (
     <>
+      <TeamLeadersRow d={d} />
       <div className="subtab-bar">
         {STAT_TYPES.map((s) => (
           <button key={s.id} className={`subtab-btn ${key === s.id ? 'active' : ''}`} onClick={() => onStatTypeChange(s.id)}>
@@ -95,19 +118,6 @@ export function PlayerStats({
           </button>
         ))}
       </div>
-      {leaders.length ? (
-        <div className={`grid-${leaders.length > 1 ? '2' : '1'}`}>
-          {leaders.map((l, i) => (
-            <div className="card center" key={i}>
-              <div className="stat-label">{key}</div>
-              <div className="stat-name">{l.name}</div>
-              <div className="stat-sub">
-                {numOr(l.yards)} YDS · {numOr(l.td)} TD
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : null}
       <div style={{ marginTop: 16 }}>
         <SectionLabel>{'National — ' + key.charAt(0).toUpperCase() + key.slice(1)}</SectionLabel>
         <div className="table primary">
