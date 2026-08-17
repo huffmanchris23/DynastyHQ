@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { DashboardData } from '@/lib/types';
 import { gateInfo } from '@/lib/gating';
-import { initials, toPct, numOr } from '@/lib/format';
+import { initials, toPct, numOr, abbrFor } from '@/lib/format';
 import SectionLabel from '@/components/shared/SectionLabel';
 import Badge from '@/components/shared/Badge';
 import EmptyState from '@/components/shared/EmptyState';
@@ -240,9 +240,10 @@ export default function Home({ d }: { d: DashboardData }) {
     const oppRecL = preview.oppLosses ?? '';
     // favorite/spread/moneyline come straight off game_preview now — no
     // mine-vs-opp comparison needed, the sheet already names the favorite.
-    const spread = preview.favorite ? `${preview.favorite} ${preview.favoriteSpread ?? ''}` : '—';
+    const favoriteAbbr = preview.favorite ? abbrFor(d.assets, preview.favorite) : null;
+    const spread = favoriteAbbr ? `${favoriteAbbr} ${preview.favoriteSpread ?? ''}` : '—';
     const total = numOr(preview.overUnder);
-    const ml = preview.favorite ? `${preview.favorite} ${preview.favoriteMoneyline ?? ''}` : '—';
+    const ml = favoriteAbbr ? `${favoriteAbbr} ${preview.favoriteMoneyline ?? ''}` : '—';
     const wpMineRaw = toPct(preview.winProbabilityMine);
     const wpOppRaw = toPct(preview.winProbabilityOpp);
     const wpMine = wpMineRaw === null ? 50 : wpMineRaw;
@@ -257,7 +258,7 @@ export default function Home({ d }: { d: DashboardData }) {
         </div>
         <div className="team-line">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Badge text={oppAbbr} size={28} />
+            <Badge text={oppAbbr} size={28} logoUrl={d.opponent && d.opponent.LOGO_URL} />
             <span style={{ fontWeight: 600 }}>{preview.oppTeam}</span>
           </div>
           <span className="tabular" style={{ color: 'rgba(255,255,255,0.5)' }}>
@@ -266,7 +267,7 @@ export default function Home({ d }: { d: DashboardData }) {
         </div>
         <div className="team-line">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Badge text={myTeamAbbr} size={28} mine />
+            <Badge text={myTeamAbbr} size={28} mine logoUrl={d.team && d.team.LOGO_URL} />
             <span style={{ fontWeight: 600 }}>{preview.myTeam}</span>
           </div>
           <span className="tabular" style={{ color: 'rgba(255,255,255,0.5)' }}>
@@ -279,11 +280,11 @@ export default function Home({ d }: { d: DashboardData }) {
             <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2 }}>{spread}</div>
           </div>
           <div>
-            <div style={{ fontSize: 9, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}>Total</div>
+            <div style={{ fontSize: 9, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}>Total O/U</div>
             <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2 }}>{total}</div>
           </div>
           <div>
-            <div style={{ fontSize: 9, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}>ML</div>
+            <div style={{ fontSize: 9, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}>Moneyline</div>
             <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2 }}>{ml}</div>
           </div>
         </div>
@@ -295,12 +296,12 @@ export default function Home({ d }: { d: DashboardData }) {
         <SectionLabel>Win Probability</SectionLabel>
         <div style={{ display: 'flex', justifyContent: 'space-between', margin: '8px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Badge text={oppAbbr} size={22} />
+            <Badge text={oppAbbr} size={22} logoUrl={d.opponent && d.opponent.LOGO_URL} />
             <b>{wpOpp.toFixed(1)}%</b>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <b>{wpMine.toFixed(1)}%</b>
-            <Badge text={myTeamAbbr} size={22} mine />
+            <Badge text={myTeamAbbr} size={22} mine logoUrl={d.team && d.team.LOGO_URL} />
           </div>
         </div>
         <div className="wp-bar">
