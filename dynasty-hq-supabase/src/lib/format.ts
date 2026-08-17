@@ -39,3 +39,35 @@ export function numOr(v: any, fallback: any = '—'): any {
 export function isMine(myTeamName: any, teamName: any): boolean {
   return !!myTeamName && String(teamName || '').toUpperCase() === String(myTeamName).toUpperCase();
 }
+
+/**
+ * Looks up a team's logo URL from the full assets list by name or
+ * abbreviation, case-insensitively (team names are cased inconsistently
+ * across source tables — "unlv" in some, "UNLV" in others).
+ */
+export function logoFor(assets: { TEAM_NAME?: any; TEAM_ABBREVIATION?: any; LOGO_URL?: any }[] | undefined, nameOrAbbr: any): string | undefined {
+  if (!assets || !nameOrAbbr) return undefined;
+  const k = String(nameOrAbbr).trim().toLowerCase();
+  const match = assets.find(
+    (a) => String(a.TEAM_NAME || '').toLowerCase() === k || String(a.TEAM_ABBREVIATION || '').toLowerCase() === k
+  );
+  return match?.LOGO_URL || undefined;
+}
+
+/** Same idea as logoFor, but returns the team's abbreviation instead of a logo URL — for compact display in odds/betting lines. */
+export function abbrFor(assets: { TEAM_NAME?: any; TEAM_ABBREVIATION?: any }[] | undefined, nameOrAbbr: any): string {
+  if (!assets || !nameOrAbbr) return String(nameOrAbbr || '');
+  const k = String(nameOrAbbr).trim().toLowerCase();
+  const match = assets.find(
+    (a) => String(a.TEAM_NAME || '').toLowerCase() === k || String(a.TEAM_ABBREVIATION || '').toLowerCase() === k
+  );
+  return match?.TEAM_ABBREVIATION || String(nameOrAbbr);
+}
+
+/** Same idea as logoFor, but against the graphics (conference logo) table. */
+export function logoForConference(graphics: { conference?: any; abbreviation?: any; logoUrl?: any }[] | undefined, name: any): string | undefined {
+  if (!graphics || !name) return undefined;
+  const k = String(name).trim().toLowerCase();
+  const match = graphics.find((g) => String(g.conference || '').toLowerCase() === k || String(g.abbreviation || '').toLowerCase() === k);
+  return match?.logoUrl || undefined;
+}
