@@ -1,6 +1,7 @@
 import type { DashboardData } from '@/lib/types';
-import { numOr, isMine as isMineFn } from '@/lib/format';
+import { numOr, isMine as isMineFn, logoFor } from '@/lib/format';
 import { Row, Thead } from '@/components/shared/Row';
+import Badge from '@/components/shared/Badge';
 import SectionLabel from '@/components/shared/SectionLabel';
 import EmptyState from '@/components/shared/EmptyState';
 import { initials } from '@/lib/format';
@@ -43,9 +44,13 @@ export function MyCoach({ d }: { d: DashboardData }) {
             }}
           >
             {c.photoLink ? (
-              <a href={c.photoLink} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
-                Photo
-              </a>
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={c.photoLink}
+                alt={c.name || 'Coach photo'}
+                referrerPolicy="no-referrer"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
             ) : (
               initials(c.name, 2)
             )}
@@ -101,8 +106,9 @@ export function MyCoach({ d }: { d: DashboardData }) {
                 <div className="tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
                   {h.season}
                 </div>
-                <div className="truncate" style={{ fontWeight: 500 }}>
-                  {h.team}
+                <div className="truncate" style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Badge text={h.team} size={18} mine={isMineFn(myTeamName, h.team)} logoUrl={logoFor(d.assets, h.team)} />
+                  <span className="truncate">{h.team}</span>
                 </div>
                 <div className="center" style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
                   {h.position}
@@ -137,8 +143,9 @@ export function HotSeats({ d }: { d: DashboardData }) {
         const color = c.security >= 70 ? '#5FA467' : c.security >= 35 ? 'var(--accent)' : '#C0555A';
         return (
           <Row key={i} cols={cols} first={i === 0} mine={isMineFn(myTeamName, c.team)}>
-            <div className="truncate" style={{ fontWeight: 500 }}>
-              {c.team}
+            <div className="truncate" style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Badge text={c.team} size={18} mine={isMineFn(myTeamName, c.team)} logoUrl={logoFor(d.assets, c.team)} />
+              <span className="truncate">{c.team}</span>
             </div>
             <div className="truncate" style={{ color: 'rgba(255,255,255,0.7)' }}>
               {c.coach}
