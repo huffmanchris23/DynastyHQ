@@ -1,5 +1,5 @@
 import type { DashboardData } from '@/lib/types';
-import { numOr, isMine as isMineFn } from '@/lib/format';
+import { numOr, isMine as isMineFn, logoFor } from '@/lib/format';
 import { Row, Thead } from '@/components/shared/Row';
 import Badge from '@/components/shared/Badge';
 import EmptyState from '@/components/shared/EmptyState';
@@ -29,8 +29,9 @@ export default function Conference({ d }: { d: DashboardData }) {
         </Thead>
         {rows.map((c, i) => (
           <Row key={i} cols={cols} first={i === 0} mine={isMineFn(myTeamName, c.team)}>
-            <div className="truncate" style={{ fontWeight: 500 }}>
-              {c.team}
+            <div className="truncate" style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Badge text={c.team} size={20} mine={isMineFn(myTeamName, c.team)} logoUrl={logoFor(d.assets, c.team)} />
+              <span className="truncate">{c.team}</span>
             </div>
             <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
               {c.confW ?? ''}-{c.confL ?? ''}

@@ -1,6 +1,7 @@
 import type { DashboardData } from '@/lib/types';
-import { isMine as isMineFn } from '@/lib/format';
+import { isMine as isMineFn, logoFor } from '@/lib/format';
 import { Row, Thead } from '@/components/shared/Row';
+import Badge from '@/components/shared/Badge';
 import EmptyState from '@/components/shared/EmptyState';
 
 export default function Rankings({ d, subtab }: { d: DashboardData; subtab: string | null }) {
@@ -20,8 +21,9 @@ export default function Rankings({ d, subtab }: { d: DashboardData; subtab: stri
           <div className="tabular" style={{ fontWeight: 700, color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>
             {r.rank}
           </div>
-          <div className="truncate" style={{ fontWeight: 500 }}>
-            {r.team}
+          <div className="truncate" style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Badge text={r.team} size={20} mine={isMineFn(myTeamName, r.team)} logoUrl={logoFor(d.assets, r.team)} />
+            <span className="truncate">{r.team}</span>
           </div>
           <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
             {r.wins}-{r.losses}
