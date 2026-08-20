@@ -307,6 +307,8 @@ export interface DashboardData {
   settings: Settings;
   team: TeamAsset | null;
   opponent: TeamAsset | null;
+  /** Full team reference list (138 teams) — used by logoFor()/abbrFor() to resolve a logo or abbreviation from any team name shown across tabs (Schedule, Rankings, Playoffs, etc.). */
+  assets: TeamAsset[];
   record: { wins: number; losses: number; apRank: number | null; coachesRank: number | null };
   recap: Recap;
   preview: Preview | null;
