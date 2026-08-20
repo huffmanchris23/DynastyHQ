@@ -92,18 +92,17 @@ function findAsset(idx: AssetIndex, nameOrAbbr: any): TeamAsset | null {
 export async function getDashboardData(): Promise<DashboardData> {
   const sb = getSupabase();
 
-  // ---- 1. Settings: the one row with real user_id/dynasty_id (template
-  // rows for future weeks are blank aside from season/week). ----
+  // ---- 1. Settings: the row flagged current_week = 'TRUE'. Each week gets
+  // its own settings row; flipping this flag is what advances the app. ----
   const { data: settingsRows, error: settingsErr } = await sb
     .from('settings')
     .select('*')
-    .not('dynasty_id', 'is', null)
-    .order('id', { ascending: true })
+    .eq('current_week', 'TRUE')
     .limit(1);
   if (settingsErr) throw new Error(`settings: ${settingsErr.message}`);
   const settingsRow = (settingsRows && settingsRows[0]) || null;
   if (!settingsRow) {
-    throw new Error('No populated row in `settings` — expected one row with user_id/dynasty_id filled in.');
+    throw new Error("No `settings` row is flagged current_week = 'TRUE'.");
   }
   const { user_id: userId, dynasty_id: dynastyId, current_season: season, current_team: myTeamName } = settingsRow;
 
@@ -115,6 +114,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   if (assetErr) throw new Error(`assets: ${assetErr.message}`);
   const assetIdx = buildAssetIndex(assetRows || []);
   const myAsset = findAsset(assetIdx, myTeamName);
+  const allAssets: TeamAsset[] = (assetRows || []).map(toTeamAsset);
 
   // ---- 3. Figure out "current week" from live data, not the settings label.
   // The settings row can lag behind (e.g. still says "Preseason" after
@@ -504,6 +504,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     },
     team: myAsset,
     opponent: oppAsset,
+    assets: allAssets,
     record: { wins, losses, apRank: myApRank ? myApRank.rank : null, coachesRank: myCoachesRank ? myCoachesRank.rank : null },
     recap,
     preview,
@@ -589,7 +590,7 @@ function buildStoryBrief(d: Partial<DashboardData>, myTeamName: any): StoryBrief
 
 export async function getMyTeamName(): Promise<any> {
   const sb = getSupabase();
-  const { data, error } = await sb.from('settings').select('current_team').not('dynasty_id', 'is', null).order('id', { ascending: true }).limit(1);
+  const { data, error } = await sb.from('settings').select('current_team').eq('current_week', 'TRUE').limit(1);
   if (error) throw new Error(error.message);
   return data?.[0]?.current_team;
 }
