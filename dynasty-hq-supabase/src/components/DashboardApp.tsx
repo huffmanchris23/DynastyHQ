@@ -48,10 +48,10 @@ function TabBody({ data, tab, subtab, statType, onStatTypeChange }: {
       if (g.isLocked) return <LockedCard untilWeek={0} />;
       return subtab === 'recruiting' ? <Recruiting d={data} /> : <DepthCharts d={data} />;
     case 'awards':
-      if ((subtab === 'coordinator' || subtab === 'coach') && !g.awardsAdvUnlocked) return <LockedCard untilWeek={12} />;
+      if ((subtab === 'coordinator' || subtab === 'coach') && !g.awardsAdvUnlocked) return <LockedCard label="Not available yet" />;
       return <Awards d={data} subtab={subtab} />;
     case 'coachingcorner':
-      if (subtab === 'hotseat') return g.statsUnlocked ? <HotSeats d={data} /> : <LockedCard untilWeek={1} />;
+      if (subtab === 'hotseat') return g.hotSeatUnlocked ? <HotSeats d={data} /> : <LockedCard label="Not available yet" />;
       return <MyCoach d={data} />;
     default:
       return null;
@@ -83,11 +83,15 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
   const [statType, setStatType] = useState('passing');
   const [season, setSeason] = useState<'s1' | 'history'>('s1');
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [colors, setColors] = useState<ColorState>(() =>
-    data.team
+  const [colors, setColors] = useState<ColorState>(() => {
+    // Settings (set once in Supabase) wins over team colors — no more re-picking every session.
+    if (data.settings && data.settings.primaryColor && data.settings.secondaryColor) {
+      return { name: 'Settings', primary: data.settings.primaryColor, secondary: data.settings.secondaryColor };
+    }
+    return data.team
       ? { name: 'Team Colors', primary: data.team.PRIMARY_COLOR || PRESETS[0].primary, secondary: data.team.SECONDARY_COLOR || PRESETS[0].secondary }
-      : PRESETS[0]
-  );
+      : PRESETS[0];
+  });
 
   // root.style.setProperty('--primary'/'--accent', ...) from render()
   useEffect(() => {
