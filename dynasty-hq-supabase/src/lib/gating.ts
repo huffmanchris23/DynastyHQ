@@ -14,6 +14,7 @@ export interface GateInfo {
   statsUnlocked: boolean;
   playoffsUnlocked: boolean;
   awardsAdvUnlocked: boolean;
+  hotSeatUnlocked: boolean;
 }
 
 export interface TabDef {
@@ -48,12 +49,18 @@ export function gateInfo(data: DashboardData | null): GateInfo {
   const hasWeekData = s.currentWeek !== undefined && s.currentWeek !== null && s.currentWeek !== '';
   const week = hasWeekData ? Number(s.currentWeek) || 0 : 999;
   const haveGame = !!s.haveGameThisWeek;
+  const awards = (data && data.awards) || { heisman: [], coordinator: [], coach: [] };
+  const coach = (data && data.coach) || { hotSeats: [], moves: [] };
   return {
     week,
     isLocked: hasWeekData ? week === 0 && !haveGame : false,
     statsUnlocked: hasWeekData ? week >= 1 : true,
     playoffsUnlocked: hasWeekData ? week >= 10 : true,
-    awardsAdvUnlocked: hasWeekData ? week >= 12 : true,
+    // Coordinator/Coach awards and Hot Seats aren't tied to a fixed week —
+    // they simply show up once the corresponding Supabase table actually has
+    // rows for the current season/week. No more guessing a week number.
+    awardsAdvUnlocked: (awards.coordinator && awards.coordinator.length > 0) || (awards.coach && awards.coach.length > 0),
+    hotSeatUnlocked: !!(coach.hotSeats && coach.hotSeats.length > 0),
   };
 }
 
@@ -65,7 +72,7 @@ export function tabLocked(t: TabDef, g: GateInfo): boolean {
 }
 
 export function subtabLockedIds(tabId: string, g: GateInfo): string[] {
-  if (tabId === 'coachingcorner') return g.statsUnlocked ? [] : ['hotseat'];
+  if (tabId === 'coachingcorner') return g.hotSeatUnlocked ? [] : ['hotseat'];
   if (tabId === 'awards') return g.awardsAdvUnlocked ? [] : ['coordinator', 'coach'];
   return [];
 }

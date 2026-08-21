@@ -501,6 +501,8 @@ export async function getDashboardData(): Promise<DashboardData> {
       currentTeam: myTeamName,
       currentWeek: statsWeek,
       haveGameThisWeek: !!settingsRow.have_game_this_week,
+      primaryColor: settingsRow.primary_color || null,
+      secondaryColor: settingsRow.secondary_color || null,
     },
     team: myAsset,
     opponent: oppAsset,

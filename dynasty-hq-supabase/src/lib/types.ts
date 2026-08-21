@@ -27,6 +27,9 @@ export interface Settings {
   currentWeek?: any;
   /** Real boolean now (settings.have_game_this_week is a Postgres boolean column, not a "YES"/"NO" string). */
   haveGameThisWeek?: boolean;
+  /** App theme colors set manually in settings.primary_color/secondary_color — takes priority over team colors so the picker doesn't need to be re-set every session. */
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
 }
 
 export interface RecapLeader {
