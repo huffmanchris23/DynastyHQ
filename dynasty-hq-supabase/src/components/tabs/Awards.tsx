@@ -1,5 +1,5 @@
 import type { DashboardData, Awards as AwardsType } from '@/lib/types';
-import { isMine as isMineFn } from '@/lib/format';
+import { isMine as isMineFn, logoFor } from '@/lib/format';
 import { Row } from '@/components/shared/Row';
 import Badge from '@/components/shared/Badge';
 import EmptyState from '@/components/shared/EmptyState';
@@ -17,7 +17,7 @@ export default function Awards({ d, subtab }: { d: DashboardData; subtab: string
           <div className="tabular" style={{ fontWeight: 700, color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>
             {p.rank}
           </div>
-          <Badge text={p.team} size={24} mine={isMineFn(myTeamName, p.team)} />
+          <Badge text={p.team} size={24} mine={isMineFn(myTeamName, p.team)} logoUrl={logoFor(d.assets, p.team)} />
           <div className="truncate">
             <span style={{ fontWeight: 600, fontSize: 14 }}>{p.name}</span>
             <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}> · {p.team}</span>
