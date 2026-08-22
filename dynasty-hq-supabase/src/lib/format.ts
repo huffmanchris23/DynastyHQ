@@ -41,27 +41,36 @@ export function isMine(myTeamName: any, teamName: any): boolean {
 }
 
 /**
+ * Some tables store a team name that doesn't exactly match `assets.team_name`
+ * — e.g. the AP/Coaches polls just say "MIAMI", but assets disambiguates
+ * "Miami (FL)" vs "Miami (OH)". Add cases here as they turn up.
+ */
+const TEAM_NAME_ALIASES: Record<string, string> = {
+  miami: 'miami (fl)',
+};
+
+function findTeamAsset<T extends { TEAM_NAME?: any; TEAM_ABBREVIATION?: any }>(assets: T[] | undefined, nameOrAbbr: any): T | undefined {
+  if (!assets || !nameOrAbbr) return undefined;
+  const k = String(nameOrAbbr).trim().toLowerCase();
+  const exact = assets.find((a) => String(a.TEAM_NAME || '').toLowerCase() === k || String(a.TEAM_ABBREVIATION || '').toLowerCase() === k);
+  if (exact) return exact;
+  const aliasKey = TEAM_NAME_ALIASES[k];
+  if (aliasKey) return assets.find((a) => String(a.TEAM_NAME || '').toLowerCase() === aliasKey);
+  return undefined;
+}
+
+/**
  * Looks up a team's logo URL from the full assets list by name or
  * abbreviation, case-insensitively (team names are cased inconsistently
  * across source tables — "unlv" in some, "UNLV" in others).
  */
 export function logoFor(assets: { TEAM_NAME?: any; TEAM_ABBREVIATION?: any; LOGO_URL?: any }[] | undefined, nameOrAbbr: any): string | undefined {
-  if (!assets || !nameOrAbbr) return undefined;
-  const k = String(nameOrAbbr).trim().toLowerCase();
-  const match = assets.find(
-    (a) => String(a.TEAM_NAME || '').toLowerCase() === k || String(a.TEAM_ABBREVIATION || '').toLowerCase() === k
-  );
-  return match?.LOGO_URL || undefined;
+  return findTeamAsset(assets, nameOrAbbr)?.LOGO_URL || undefined;
 }
 
 /** Same idea as logoFor, but returns the team's abbreviation instead of a logo URL — for compact display in odds/betting lines. */
 export function abbrFor(assets: { TEAM_NAME?: any; TEAM_ABBREVIATION?: any }[] | undefined, nameOrAbbr: any): string {
-  if (!assets || !nameOrAbbr) return String(nameOrAbbr || '');
-  const k = String(nameOrAbbr).trim().toLowerCase();
-  const match = assets.find(
-    (a) => String(a.TEAM_NAME || '').toLowerCase() === k || String(a.TEAM_ABBREVIATION || '').toLowerCase() === k
-  );
-  return match?.TEAM_ABBREVIATION || String(nameOrAbbr);
+  return findTeamAsset(assets, nameOrAbbr)?.TEAM_ABBREVIATION || String(nameOrAbbr || '');
 }
 
 /** Same idea as logoFor, but against the graphics (conference logo) table. */
