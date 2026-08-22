@@ -193,6 +193,8 @@ export interface PlayerStatLeader {
   team: any;
   td: any;
   yards: any;
+  /** From top_performers.photo_url — set manually per category/week, matched by category. */
+  photoUrl?: string | null;
 }
 
 export interface PlayerStatBlock {
@@ -292,6 +294,8 @@ export interface ContentItem {
   subHeadline: any;
   homePage: any;
   contentTab: any;
+  /** Optional graphic (e.g. podcast cover art) from content.content_graphic_url. */
+  graphicUrl: any;
 }
 
 export interface Content {

@@ -149,6 +149,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     coyRes,
     myCoachRes,
     contentRes,
+    topPerformersRes,
   ] = await Promise.all([
     t('last_week_box_score').eq('week', recapWeek).limit(1),
     t('last_week_player_stats').eq('week', recapWeek).limit(1),
@@ -173,13 +174,14 @@ export async function getDashboardData(): Promise<DashboardData> {
     t('coach_of_the_year').eq('week', statsWeek).order('rank', { ascending: true }),
     t('my_coach'),
     t('content'),
+    t('top_performers').eq('week', statsWeek),
   ]);
 
   for (const [name, res] of Object.entries({
     boxScoreRes, playerStatsRecapRes, previewRes, scheduleRes, top25Res, apRes, coachesRes,
     playoffRes, bracketRes, confRes, teamStatsRes, passingRes, rushingRes, receivingRes,
     recruitBoardRes, recruitRanksRes, depthRes, hotSeatsRes, heismanRes, broylesRes, coyRes,
-    myCoachRes, contentRes,
+    myCoachRes, contentRes, topPerformersRes,
   })) {
     if ((res as any).error) throw new Error(`${name}: ${(res as any).error.message}`);
   }
@@ -374,7 +376,15 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   /* -------- Player stats -------- */
 
-  function playerBlock(rows: any[]): PlayerStatBlock {
+  // Photos set manually per category (passing/rushing/receiving) in top_performers —
+  // matched by category, not by name, since the leader can change week to week.
+  const topPerformerPhoto: Record<string, string | null> = {};
+  (topPerformersRes.data || []).forEach((r: any) => {
+    const cat = norm(r.category);
+    if (cat) topPerformerPhoto[cat] = r.photo_url || null;
+  });
+
+  function playerBlock(rows: any[], category: string): PlayerStatBlock {
     return {
       national: rows
         .filter((r) => /^\d+$/.test(String(r.rank)))
@@ -382,13 +392,13 @@ export async function getDashboardData(): Promise<DashboardData> {
         .map((r) => ({ rank: safeNum(r.rank), name: r.name, team: r.team, td: r.tds, yards: r.yards })),
       leaders: rows
         .filter((r) => norm(r.rank).startsWith('user_team'))
-        .map((r) => ({ name: r.name, team: r.team, td: r.tds, yards: r.yards })),
+        .map((r) => ({ name: r.name, team: r.team, td: r.tds, yards: r.yards, photoUrl: topPerformerPhoto[category] || null })),
     };
   }
   const playerStats: PlayerStats = {
-    passing: playerBlock(passingRes.data || []),
-    rushing: playerBlock(rushingRes.data || []),
-    receiving: playerBlock(receivingRes.data || []),
+    passing: playerBlock(passingRes.data || [], 'passing'),
+    rushing: playerBlock(rushingRes.data || [], 'rushing'),
+    receiving: playerBlock(receivingRes.data || [], 'receiving'),
   };
 
   /* -------- Recruiting -------- */
@@ -480,7 +490,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   (contentRes.data || []).forEach((r: any) => {
     const key = CONTENT_TYPE_MAP[norm(r.content_input_type)];
     if (!key || !r.headline) return;
-    content[key].push({ link: null, headline: r.headline, subHeadline: r.sub_headline, homePage: null, contentTab: null });
+    content[key].push({ link: null, headline: r.headline, subHeadline: r.sub_headline, homePage: null, contentTab: null, graphicUrl: r.content_graphic_url || null });
   });
 
   /* -------- Record + opponent asset -------- */
