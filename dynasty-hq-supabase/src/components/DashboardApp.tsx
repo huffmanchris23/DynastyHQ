@@ -49,6 +49,7 @@ function TabBody({ data, tab, subtab, statType, onStatTypeChange }: {
       if (g.isLocked) return <LockedCard untilWeek={0} />;
       return subtab === 'recruiting' ? <Recruiting d={data} /> : <DepthCharts d={data} />;
     case 'awards':
+      if (subtab === 'heisman' && !g.heismanUnlocked) return <LockedCard label="Not available yet" />;
       if ((subtab === 'coordinator' || subtab === 'coach') && !g.awardsAdvUnlocked) return <LockedCard label="Not available yet" />;
       return <Awards d={data} subtab={subtab} />;
     case 'coachingcorner':
