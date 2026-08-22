@@ -18,16 +18,29 @@ export default function Badge({
 
   if (logoUrl && !broken) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={logoUrl}
-        alt=""
-        width={size}
-        height={size}
-        referrerPolicy="no-referrer"
-        style={{ width: size, height: size, objectFit: 'contain', borderRadius: '50%' }}
-        onError={() => setBroken(true)}
-      />
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: '50%',
+          background: 'rgba(255,255,255,0.92)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={logoUrl}
+          alt=""
+          width={size * 0.8}
+          height={size * 0.8}
+          referrerPolicy="no-referrer"
+          style={{ width: size * 0.8, height: size * 0.8, objectFit: 'contain' }}
+          onError={() => setBroken(true)}
+        />
+      </div>
     );
   }
 
