@@ -84,11 +84,36 @@ function PodcastCard({ d }: { d: DashboardData }) {
       <SectionLabel>Podcast</SectionLabel>
       {podcast.length ? (
         podcast.map((p, i) => (
-          <div className="card news-card" key={i}>
-            <div className="news-thumb">🎙️</div>
+          <div
+            key={i}
+            className="card news-card"
+            style={{ padding: 12, gap: 14, alignItems: 'center' }}
+          >
+            {p.graphicUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={p.graphicUrl}
+                alt={p.headline || '4th and Forever'}
+                referrerPolicy="no-referrer"
+                style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 72, height: 72, borderRadius: 10, flexShrink: 0,
+                  background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 30,
+                }}
+              >
+                🎙️
+              </div>
+            )}
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div className="news-headline">{p.headline}</div>
-              {p.subHeadline ? <div className="news-snip">{p.subHeadline}</div> : null}
+              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--accent)', fontWeight: 700, marginBottom: 3 }}>
+                4th and Forever
+              </div>
+              <div className="news-headline" style={{ fontSize: 15, lineHeight: 1.3 }}>{p.headline}</div>
+              {p.subHeadline ? <div className="news-snip" style={{ marginTop: 3 }}>{p.subHeadline}</div> : null}
             </div>
           </div>
         ))
@@ -196,17 +221,66 @@ function StoryBrief({ d }: { d: DashboardData }) {
   );
 }
 
-/* ---------------- renderHome ---------------- */
-
-function LeaderCard({ label, l }: { label: string; l: { name: any; yards: any; td: any } | undefined }) {
+function LeaderCard({ label, l }: { label: string; l: { name: any; yards: any; td: any; photoUrl?: any } | undefined }) {
   return (
     <div className="card center">
+      {l && l.photoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={l.photoUrl}
+          alt={l.name || label}
+          referrerPolicy="no-referrer"
+          style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', margin: '0 auto 6px' }}
+        />
+      ) : (
+        <div
+          style={{
+            width: 44, height: 44, borderRadius: '50%', margin: '0 auto 6px',
+            background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.4)',
+          }}
+        >
+          {l && l.name ? initials(l.name, 2) : '—'}
+        </div>
+      )}
       <div className="stat-label">{label}</div>
       <div className="stat-name">{l ? l.name : '—'}</div>
       <div className="stat-sub">{l ? `${numOr(l.yards)} YDS · ${numOr(l.td)} TD` : ''}</div>
     </div>
   );
 }
+
+function LastGameCard({ d }: { d: DashboardData }) {
+  const box = d.recap && d.recap.myBox;
+  const opp = d.recap && d.recap.oppBox;
+  if (!box || box.FINAL_SCORE === undefined || box.FINAL_SCORE === null) return null;
+  const won = numOr(box.FINAL_SCORE, 0) > numOr(opp?.FINAL_SCORE, 0);
+  return (
+    <div className="card primary tight" style={{ marginBottom: 12 }}>
+      <SectionLabel>Last Game</SectionLabel>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span
+            style={{
+              fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em',
+              color: won ? '#3ecf72' : '#e05a5a',
+              border: `1px solid ${won ? '#3ecf72' : '#e05a5a'}`,
+              borderRadius: 4, padding: '2px 6px',
+            }}
+          >
+            {won ? 'W' : 'L'}
+          </span>
+          <span style={{ fontWeight: 600 }}>vs {box.OPPONENT}</span>
+        </div>
+        <span className="tabular" style={{ fontSize: 18, fontWeight: 700 }}>
+          {numOr(box.FINAL_SCORE)}–{numOr(opp?.FINAL_SCORE)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- renderHome ---------------- */
 
 export default function Home({ d }: { d: DashboardData }) {
   const g = gateInfo(d);
@@ -222,10 +296,9 @@ export default function Home({ d }: { d: DashboardData }) {
     );
   }
 
-  const leaders = (d.recap && d.recap.leaders) || ({} as DashboardData['recap']['leaders']);
-  const passing = leaders.passing;
-  const rushing = (leaders.rushing || [])[0];
-  const receiving = (leaders.receiving || [])[0];
+  const seasonPassing = (d.playerStats && d.playerStats.passing.leaders[0]) || undefined;
+  const seasonRushing = (d.playerStats && d.playerStats.rushing.leaders[0]) || undefined;
+  const seasonReceiving = (d.playerStats && d.playerStats.receiving.leaders[0]) || undefined;
 
   const preview = d.preview;
   let nextGameCard: React.ReactNode = null;
@@ -320,10 +393,14 @@ export default function Home({ d }: { d: DashboardData }) {
   return (
     <>
       <StoryBrief d={d} />
+      <LastGameCard d={d} />
+      <div style={{ marginBottom: 6 }}>
+        <SectionLabel>Season Leaders</SectionLabel>
+      </div>
       <div className="grid-3">
-        <LeaderCard label="Passing" l={passing || undefined} />
-        <LeaderCard label="Rushing" l={rushing} />
-        <LeaderCard label="Receiving" l={receiving} />
+        <LeaderCard label="Passing" l={seasonPassing} />
+        <LeaderCard label="Rushing" l={seasonRushing} />
+        <LeaderCard label="Receiving" l={seasonReceiving} />
       </div>
       {nextGameCard}
       {predictorCard}
