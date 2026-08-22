@@ -6,7 +6,8 @@ import { TABS, PRESETS, gateInfo, tabLocked, subtabLockedIds, type TabDef } from
 import Badge from '@/components/shared/Badge';
 import LockedCard from '@/components/shared/LockedCard';
 import HistoryPlaceholder from '@/components/shared/HistoryPlaceholder';
-import ColorPicker, { type ColorState } from '@/components/shared/ColorPicker';
+import { type ColorState } from '@/components/shared/ColorPicker';
+import Wilson from '@/components/Wilson';
 
 import Home from '@/components/tabs/Home';
 import { ScheduleTeam, ScheduleTop25 } from '@/components/tabs/Schedule';
@@ -82,7 +83,6 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
   const [subtab, setSubtab] = useState<string | null>(null);
   const [statType, setStatType] = useState('passing');
   const [season, setSeason] = useState<'s1' | 'history'>('s1');
-  const [showColorPicker, setShowColorPicker] = useState(false);
   const [colors, setColors] = useState<ColorState>(() => {
     // Settings (set once in Supabase) wins over team colors — no more re-picking every session.
     if (data.settings && data.settings.primaryColor && data.settings.secondaryColor) {
@@ -119,9 +119,6 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
           <div className="header-inner">
             <div className="header-top">
               <div className="header-tag">Dynasty HQ — {data.settings.currentDataSheet || ''}</div>
-              <button className="palette-btn" onClick={() => setShowColorPicker(true)}>
-                🎨
-              </button>
             </div>
             <div className="header-row">
               <div className="header-team">
@@ -170,7 +167,7 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
         </div>
       </div>
 
-      {showColorPicker ? <ColorPicker data={data} colors={colors} onClose={() => setShowColorPicker(false)} onChange={setColors} /> : null}
+      <Wilson />
     </>
   );
 }
