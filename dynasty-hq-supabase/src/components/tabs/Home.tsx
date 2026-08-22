@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { DashboardData } from '@/lib/types';
 import { gateInfo } from '@/lib/gating';
-import { initials, toPct, numOr, abbrFor } from '@/lib/format';
+import { initials, toPct, numOr, abbrFor, logoFor } from '@/lib/format';
 import SectionLabel from '@/components/shared/SectionLabel';
 import Badge from '@/components/shared/Badge';
 import EmptyState from '@/components/shared/EmptyState';
@@ -223,7 +223,7 @@ function StoryBrief({ d }: { d: DashboardData }) {
 
 function LeaderCard({ label, l }: { label: string; l: { name: any; yards: any; td: any; photoUrl?: any } | undefined }) {
   return (
-    <div className="card center">
+    <div style={{ textAlign: 'center' }}>
       {l && l.photoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -255,26 +255,41 @@ function LastGameCard({ d }: { d: DashboardData }) {
   const opp = d.recap && d.recap.oppBox;
   if (!box || box.FINAL_SCORE === undefined || box.FINAL_SCORE === null) return null;
   const won = numOr(box.FINAL_SCORE, 0) > numOr(opp?.FINAL_SCORE, 0);
+  const myLogo = d.team?.LOGO_URL || logoFor(d.assets, box.TEAM);
+  const oppLogo = logoFor(d.assets, box.OPPONENT);
   return (
     <div className="card primary tight" style={{ marginBottom: 12 }}>
-      <SectionLabel>Last Game</SectionLabel>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span
-            style={{
-              fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em',
-              color: won ? '#3ecf72' : '#e05a5a',
-              border: `1px solid ${won ? '#3ecf72' : '#e05a5a'}`,
-              borderRadius: 4, padding: '2px 6px',
-            }}
-          >
-            {won ? 'W' : 'L'}
-          </span>
-          <span style={{ fontWeight: 600 }}>vs {box.OPPONENT}</span>
-        </div>
-        <span className="tabular" style={{ fontSize: 18, fontWeight: 700 }}>
-          {numOr(box.FINAL_SCORE)}–{numOr(opp?.FINAL_SCORE)}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <SectionLabel>Last Game</SectionLabel>
+        <span
+          style={{
+            fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em',
+            color: won ? '#3ecf72' : '#e05a5a',
+            border: `1px solid ${won ? '#3ecf72' : '#e05a5a'}`,
+            borderRadius: 4, padding: '2px 6px',
+          }}
+        >
+          {won ? 'W' : 'L'}
         </span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: 64 }}>
+          <Badge text={box.TEAM} size={36} mine logoUrl={myLogo} />
+          <span className="truncate" style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', maxWidth: 64, textAlign: 'center' }}>
+            {box.TEAM}
+          </span>
+        </div>
+        <div className="tabular" style={{ fontSize: 24, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span>{numOr(box.FINAL_SCORE)}</span>
+          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 16 }}>–</span>
+          <span>{numOr(opp?.FINAL_SCORE)}</span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: 64 }}>
+          <Badge text={box.OPPONENT} size={36} logoUrl={oppLogo} />
+          <span className="truncate" style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', maxWidth: 64, textAlign: 'center' }}>
+            {box.OPPONENT}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -394,13 +409,13 @@ export default function Home({ d }: { d: DashboardData }) {
     <>
       <StoryBrief d={d} />
       <LastGameCard d={d} />
-      <div style={{ marginBottom: 6 }}>
+      <div className="card tight" style={{ marginBottom: 12 }}>
         <SectionLabel>Season Leaders</SectionLabel>
-      </div>
-      <div className="grid-3">
-        <LeaderCard label="Passing" l={seasonPassing} />
-        <LeaderCard label="Rushing" l={seasonRushing} />
-        <LeaderCard label="Receiving" l={seasonReceiving} />
+        <div className="grid-3">
+          <LeaderCard label="Passing" l={seasonPassing} />
+          <LeaderCard label="Rushing" l={seasonRushing} />
+          <LeaderCard label="Receiving" l={seasonReceiving} />
+        </div>
       </div>
       {nextGameCard}
       {predictorCard}
