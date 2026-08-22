@@ -385,10 +385,10 @@ export default function Home({ d }: { d: DashboardData }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', margin: '8px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Badge text={oppAbbr} size={22} logoUrl={d.opponent && d.opponent.LOGO_URL} />
-            <b>{wpOpp.toFixed(1)}%</b>
+            <b>{Math.round(wpOpp)}%</b>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <b>{wpMine.toFixed(1)}%</b>
+            <b>{Math.round(wpMine)}%</b>
             <Badge text={myTeamAbbr} size={22} mine logoUrl={d.team && d.team.LOGO_URL} />
           </div>
         </div>

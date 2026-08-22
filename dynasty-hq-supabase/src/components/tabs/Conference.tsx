@@ -7,6 +7,11 @@ import { Row, Thead } from '@/components/shared/Row';
 import Badge from '@/components/shared/Badge';
 import EmptyState from '@/components/shared/EmptyState';
 
+function toNum(v: any): number {
+  const n = Number(v);
+  return isNaN(n) ? 0 : n;
+}
+
 export default function Conference({ d }: { d: DashboardData }) {
   const allRows = d.conf || [];
   const myTeamName = d.team && d.team.TEAM_NAME;
@@ -25,6 +30,30 @@ export default function Conference({ d }: { d: DashboardData }) {
     return list.sort((a, b) => a.localeCompare(b));
   }, [allRows]);
 
+  // The frontrunner of each conference race — best conference record first,
+  // then best overall record as the tiebreaker.
+  const frontrunners = useMemo(() => {
+    const leaderByConf = new Map<string, (typeof allRows)[number]>();
+    allRows.forEach((r) => {
+      const key = r.conference || '';
+      if (!key) return;
+      const current = leaderByConf.get(key);
+      if (!current) {
+        leaderByConf.set(key, r);
+        return;
+      }
+      const rConfW = toNum(r.confW), curConfW = toNum(current.confW);
+      const rConfL = toNum(r.confL), curConfL = toNum(current.confL);
+      const rOvW = toNum(r.overallW), curOvW = toNum(current.overallW);
+      const better =
+        rConfW > curConfW ||
+        (rConfW === curConfW && rConfL < curConfL) ||
+        (rConfW === curConfW && rConfL === curConfL && rOvW > curOvW);
+      if (better) leaderByConf.set(key, r);
+    });
+    return conferences.map((c) => ({ conference: c, leader: leaderByConf.get(c) }));
+  }, [allRows, conferences]);
+
   const defaultConf = conferences.find((c) => String(c).toLowerCase() === String(myConference || '').toLowerCase()) || conferences[0] || '';
   const [selected, setSelected] = useState(defaultConf);
   const activeConf = conferences.includes(selected) ? selected : defaultConf;
@@ -36,6 +65,50 @@ export default function Conference({ d }: { d: DashboardData }) {
 
   return (
     <>
+      {conferences.length > 1 ? (
+        <div style={{ marginBottom: 12 }}>
+          <div className="stat-label" style={{ marginBottom: 6 }}>
+            Conference Frontrunners
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {frontrunners.map(({ conference, leader }) => (
+              <button
+                key={conference}
+                onClick={() => setSelected(conference)}
+                className="card"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '8px 10px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  borderColor: conference === activeConf ? 'var(--accent)' : undefined,
+                }}
+              >
+                {leader ? (
+                  <Badge text={leader.team} size={22} mine={isMineFn(myTeamName, leader.team)} logoUrl={logoFor(d.assets, leader.team)} />
+                ) : (
+                  <div style={{ width: 22, height: 22 }} />
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="truncate" style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                    {conference}
+                  </div>
+                  <div className="truncate" style={{ fontSize: 13, fontWeight: 600 }}>
+                    {leader ? leader.team : '—'}
+                  </div>
+                </div>
+                {leader ? (
+                  <div className="tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>
+                    {leader.confW ?? 0}-{leader.confL ?? 0}
+                  </div>
+                ) : null}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
         <Badge text={activeConf} size={40} mine />
         <div style={{ flex: 1, minWidth: 0 }}>

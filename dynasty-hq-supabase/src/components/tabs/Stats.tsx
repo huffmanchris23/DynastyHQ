@@ -16,7 +16,7 @@ export function TeamStats({ d }: { d: DashboardData }) {
     { label: 'Rush Yds/Game', value: mine.rushYpg },
   ];
   const national = ts.national || [];
-  const cols = '26px 1fr 60px';
+  const cols = '26px 1fr 56px 56px';
 
   return (
     <>
@@ -37,6 +37,7 @@ export function TeamStats({ d }: { d: DashboardData }) {
           <Thead cols={cols}>
             <div style={{ textAlign: 'left' }}>Rk</div>
             <div style={{ textAlign: 'left' }}>Team</div>
+            <div>Pts/G</div>
             <div>Yds/G</div>
           </Thead>
           {national.length ? (
@@ -50,6 +51,9 @@ export function TeamStats({ d }: { d: DashboardData }) {
                   <span className="truncate" style={{ fontWeight: 500 }}>
                     {r.team}
                   </span>
+                </div>
+                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                  {numOr(r.ppg)}
                 </div>
                 <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
                   {numOr(r.ypg)}
