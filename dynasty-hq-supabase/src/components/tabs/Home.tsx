@@ -221,35 +221,6 @@ function StoryBrief({ d }: { d: DashboardData }) {
   );
 }
 
-function LeaderCard({ label, l }: { label: string; l: { name: any; yards: any; td: any; photoUrl?: any } | undefined }) {
-  return (
-    <div style={{ textAlign: 'center' }}>
-      {l && l.photoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={l.photoUrl}
-          alt={l.name || label}
-          referrerPolicy="no-referrer"
-          style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', margin: '0 auto 6px' }}
-        />
-      ) : (
-        <div
-          style={{
-            width: 44, height: 44, borderRadius: '50%', margin: '0 auto 6px',
-            background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.4)',
-          }}
-        >
-          {l && l.name ? initials(l.name, 2) : '—'}
-        </div>
-      )}
-      <div className="stat-label">{label}</div>
-      <div className="stat-name">{l ? l.name : '—'}</div>
-      <div className="stat-sub">{l ? `${numOr(l.yards)} YDS · ${numOr(l.td)} TD` : ''}</div>
-    </div>
-  );
-}
-
 function LastGameCard({ d }: { d: DashboardData }) {
   const box = d.recap && d.recap.myBox;
   const opp = d.recap && d.recap.oppBox;
@@ -279,7 +250,7 @@ function LastGameCard({ d }: { d: DashboardData }) {
             {box.TEAM}
           </span>
         </div>
-        <div className="tabular" style={{ fontSize: 24, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div className="tabular" style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, display: 'flex', alignItems: 'center', gap: 6 }}>
           <span>{numOr(box.FINAL_SCORE)}</span>
           <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 16 }}>–</span>
           <span>{numOr(opp?.FINAL_SCORE)}</span>
@@ -310,10 +281,6 @@ export default function Home({ d }: { d: DashboardData }) {
       </>
     );
   }
-
-  const seasonPassing = (d.playerStats && d.playerStats.passing.leaders[0]) || undefined;
-  const seasonRushing = (d.playerStats && d.playerStats.rushing.leaders[0]) || undefined;
-  const seasonReceiving = (d.playerStats && d.playerStats.receiving.leaders[0]) || undefined;
 
   const preview = d.preview;
   let nextGameCard: React.ReactNode = null;
@@ -409,14 +376,6 @@ export default function Home({ d }: { d: DashboardData }) {
     <>
       <StoryBrief d={d} />
       <LastGameCard d={d} />
-      <div className="card tight" style={{ marginBottom: 12 }}>
-        <SectionLabel>Season Leaders</SectionLabel>
-        <div className="grid-3">
-          <LeaderCard label="Passing" l={seasonPassing} />
-          <LeaderCard label="Rushing" l={seasonRushing} />
-          <LeaderCard label="Receiving" l={seasonReceiving} />
-        </div>
-      </div>
       {nextGameCard}
       {predictorCard}
       <div style={{ marginTop: 16 }}>{contentBlock}</div>

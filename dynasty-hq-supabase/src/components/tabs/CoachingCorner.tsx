@@ -63,6 +63,16 @@ export function MyCoach({ d }: { d: DashboardData }) {
             <BioRow label="Defense Playbook" value={c.defensePlaybook} />
           </div>
         </div>
+        <div className="grid-2" style={{ marginTop: 10 }}>
+          <div className="card">
+            <div className="stat-label">Coaching Philosophy</div>
+            <div style={{ fontSize: 13, lineHeight: 1.5, marginTop: 4 }}>{c.coachingPhilosophy || '—'}</div>
+          </div>
+          <div className="card">
+            <div className="stat-label">Background</div>
+            <div style={{ fontSize: 13, lineHeight: 1.5, marginTop: 4 }}>{c.background || '—'}</div>
+          </div>
+        </div>
       </div>
       <div style={{ marginTop: 16 }}>
         <SectionLabel>Record Book</SectionLabel>
