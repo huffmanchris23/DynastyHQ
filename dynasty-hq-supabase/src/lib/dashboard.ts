@@ -160,7 +160,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     t('coaches_poll').eq('week', statsWeek).order('coaches_poll', { ascending: true }),
     t('playoff_rankings').eq('week', statsWeek).order('playoff_ranking', { ascending: true }),
     t('playoff_bracket').eq('week', statsWeek).limit(1),
-    t('conference_standings').order('conference', { ascending: true }).order('overall_wins', { ascending: false }),
+    t('conference_standings').eq('week', statsWeek).order('conference', { ascending: true }).order('rank', { ascending: true }),
     t('team_stats').eq('week', statsWeek),
     t('passing').eq('week', statsWeek),
     t('rushing').eq('week', statsWeek),
@@ -341,6 +341,7 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   const conf: ConfRow[] = (confRes.data || []).map((r: any) => ({
     conference: r.conference,
+    rank: r.rank,
     team: r.team,
     confW: r.conference_wins,
     confL: r.conference_losses,
@@ -466,6 +467,8 @@ export async function getDashboardData(): Promise<DashboardData> {
     pipeline: myCoachRow?.recruiting_pipeline,
     offensePlaybook: myCoachRow?.offense,
     defensePlaybook: myCoachRow?.defense,
+    coachingPhilosophy: myCoachRow?.coaching_philosophy,
+    background: myCoachRow?.background,
     photoLink: myCoachRow?.image_url,
     // Current schema carries exactly one season-history row inline on the
     // same record (season/team/title/season_wins/season_losses). If you

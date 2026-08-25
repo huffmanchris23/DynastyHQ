@@ -34,7 +34,52 @@ export const TABS: TabDef[] = [
   { id: 'roster', label: 'Roster', subtabs: [{ id: 'depth', label: 'Depth Charts' }, { id: 'recruiting', label: 'Recruiting' }] },
   { id: 'awards', label: 'Awards', subtabs: [{ id: 'heisman', label: 'Heisman' }, { id: 'coordinator', label: 'Coordinator' }, { id: 'coach', label: 'Coach' }] },
   { id: 'coachingcorner', label: 'Coaching Corner', subtabs: [{ id: 'mycoach', label: 'My Coach' }, { id: 'hotseat', label: 'Hot Seats' }] },
+  {
+    id: 'commissioner', label: 'Commissioner', subtabs: [
+      { id: 'upload', label: 'Upload' },
+      { id: 'settings', label: 'Settings' },
+      { id: 'scheduleassistant', label: 'Schedule Assistant' },
+      { id: 'leaguehistory', label: 'League History' },
+    ],
+  },
+  {
+    id: 'community', label: 'Community', subtabs: [
+      { id: 'guides', label: 'Dynasty Guides' },
+      { id: 'messageboard', label: 'Message Board' },
+      { id: 'announcements', label: 'Announcements' },
+      { id: 'contact', label: 'Contact' },
+    ],
+  },
 ];
+
+/**
+ * MVP-scope gate, separate from week-based gating above. These are
+ * permanently parked behind "Coming Soon" for now to cut OCR scope from
+ * ~30 screenshots/week down to 9-11 — not tied to week number or data
+ * presence, just a flat on/off per tab or subtab until built out.
+ */
+export const COMING_SOON_TABS: string[] = ['commissioner', 'community', 'conference'];
+
+export const COMING_SOON_SUBTABS: Record<string, string[]> = {
+  awards: ['heisman', 'coordinator', 'coach'],
+  coachingcorner: ['hotseat'],
+  roster: ['recruiting'],
+  stats: ['player'],
+  schedule: ['top25'],
+};
+
+export function isComingSoonTab(tabId: string): boolean {
+  return COMING_SOON_TABS.indexOf(tabId) > -1;
+}
+
+export function comingSoonSubtabIds(tabId: string): string[] {
+  return COMING_SOON_SUBTABS[tabId] || [];
+}
+
+export function isComingSoonSubtab(tabId: string, subtabId: string | null): boolean {
+  if (!subtabId) return false;
+  return comingSoonSubtabIds(tabId).indexOf(subtabId) > -1;
+}
 
 export const PRESETS = [
   { name: 'Crimson & Gray', primary: '#7A2426', secondary: '#C9962E' },

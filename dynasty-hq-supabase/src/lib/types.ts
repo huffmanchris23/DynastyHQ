@@ -156,6 +156,7 @@ export interface Playoff {
 
 export interface ConfRow {
   conference: any;
+  rank: any;
   team: any;
   confW: any;
   confL: any;
@@ -284,6 +285,8 @@ export interface MyCoach {
   pipeline: any;
   offensePlaybook: any;
   defensePlaybook: any;
+  coachingPhilosophy: any;
+  background: any;
   photoLink: any;
   history: MyCoachHistory[];
 }
