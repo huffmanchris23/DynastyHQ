@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import type { DashboardData } from '@/lib/types';
-import { TABS, PRESETS, gateInfo, tabLocked, subtabLockedIds, type TabDef } from '@/lib/gating';
+import { TABS, PRESETS, gateInfo, tabLocked, subtabLockedIds, isComingSoonTab, isComingSoonSubtab, comingSoonSubtabIds, type TabDef } from '@/lib/gating';
 import Badge from '@/components/shared/Badge';
 import LockedCard from '@/components/shared/LockedCard';
+import ComingSoon from '@/components/shared/ComingSoon';
 import HistoryPlaceholder from '@/components/shared/HistoryPlaceholder';
 import { type ColorState } from '@/components/shared/ColorPicker';
 import Wilson from '@/components/Wilson';
@@ -30,6 +31,12 @@ function TabBody({ data, tab, subtab, statType, onStatTypeChange }: {
   onStatTypeChange: (id: string) => void;
 }) {
   const g = gateInfo(data);
+
+  // MVP scope gate — checked first, ahead of any week-based unlock logic,
+  // since these are flatly parked regardless of season progress.
+  if (isComingSoonTab(tab)) return <ComingSoon />;
+  if (isComingSoonSubtab(tab, subtab)) return <ComingSoon />;
+
   switch (tab) {
     case 'home':
       return <Home d={data} />;
@@ -55,6 +62,9 @@ function TabBody({ data, tab, subtab, statType, onStatTypeChange }: {
     case 'coachingcorner':
       if (subtab === 'hotseat') return g.hotSeatUnlocked ? <HotSeats d={data} /> : <LockedCard label="Not available yet" />;
       return <MyCoach d={data} />;
+    case 'commissioner':
+    case 'community':
+      return <ComingSoon />;
     default:
       return null;
   }
@@ -63,13 +73,13 @@ function TabBody({ data, tab, subtab, statType, onStatTypeChange }: {
 /* ============================== SUBTAB BAR ============================== */
 /* Port of renderSubtabBar(). */
 
-function SubtabBar({ subtabs, active, lockedIds, onSelect }: { subtabs: { id: string; label: string }[]; active: string | null; lockedIds: string[]; onSelect: (id: string) => void }) {
+function SubtabBar({ subtabs, active, lockedIds, comingSoonIds, onSelect }: { subtabs: { id: string; label: string }[]; active: string | null; lockedIds: string[]; comingSoonIds: string[]; onSelect: (id: string) => void }) {
   return (
     <div className="subtab-bar">
       {subtabs.map((s) => (
         <button key={s.id} className={`subtab-btn ${active === s.id ? 'active' : ''}`} onClick={() => onSelect(s.id)}>
           {s.label}
-          {lockedIds.indexOf(s.id) > -1 ? ' 🔒' : ''}
+          {comingSoonIds.indexOf(s.id) > -1 ? ' 🚧' : lockedIds.indexOf(s.id) > -1 ? ' 🔒' : ''}
         </button>
       ))}
     </div>
@@ -119,7 +129,11 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
         <div className="header-band">
           <div className="header-inner">
             <div className="header-top">
-              <div className="header-tag">Dynasty HQ — {data.settings.currentDataSheet || ''}</div>
+              <div className="header-tag" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/icon-192.png" alt="Dynasty HQ" style={{ width: 18, height: 18, borderRadius: 4 }} />
+                <span>Dynasty HQ — {data.settings.currentDataSheet || ''}</span>
+              </div>
             </div>
             <div className="header-row">
               <div className="header-team">
@@ -137,7 +151,7 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
               {TABS.map((t) => (
                 <button key={t.id} className={`tab-btn ${tab === t.id ? 'active' : ''}`} onClick={() => selectTab(t.id)}>
                   {t.label}
-                  {tabLocked(t, g) ? ' 🔒' : ''}
+                  {isComingSoonTab(t.id) ? ' 🚧' : tabLocked(t, g) ? ' 🔒' : ''}
                 </button>
               ))}
             </div>
@@ -150,7 +164,7 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
           ) : (
             <>
               {currentTabDef && currentTabDef.subtabs ? (
-                <SubtabBar subtabs={currentTabDef.subtabs} active={subtab} lockedIds={subtabLockedIds(currentTabDef.id, g)} onSelect={setSubtab} />
+                <SubtabBar subtabs={currentTabDef.subtabs} active={subtab} lockedIds={subtabLockedIds(currentTabDef.id, g)} comingSoonIds={comingSoonSubtabIds(currentTabDef.id)} onSelect={setSubtab} />
               ) : null}
               <div className="stack">
                 <TabBody data={data} tab={tab} subtab={subtab} statType={statType} onStatTypeChange={setStatType} />
