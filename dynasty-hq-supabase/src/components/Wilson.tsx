@@ -71,7 +71,7 @@ export default function Wilson() {
           boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
         }}
       >
-        {open ? '✕' : '📚'}
+        {open ? '✕' : '🥥'}
       </button>
 
       {open ? (
@@ -102,7 +102,7 @@ export default function Wilson() {
               background: 'rgba(0,0,0,0.2)',
             }}
           >
-            <span style={{ fontSize: 18 }}>📚</span>
+            <span style={{ fontSize: 18 }}>🥥</span>
             <div>
               <div style={{ fontWeight: 700, fontSize: 14 }}>Wilson</div>
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Dynasty HQ Librarian</div>
