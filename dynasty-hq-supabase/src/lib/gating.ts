@@ -58,7 +58,7 @@ export const TABS: TabDef[] = [
  * ~30 screenshots/week down to 9-11 — not tied to week number or data
  * presence, just a flat on/off per tab or subtab until built out.
  */
-export const COMING_SOON_TABS: string[] = ['commissioner', 'community', 'conference'];
+export const COMING_SOON_TABS: string[] = ['commissioner', 'community', 'conference', 'awards'];
 
 export const COMING_SOON_SUBTABS: Record<string, string[]> = {
   awards: ['heisman', 'coordinator', 'coach'],
