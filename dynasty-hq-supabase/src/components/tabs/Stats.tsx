@@ -15,8 +15,8 @@ export function TeamStats({ d }: { d: DashboardData }) {
     { label: 'Pass Yds/Game', value: mine.passYpg },
     { label: 'Rush Yds/Game', value: mine.rushYpg },
   ];
-  const national = ts.national || [];
-  const cols = '26px 1fr 56px 56px';
+  const national = (ts.national || []).slice(0, 5);
+  const cols = '26px 1fr 46px 46px 56px 56px';
 
   return (
     <>

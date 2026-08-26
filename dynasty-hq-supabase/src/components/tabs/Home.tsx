@@ -54,7 +54,7 @@ function TeamPreview({ d }: { d: DashboardData }) {
 
 /* ---------------- renderHomeContent ---------------- */
 
-function NewsList({ title, items }: { title: string; items: { headline: any; subHeadline?: any }[] }) {
+function NewsList({ title, items }: { title: string; items: { headline: any; subHeadline?: any; graphicUrl?: any }[] }) {
   return (
     <div>
       <SectionLabel>{title}</SectionLabel>
@@ -62,7 +62,17 @@ function NewsList({ title, items }: { title: string; items: { headline: any; sub
         {items.length ? (
           items.map((n, i) => (
             <div className="card news-card" key={i}>
-              <div className="news-thumb">📰</div>
+              {n.graphicUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={n.graphicUrl}
+                  alt={n.headline || ''}
+                  referrerPolicy="no-referrer"
+                  style={{ width: 60, height: 60, borderRadius: 2, objectFit: 'cover', flexShrink: 0 }}
+                />
+              ) : (
+                <div className="news-thumb">📰</div>
+              )}
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div className="news-headline">{n.headline}</div>
                 {n.subHeadline ? <div className="news-snip">{n.subHeadline}</div> : null}
