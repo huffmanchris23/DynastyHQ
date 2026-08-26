@@ -76,12 +76,19 @@ function TabBody({ data, tab, subtab, statType, onStatTypeChange }: {
 function SubtabBar({ subtabs, active, lockedIds, comingSoonIds, onSelect }: { subtabs: { id: string; label: string }[]; active: string | null; lockedIds: string[]; comingSoonIds: string[]; onSelect: (id: string) => void }) {
   return (
     <div className="subtab-bar">
-      {subtabs.map((s) => (
-        <button key={s.id} className={`subtab-btn ${active === s.id ? 'active' : ''}`} onClick={() => onSelect(s.id)}>
-          {s.label}
-          {comingSoonIds.indexOf(s.id) > -1 ? ' 🚧' : lockedIds.indexOf(s.id) > -1 ? ' 🔒' : ''}
-        </button>
-      ))}
+      {subtabs.map((s) => {
+        const isComingSoon = comingSoonIds.indexOf(s.id) > -1;
+        return (
+          <button
+            key={s.id}
+            className={`subtab-btn ${active === s.id ? 'active' : ''} ${isComingSoon ? 'is-coming-soon' : ''}`}
+            onClick={() => onSelect(s.id)}
+          >
+            {s.label}
+            {!isComingSoon && lockedIds.indexOf(s.id) > -1 ? ' 🔒' : ''}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -149,9 +156,13 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
           <div className="tabstrip-outer">
             <div className="tabstrip">
               {TABS.map((t) => (
-                <button key={t.id} className={`tab-btn ${tab === t.id ? 'active' : ''}`} onClick={() => selectTab(t.id)}>
+                <button
+                  key={t.id}
+                  className={`tab-btn ${tab === t.id ? 'active' : ''} ${isComingSoonTab(t.id) ? 'is-coming-soon' : ''}`}
+                  onClick={() => selectTab(t.id)}
+                >
                   {t.label}
-                  {isComingSoonTab(t.id) ? ' 🚧' : tabLocked(t, g) ? ' 🔒' : ''}
+                  {!isComingSoonTab(t.id) && tabLocked(t, g) ? ' 🔒' : ''}
                 </button>
               ))}
             </div>
