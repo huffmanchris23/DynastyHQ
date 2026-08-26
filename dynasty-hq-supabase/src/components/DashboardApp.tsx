@@ -155,7 +155,7 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
           </div>
           <div className="tabstrip-outer">
             <div className="tabstrip">
-              {TABS.map((t) => (
+              {TABS.filter((t) => !isComingSoonTab(t.id)).map((t) => (
                 <button
                   key={t.id}
                   className={`tab-btn ${tab === t.id ? 'active' : ''} ${isComingSoonTab(t.id) ? 'is-coming-soon' : ''}`}
@@ -174,9 +174,23 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
             <HistoryPlaceholder />
           ) : (
             <>
-              {currentTabDef && currentTabDef.subtabs ? (
-                <SubtabBar subtabs={currentTabDef.subtabs} active={subtab} lockedIds={subtabLockedIds(currentTabDef.id, g)} comingSoonIds={comingSoonSubtabIds(currentTabDef.id)} onSelect={setSubtab} />
-              ) : null}
+              {currentTabDef && currentTabDef.subtabs
+                ? (() => {
+                    const visibleSubtabs = currentTabDef.subtabs!.filter(
+                      (s) => comingSoonSubtabIds(currentTabDef.id).indexOf(s.id) === -1
+                    );
+                    if (!visibleSubtabs.length) return null;
+                    return (
+                      <SubtabBar
+                        subtabs={visibleSubtabs}
+                        active={subtab}
+                        lockedIds={subtabLockedIds(currentTabDef.id, g)}
+                        comingSoonIds={[]}
+                        onSelect={setSubtab}
+                      />
+                    );
+                  })()
+                : null}
               <div className="stack">
                 <TabBody data={data} tab={tab} subtab={subtab} statType={statType} onStatTypeChange={setStatType} />
               </div>
