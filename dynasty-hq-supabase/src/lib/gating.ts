@@ -94,12 +94,11 @@ export function gateInfo(data: DashboardData | null): GateInfo {
   const s = (data && data.settings) || {};
   const hasWeekData = s.currentWeek !== undefined && s.currentWeek !== null && s.currentWeek !== '';
   const week = hasWeekData ? Number(s.currentWeek) || 0 : 999;
-  const haveGame = !!s.haveGameThisWeek;
   const awards = (data && data.awards) || { heisman: [], coordinator: [], coach: [] };
   const coach = (data && data.coach) || { hotSeats: [], moves: [] };
   return {
     week,
-    isLocked: hasWeekData ? week === 0 && !haveGame : false,
+    isLocked: hasWeekData ? week === 0 : false,
     statsUnlocked: hasWeekData ? week >= 1 : true,
     playoffsUnlocked: hasWeekData ? week >= 10 : true,
     // Coordinator/Coach awards, Heisman, and Hot Seats aren't tied to a fixed

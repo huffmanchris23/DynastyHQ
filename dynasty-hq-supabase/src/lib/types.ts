@@ -25,8 +25,6 @@ export interface Settings {
   currentTeam?: string;
   /** Numeric week derived from live data (max week present in ap_poll/game_preview), not the raw settings label. */
   currentWeek?: any;
-  /** Real boolean now (settings.have_game_this_week is a Postgres boolean column, not a "YES"/"NO" string). */
-  haveGameThisWeek?: boolean;
   /** App theme colors set manually in settings.primary_color/secondary_color — takes priority over team colors so the picker doesn't need to be re-set every session. */
   primaryColor?: string | null;
   secondaryColor?: string | null;
@@ -131,6 +129,8 @@ export interface PollEntry {
   team: any;
   wins: number;
   losses: number;
+  /** Previous week's rank, from ap_poll.last_week / coaches_poll.last_week. Null for a team's first appearance. */
+  lastWeek?: number | null;
   // Populated only if applyMovement_ is ever wired in (see snapshot.ts) —
   // unused today, kept for parity with the original dead code path.
   changeDir?: 'UP' | 'DOWN' | 'SAME' | null;

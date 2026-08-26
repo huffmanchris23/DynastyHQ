@@ -92,19 +92,16 @@ function findAsset(idx: AssetIndex, nameOrAbbr: any): TeamAsset | null {
 export async function getDashboardData(): Promise<DashboardData> {
   const sb = getSupabase();
 
-  // ---- 1. Settings: the row flagged current_week = 'TRUE'. Each week gets
-  // its own settings row; flipping this flag is what advances the app. ----
-  const { data: settingsRows, error: settingsErr } = await sb
-    .from('settings')
-    .select('*')
-    .eq('current_week', 'TRUE')
-    .limit(1);
+  // ---- 1. Settings: one permanent row per dynasty — just identity
+  // (user/dynasty/season) plus theme colors now. Team/week context lives
+  // on the data tables themselves (see step 2b), not duplicated here. ----
+  const { data: settingsRows, error: settingsErr } = await sb.from('settings').select('*').limit(1);
   if (settingsErr) throw new Error(`settings: ${settingsErr.message}`);
   const settingsRow = (settingsRows && settingsRows[0]) || null;
   if (!settingsRow) {
-    throw new Error("No `settings` row is flagged current_week = 'TRUE'.");
+    throw new Error('No `settings` row found.');
   }
-  const { user_id: userId, dynasty_id: dynastyId, current_season: season, current_team: myTeamName } = settingsRow;
+  const { user_id: userId, dynasty_id: dynastyId, current_season: season } = settingsRow;
 
   // Scoped query builder — every weekly table is filtered to this dynasty + season.
   const t = (table: string) => sb.from(table).select('*').eq('dynasty_id', dynastyId).eq('season', season);
@@ -113,6 +110,13 @@ export async function getDashboardData(): Promise<DashboardData> {
   const { data: assetRows, error: assetErr } = await sb.from('assets').select('*');
   if (assetErr) throw new Error(`assets: ${assetErr.message}`);
   const assetIdx = buildAssetIndex(assetRows || []);
+
+  // ---- 2b. "My team" comes from the game_preview row flagged current_week —
+  // this used to be duplicated on settings.current_team, now it's a single
+  // source of truth that already gets updated whenever the week advances. ----
+  const { data: gpAnchorRows, error: gpAnchorErr } = await t('game_preview').eq('current_week', true).limit(1);
+  if (gpAnchorErr) throw new Error(`game_preview: ${gpAnchorErr.message}`);
+  const myTeamName = (gpAnchorRows && gpAnchorRows[0] && gpAnchorRows[0].team) || null;
   const myAsset = findAsset(assetIdx, myTeamName);
   const allAssets: TeamAsset[] = (assetRows || []).map(toTeamAsset);
 
@@ -325,7 +329,13 @@ export async function getDashboardData(): Promise<DashboardData> {
   /* -------- Rankings -------- */
 
   const toPoll = (rows: any[], rankCol: string): PollEntry[] =>
-    rows.map((r) => ({ rank: safeNum(r[rankCol]), team: r.team, wins: safeNum(r.wins), losses: safeNum(r.losses) }));
+    rows.map((r) => ({
+      rank: safeNum(r[rankCol]),
+      team: r.team,
+      wins: safeNum(r.wins),
+      losses: safeNum(r.losses),
+      lastWeek: r.last_week !== null && r.last_week !== undefined && r.last_week !== '' ? safeNum(r.last_week) : null,
+    }));
   const rank = { ap: toPoll(apRes.data || [], 'ap_poll'), coaches: toPoll(coachesRes.data || [], 'coaches_poll') };
 
   /* -------- Playoff -------- */
@@ -510,10 +520,9 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   const result: DashboardData = {
     settings: {
-      currentDataSheet: settingsRow.current_week_name ? `${settingsRow.current_week_name}` : `Week ${statsWeek}`,
+      currentDataSheet: `Week ${statsWeek}`,
       currentTeam: myTeamName,
       currentWeek: statsWeek,
-      haveGameThisWeek: !!settingsRow.have_game_this_week,
       primaryColor: settingsRow.primary_color || null,
       secondaryColor: settingsRow.secondary_color || null,
     },
@@ -605,7 +614,7 @@ function buildStoryBrief(d: Partial<DashboardData>, myTeamName: any): StoryBrief
 
 export async function getMyTeamName(): Promise<any> {
   const sb = getSupabase();
-  const { data, error } = await sb.from('settings').select('current_team').eq('current_week', 'TRUE').limit(1);
+  const { data, error } = await sb.from('game_preview').select('team').eq('current_week', true).limit(1);
   if (error) throw new Error(error.message);
-  return data?.[0]?.current_team;
+  return data?.[0]?.team;
 }
