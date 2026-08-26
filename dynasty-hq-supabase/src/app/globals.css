@@ -85,6 +85,9 @@ a { color: inherit; }
   border: 1px solid rgba(255,255,255,0.15); background: transparent; color: rgba(255,255,255,0.5); cursor: pointer;
 }
 .subtab-btn.active { color: var(--accent); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 13%, transparent); }
+.tab-btn.is-coming-soon, .subtab-btn.is-coming-soon { color: rgba(255,255,255,0.28); }
+.tab-btn.is-coming-soon.active { color: rgba(255,255,255,0.55); background: rgba(0,0,0,0.22); border-bottom-color: rgba(255,255,255,0.28); }
+.subtab-btn.is-coming-soon.active { color: rgba(255,255,255,0.55); border-color: rgba(255,255,255,0.28); background: rgba(255,255,255,0.06); }
 
 main { padding: 12px 16px 32px; }
 .stack { display: flex; flex-direction: column; gap: 16px; }
