@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import type { DashboardData } from '@/lib/types';
 import { gateInfo } from '@/lib/gating';
 import { initials, toPct, numOr, abbrFor, logoFor } from '@/lib/format';
@@ -144,92 +143,7 @@ function HomeContent({ d }: { d: DashboardData }) {
   );
 }
 
-/* ---------------- renderStoryBrief / copyStoryBrief ---------------- */
-
-function fallbackCopy(text: string, cb: () => void) {
-  const ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.position = 'fixed';
-  ta.style.opacity = '0';
-  document.body.appendChild(ta);
-  ta.select();
-  try {
-    document.execCommand('copy');
-  } catch (e) {
-    /* no-op, mirrors original's empty catch */
-  }
-  document.body.removeChild(ta);
-  cb();
-}
-
-function StoryBrief({ d }: { d: DashboardData }) {
-  const items = d.storyBrief || [];
-  const [label, setLabel] = useState('Copy Brief for Claude');
-  if (!items.length) return null;
-
-  function copyStoryBrief() {
-    const lines = [`${d.settings.currentDataSheet} — Story Brief (${d.team ? d.team.TEAM_NAME : ''})`, ''];
-    items.forEach((s) => lines.push(`[${s.tag}] ${s.text}`));
-    const text = lines.join('\n');
-    const done = () => {
-      setLabel('Copied ✓');
-      setTimeout(() => setLabel('Copy Brief for Claude'), 1500);
-    };
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
-    } else {
-      fallbackCopy(text, done);
-    }
-  }
-
-  return (
-    <div className="card accent">
-      <SectionLabel>Weekly Story Brief</SectionLabel>
-      <div className="stack-sm">
-        {items.map((s, i) => (
-          <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-            <span
-              style={{
-                flexShrink: 0,
-                fontSize: 9,
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-                fontWeight: 700,
-                color: 'var(--accent)',
-                border: '1px solid var(--accent)',
-                borderRadius: 999,
-                padding: '2px 7px',
-                marginTop: 1,
-              }}
-            >
-              {s.tag}
-            </span>
-            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', lineHeight: 1.4 }}>{s.text}</span>
-          </div>
-        ))}
-      </div>
-      <button
-        onClick={copyStoryBrief}
-        style={{
-          marginTop: 10,
-          width: '100%',
-          padding: 8,
-          borderRadius: 4,
-          border: '1px solid var(--accent)',
-          background: 'transparent',
-          color: 'var(--accent)',
-          fontSize: 11,
-          fontWeight: 600,
-          textTransform: 'uppercase',
-          letterSpacing: '0.04em',
-          cursor: 'pointer',
-        }}
-      >
-        {label}
-      </button>
-    </div>
-  );
-}
+/* ---------------- LastGameCard ---------------- */
 
 function LastGameCard({ d }: { d: DashboardData }) {
   const box = d.recap && d.recap.myBox;
@@ -285,7 +199,6 @@ export default function Home({ d }: { d: DashboardData }) {
   if (g.isLocked) {
     return (
       <>
-        <StoryBrief d={d} />
         <TeamPreview d={d} />
         <div style={{ marginTop: 16 }}>{contentBlock}</div>
       </>
@@ -384,7 +297,6 @@ export default function Home({ d }: { d: DashboardData }) {
 
   return (
     <>
-      <StoryBrief d={d} />
       <LastGameCard d={d} />
       {nextGameCard}
       {predictorCard}
