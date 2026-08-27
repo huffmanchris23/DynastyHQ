@@ -55,9 +55,9 @@ a { color: inherit; }
 
 .header-row { display: flex; align-items: flex-end; justify-content: space-between; padding-bottom: 8px; }
 .header-team { display: flex; align-items: center; gap: 10px; }
-.header-team h1 { font-family: var(--font-display); font-size: 26px; font-weight: 400; margin: 0; letter-spacing: 0.01em; line-height: 1; text-transform: uppercase; }
+.header-team h1 { font-family: var(--font-display); font-size: 26px; font-weight: 400; margin: 0; letter-spacing: -0.01em; line-height: 1; text-transform: uppercase; transform: skewX(-8deg); transform-origin: left bottom; display: inline-block; }
 .header-record { text-align: right; }
-.header-record .rec { font-family: var(--font-display); font-weight: 400; font-size: 26px; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.header-record .rec { font-family: var(--font-display); font-weight: 400; font-size: 26px; line-height: 1; color: #007A86; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; transform: skewX(-8deg); transform-origin: right bottom; display: inline-block; }
 .header-record .rk { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.6); margin-top: 2px; }
 
 .badge {
