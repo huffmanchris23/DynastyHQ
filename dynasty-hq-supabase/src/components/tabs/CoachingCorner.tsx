@@ -70,7 +70,19 @@ export function MyCoach({ d }: { d: DashboardData }) {
           </div>
           <div className="card">
             <div className="stat-label">Background</div>
-            <div style={{ fontSize: 13, lineHeight: 1.5, marginTop: 4 }}>{c.background || '—'}</div>
+            <div style={{ fontSize: 13, lineHeight: 1.5, marginTop: 4 }}>
+              {c.background ? (
+                String(c.background)
+                  .split('\n')
+                  .map((line: string, i: number) => (
+                    <div key={i} style={{ marginTop: i === 0 ? 0 : 3 }}>
+                      {line}
+                    </div>
+                  ))
+              ) : (
+                '—'
+              )}
+            </div>
           </div>
         </div>
       </div>
