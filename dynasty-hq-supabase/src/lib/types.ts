@@ -319,6 +319,8 @@ export interface DashboardData {
   opponent: TeamAsset | null;
   /** Full team reference list (138 teams) — used by logoFor()/abbrFor() to resolve a logo or abbreviation from any team name shown across tabs (Schedule, Rankings, Playoffs, etc.). */
   assets: TeamAsset[];
+  /** Raw ocr_helper rows (team-name crosswalk) — consumed once via format.ts's loadNameAliases(), not read directly by components. */
+  ocrHelper?: any[];
   record: { wins: number; losses: number; apRank: number | null; coachesRank: number | null };
   recap: Recap;
   preview: Preview | null;

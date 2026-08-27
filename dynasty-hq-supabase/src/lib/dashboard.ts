@@ -111,6 +111,12 @@ export async function getDashboardData(): Promise<DashboardData> {
   if (assetErr) throw new Error(`assets: ${assetErr.message}`);
   const assetIdx = buildAssetIndex(assetRows || []);
 
+  // Team-name crosswalk (schedule/polls/playoffs/stats/preview/betting
+  // naming variants → canonical team_name) — used to resolve logos even
+  // when a source table stores the on-screen abbreviated form.
+  const { data: ocrHelperRows, error: ocrHelperErr } = await sb.from('ocr_helper').select('*');
+  if (ocrHelperErr) throw new Error(`ocr_helper: ${ocrHelperErr.message}`);
+
   // ---- 2b. "My team" comes from the game_preview row flagged current_week —
   // this used to be duplicated on settings.current_team, now it's a single
   // source of truth that already gets updated whenever the week advances. ----
@@ -194,8 +200,17 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   const boxRow = boxScoreRes.data?.[0];
   const playerRow = playerStatsRecapRes.data?.[0];
+
+  // Fallback: derive last week's final score from team_schedule instead of
+  // requiring a separate last_week_box_score entry — the schedule row
+  // already gets filled in as part of the normal weekly OCR pass, so this
+  // covers the score/opponent/W-L even before (or without) a full box score.
+  const scheduleFallbackRow = !boxRow?.final_score
+    ? (scheduleRes.data || []).find((r: any) => String(r.week_name || '').toLowerCase() === `week_${recapWeek}`)
+    : null;
+
   const recap: Recap = {
-    myBox: boxRow
+    myBox: boxRow?.final_score
       ? {
           TEAM: boxRow.team,
           Q1_SCORE: boxRow.q1_score,
@@ -209,8 +224,14 @@ export async function getDashboardData(): Promise<DashboardData> {
           TURNOVERS: boxRow.turnovers,
           OPPONENT: boxRow.opponent,
         }
+      : scheduleFallbackRow
+      ? {
+          TEAM: myTeamName,
+          FINAL_SCORE: scheduleFallbackRow.team_score,
+          OPPONENT: scheduleFallbackRow.opponent,
+        }
       : {},
-    oppBox: boxRow
+    oppBox: boxRow?.final_score
       ? {
           Q1_SCORE: boxRow.opponent_q1_score,
           Q2_SCORE: boxRow.opponent_q2_score,
@@ -222,6 +243,8 @@ export async function getDashboardData(): Promise<DashboardData> {
           TOTAL_YARDS: boxRow.opponent_total_yards,
           TURNOVERS: boxRow.opponent_turnovers,
         }
+      : scheduleFallbackRow
+      ? { FINAL_SCORE: scheduleFallbackRow.opponent_score }
       : {},
     leaders: {
       team: playerRow?.team,
@@ -529,6 +552,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     team: myAsset,
     opponent: oppAsset,
     assets: allAssets,
+    ocrHelper: ocrHelperRows || [],
     record: { wins, losses, apRank: myApRank ? myApRank.rank : null, coachesRank: myCoachesRank ? myCoachesRank.rank : null },
     recap,
     preview,

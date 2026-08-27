@@ -49,12 +49,58 @@ const TEAM_NAME_ALIASES: Record<string, string> = {
   miami: 'miami (fl)',
 };
 
+/**
+ * Dynamic aliases built from ocr_helper — every on-screen name variant
+ * (schedule/polls/playoffs/stats/preview/betting + abbreviation) mapped to
+ * the canonical assets.team_name, so OCR entries that use whatever
+ * abbreviated form the game shows on a given screen (e.g. "K State",
+ * "Miss St") still resolve to the right logo/colors. Call loadNameAliases()
+ * once with the fetched ocr_helper rows before anything renders.
+ */
+let dynamicAliases: Record<string, string> = {};
+
+export function loadNameAliases(
+  rows:
+    | {
+        team_name?: any;
+        team_abbreviation?: any;
+        name_in_schedule?: any;
+        name_in_polls?: any;
+        name_in_playoffs?: any;
+        name_in_stats?: any;
+        name_in_preview?: any;
+        name_in_betting?: any;
+      }[]
+    | undefined
+): void {
+  if (!rows || !rows.length) return;
+  const next: Record<string, string> = {};
+  const variantKeys = [
+    'team_abbreviation',
+    'name_in_schedule',
+    'name_in_polls',
+    'name_in_playoffs',
+    'name_in_stats',
+    'name_in_preview',
+    'name_in_betting',
+  ] as const;
+  rows.forEach((r) => {
+    const canonical = String(r.team_name || '').trim().toLowerCase();
+    if (!canonical) return;
+    variantKeys.forEach((vk) => {
+      const variant = String(r[vk] || '').trim().toLowerCase();
+      if (variant) next[variant] = canonical;
+    });
+  });
+  dynamicAliases = next;
+}
+
 function findTeamAsset<T extends { TEAM_NAME?: any; TEAM_ABBREVIATION?: any }>(assets: T[] | undefined, nameOrAbbr: any): T | undefined {
   if (!assets || !nameOrAbbr) return undefined;
   const k = String(nameOrAbbr).trim().toLowerCase();
   const exact = assets.find((a) => String(a.TEAM_NAME || '').toLowerCase() === k || String(a.TEAM_ABBREVIATION || '').toLowerCase() === k);
   if (exact) return exact;
-  const aliasKey = TEAM_NAME_ALIASES[k];
+  const aliasKey = TEAM_NAME_ALIASES[k] || dynamicAliases[k];
   if (aliasKey) return assets.find((a) => String(a.TEAM_NAME || '').toLowerCase() === aliasKey);
   return undefined;
 }
