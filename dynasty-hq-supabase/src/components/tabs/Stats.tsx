@@ -39,6 +39,8 @@ export function TeamStats({ d }: { d: DashboardData }) {
             <div style={{ textAlign: 'left' }}>Team</div>
             <div>Pts/G</div>
             <div>Yds/G</div>
+            <div>Pass/G</div>
+            <div>Rush/G</div>
           </Thead>
           {national.length ? (
             national.map((r, i) => (
@@ -57,6 +59,12 @@ export function TeamStats({ d }: { d: DashboardData }) {
                 </div>
                 <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
                   {numOr(r.ypg)}
+                </div>
+                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                  {numOr(r.passYpg)}
+                </div>
+                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                  {numOr(r.rushYpg)}
                 </div>
               </Row>
             ))

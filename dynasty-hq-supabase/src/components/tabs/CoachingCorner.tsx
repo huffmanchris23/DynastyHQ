@@ -68,22 +68,6 @@ export function MyCoach({ d }: { d: DashboardData }) {
             <div className="stat-label">Coaching Philosophy</div>
             <div style={{ fontSize: 13, lineHeight: 1.5, marginTop: 4 }}>{c.coachingPhilosophy || '—'}</div>
           </div>
-          <div className="card" style={{ marginTop: 10 }}>
-            <div className="stat-label">Background</div>
-            <div style={{ fontSize: 13, lineHeight: 1.5, marginTop: 4 }}>
-              {c.background ? (
-                String(c.background)
-                  .split('\n')
-                  .map((line: string, i: number) => (
-                    <div key={i} style={{ marginTop: i === 0 ? 0 : 3, whiteSpace: 'nowrap' }}>
-                      {line}
-                    </div>
-                  ))
-              ) : (
-                '—'
-              )}
-            </div>
-          </div>
         </div>
       </div>
       <div style={{ marginTop: 16 }}>
@@ -110,6 +94,24 @@ export function MyCoach({ d }: { d: DashboardData }) {
           <div className="card">
             <div className="stat-label">National Titles</div>
             <div className="stat-value">{numOr(c.natTitles)}</div>
+          </div>
+        </div>
+      </div>
+      <div style={{ marginTop: 16 }}>
+        <div className="card">
+          <div className="stat-label">Background</div>
+          <div style={{ fontSize: 13, lineHeight: 1.5, marginTop: 4 }}>
+            {c.background ? (
+              String(c.background)
+                .split('\n')
+                .map((line: string, i: number) => (
+                  <div key={i} style={{ marginTop: i === 0 ? 0 : 3, whiteSpace: 'nowrap' }}>
+                    {line}
+                  </div>
+                ))
+            ) : (
+              '—'
+            )}
           </div>
         </div>
       </div>
