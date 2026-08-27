@@ -8,6 +8,7 @@ import LockedCard from '@/components/shared/LockedCard';
 import ComingSoon from '@/components/shared/ComingSoon';
 import HistoryPlaceholder from '@/components/shared/HistoryPlaceholder';
 import { type ColorState } from '@/components/shared/ColorPicker';
+import { loadNameAliases } from '@/lib/format';
 import Wilson from '@/components/Wilson';
 
 import Home from '@/components/tabs/Home';
@@ -97,6 +98,10 @@ function SubtabBar({ subtabs, active, lockedIds, comingSoonIds, onSelect }: { su
 /* Port of render()/selectTab()/selectSubtab()/selectStatType()/onSeasonChange(). */
 
 export default function DashboardApp({ data }: { data: DashboardData }) {
+  // Synchronous, not an effect — must run before any child tab renders and
+  // calls logoFor()/abbrFor(), which happens on this very first render.
+  loadNameAliases(data.ocrHelper);
+
   const [tab, setTab] = useState('home');
   const [subtab, setSubtab] = useState<string | null>(null);
   const [statType, setStatType] = useState('passing');
