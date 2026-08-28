@@ -87,6 +87,38 @@ function findAsset(idx: AssetIndex, nameOrAbbr: any): TeamAsset | null {
   return idx.byName.get(k) || idx.byAbbr.get(k) || null;
 }
 
+// Canonicalizes any on-screen team-name variant (e.g. team_schedule's "NMSU"
+// vs game_preview's "New Mexico State") down to one key via ocr_helper, so
+// cross-table matches (like the opponent's win/loss lookup below) work even
+// when two tables store different naming conventions for the same team.
+function buildNameCanon(rows: any[]): Map<string, string> {
+  const map = new Map<string, string>();
+  const variantKeys = [
+    'team_name',
+    'team_abbreviation',
+    'name_in_schedule',
+    'name_in_polls',
+    'name_in_playoffs',
+    'name_in_stats',
+    'name_in_preview',
+    'name_in_betting',
+  ];
+  rows.forEach((r) => {
+    const canonical = norm(r.team_name);
+    if (!canonical) return;
+    variantKeys.forEach((vk) => {
+      const variant = norm(r[vk]);
+      if (variant) map.set(variant, canonical);
+    });
+  });
+  return map;
+}
+
+function canon(map: Map<string, string>, name: any): string {
+  const k = norm(name);
+  return map.get(k) || k;
+}
+
 /* ============================== MAIN AGGREGATOR ============================== */
 
 export async function getDashboardData(): Promise<DashboardData> {
@@ -116,6 +148,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   // when a source table stores the on-screen abbreviated form.
   const { data: ocrHelperRows, error: ocrHelperErr } = await sb.from('ocr_helper').select('*');
   if (ocrHelperErr) throw new Error(`ocr_helper: ${ocrHelperErr.message}`);
+  const nameCanon = buildNameCanon(ocrHelperRows || []);
 
   // ---- 2b. "My team" comes from the game_preview row flagged current_week —
   // this used to be duplicated on settings.current_team, now it's a single
@@ -320,9 +353,11 @@ export async function getDashboardData(): Promise<DashboardData> {
   let preview: Preview | null = null;
   if (previewRow) {
     // Opponent's win/loss record isn't on game_preview — pull it from the
-    // matching, not-yet-played row in team_schedule instead.
+    // matching, not-yet-played row in team_schedule instead. Matched via
+    // nameCanon since the two tables store different on-screen naming
+    // conventions for the same team (e.g. "NMSU" vs "New Mexico State").
     const oppScheduleRow = scheduleRows.find(
-      (r: any) => norm(r.opponent) === norm(previewRow.opponent) && !r.w_or_l
+      (r: any) => canon(nameCanon, r.opponent) === canon(nameCanon, previewRow.opponent) && !r.w_or_l
     );
     preview = {
       myTeam: previewRow.team,
