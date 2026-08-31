@@ -56,6 +56,13 @@ export function ScheduleTeam({ d }: { d: DashboardData }) {
           <EmptyState>No schedule data yet.</EmptyState>
         )}
       </div>
+      {games.some((g) => /[*+^]/.test(g.week)) ? (
+        <div style={{ marginTop: 8, fontSize: 11, color: 'rgba(255,255,255,0.4)', display: 'flex', gap: 12 }}>
+          <span>* Conference Championship</span>
+          <span>+ Bowl Game</span>
+          <span>^ CFB Playoff Game</span>
+        </div>
+      ) : null}
     </>
   );
 }
