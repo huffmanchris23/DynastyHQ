@@ -216,6 +216,11 @@ export default function Home({ d }: { d: DashboardData }) {
     const myRecL = d.record ? d.record.losses : '';
     const oppRecW = preview.oppWins ?? '';
     const oppRecL = preview.oppLosses ?? '';
+    // Once CFP rankings are live, show "(N) Team Name" for ranked teams —
+    // falls back to the plain name if playoff rankings aren't live yet or
+    // a team is unranked.
+    const myTeamLabel = preview.myCfpRank ? `(${preview.myCfpRank}) ${preview.myTeam}` : preview.myTeam;
+    const oppTeamLabel = preview.oppCfpRank ? `(${preview.oppCfpRank}) ${preview.oppTeam}` : preview.oppTeam;
     // favorite/spread/moneyline come straight off game_preview now — no
     // mine-vs-opp comparison needed, the sheet already names the favorite.
     const favoriteAbbr = preview.favorite ? abbrFor(d.assets, preview.favorite) : null;
@@ -237,7 +242,7 @@ export default function Home({ d }: { d: DashboardData }) {
         <div className="team-line">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Badge text={oppAbbr} size={28} logoUrl={d.opponent && d.opponent.LOGO_URL} />
-            <span style={{ fontWeight: 600 }}>{preview.oppTeam}</span>
+            <span style={{ fontWeight: 600 }}>{oppTeamLabel}</span>
           </div>
           <span className="tabular" style={{ color: 'rgba(255,255,255,0.5)' }}>
             {oppRecW}-{oppRecL}
@@ -246,7 +251,7 @@ export default function Home({ d }: { d: DashboardData }) {
         <div className="team-line">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Badge text={myTeamAbbr} size={28} mine logoUrl={d.team && d.team.LOGO_URL} />
-            <span style={{ fontWeight: 600 }}>{preview.myTeam}</span>
+            <span style={{ fontWeight: 600 }}>{myTeamLabel}</span>
           </div>
           <span className="tabular" style={{ color: 'rgba(255,255,255,0.5)' }}>
             {myRecW}-{myRecL}
@@ -288,8 +293,8 @@ export default function Home({ d }: { d: DashboardData }) {
           <div style={{ width: `${Math.max(wpMine - 1, 0)}%`, background: myColor }} />
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 10, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}>
-          <span>{preview.oppTeam}</span>
-          <span>{preview.myTeam}</span>
+          <span>{oppTeamLabel}</span>
+          <span>{myTeamLabel}</span>
         </div>
       </div>
     );
