@@ -131,7 +131,7 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
   const team = data.team || ({} as NonNullable<DashboardData['team']>);
   const rec = data.record || ({} as DashboardData['record']);
   const recordStr = `${rec.wins || 0}-${rec.losses || 0}`;
-  const apRank = rec.apRank ? `#${rec.apRank} AP` : 'NR';
+  const apRank = rec.cfpRank ? `#${rec.cfpRank} CFP` : rec.apRank ? `#${rec.apRank} AP` : 'NR';
   const currentTabDef = TABS.find((t) => t.id === tab) as TabDef | undefined;
   const g = gateInfo(data);
 
