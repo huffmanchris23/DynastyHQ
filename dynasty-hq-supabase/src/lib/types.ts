@@ -91,6 +91,10 @@ export interface PreseasonPreview {
 
 export interface ScheduleGame {
   week: string;
+  /** Numeric sort key — regular-season weeks use their own number; postseason
+   * rows (Conf Championship, bowl/playoff rounds) use 15-19 so they sort
+   * after the regular season while `week` holds a short display label. */
+  sortWeek: number;
   homeAway: any;
   opponent: any;
   oppWins: any;

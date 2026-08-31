@@ -325,14 +325,14 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   /* -------- Schedule (season-long, not week-scoped) -------- */
 
-  const POSTSEASON_LABELS = [
-    'conference_championship',
-    'bowl_game',
-    'playoff_round_1',
-    'playoff_quarterfinals',
-    'playoff_semifinals',
-    'national_championship',
-  ];
+  const POSTSEASON_LABELS: Record<string, { short: string; sortWeek: number }> = {
+    conference_championship: { short: 'CCG', sortWeek: 15 },
+    bowl_game: { short: 'Bowl', sortWeek: 16 },
+    playoff_round_1: { short: 'PO1', sortWeek: 16 },
+    playoff_quarterfinals: { short: 'QF', sortWeek: 17 },
+    playoff_semifinals: { short: 'SF', sortWeek: 18 },
+    national_championship: { short: 'NCG', sortWeek: 19 },
+  };
 
   const scheduleRows = scheduleRes.data || [];
   const games: Schedule['games'] = [];
@@ -343,6 +343,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     if (weekMatch) {
       games.push({
         week: weekMatch[1],
+        sortWeek: safeNum(weekMatch[1]),
         homeAway: row.home_or_away || null,
         opponent: row.opponent || null,
         oppWins: row.opponent_wins,
@@ -354,7 +355,23 @@ export async function getDashboardData(): Promise<DashboardData> {
       });
       return;
     }
-    if (POSTSEASON_LABELS.includes(label.toLowerCase()) && row.opponent) {
+    const postseasonMeta = POSTSEASON_LABELS[label.toLowerCase()];
+    if (postseasonMeta && row.opponent) {
+      // Postseason rows render in the same continuous schedule table as the
+      // regular season now, not a separate section — same full shape, just
+      // a short label instead of a week number.
+      games.push({
+        week: postseasonMeta.short,
+        sortWeek: postseasonMeta.sortWeek,
+        homeAway: row.home_or_away || null,
+        opponent: row.opponent || null,
+        oppWins: row.opponent_wins,
+        oppLosses: row.opponent_losses,
+        result: row.w_or_l || null,
+        teamScore: row.team_score,
+        oppScore: row.opponent_score,
+        bye: false,
+      });
       postseason.push({
         label: toTitleCase(label.replace(/_/g, ' ')),
         opponent: row.opponent || null,
@@ -362,7 +379,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       });
     }
   });
-  games.sort((a, b) => safeNum(a.week) - safeNum(b.week));
+  games.sort((a, b) => a.sortWeek - b.sortWeek);
 
   const top25: Top25Game[] = (top25Res.data || []).map((row: any) => ({
     away: row.away_team,
