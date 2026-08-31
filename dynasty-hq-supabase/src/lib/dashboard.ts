@@ -325,13 +325,16 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   /* -------- Schedule (season-long, not week-scoped) -------- */
 
-  const POSTSEASON_LABELS: Record<string, { short: string; sortWeek: number }> = {
-    conference_championship: { short: 'CCG', sortWeek: 15 },
-    bowl_game: { short: 'Bowl', sortWeek: 16 },
-    playoff_round_1: { short: 'PO1', sortWeek: 16 },
-    playoff_quarterfinals: { short: 'QF', sortWeek: 17 },
-    playoff_semifinals: { short: 'SF', sortWeek: 18 },
-    national_championship: { short: 'NCG', sortWeek: 19 },
+  // Postseason rows display as their sequential week number plus a suffix
+  // symbol marking the game type (legend rendered in Schedule.tsx):
+  //   * = Conference Championship, + = Bowl Game, ^ = CFB Playoff Game
+  const POSTSEASON_LABELS: Record<string, { suffix: string; sortWeek: number }> = {
+    conference_championship: { suffix: '*', sortWeek: 15 },
+    bowl_game: { suffix: '+', sortWeek: 16 },
+    playoff_round_1: { suffix: '^', sortWeek: 16 },
+    playoff_quarterfinals: { suffix: '^', sortWeek: 17 },
+    playoff_semifinals: { suffix: '^', sortWeek: 18 },
+    national_championship: { suffix: '^', sortWeek: 19 },
   };
 
   const scheduleRows = scheduleRes.data || [];
@@ -358,10 +361,10 @@ export async function getDashboardData(): Promise<DashboardData> {
     const postseasonMeta = POSTSEASON_LABELS[label.toLowerCase()];
     if (postseasonMeta && row.opponent) {
       // Postseason rows render in the same continuous schedule table as the
-      // regular season now, not a separate section — same full shape, just
-      // a short label instead of a week number.
+      // regular season now, not a separate section — week number + suffix
+      // symbol instead of a text label.
       games.push({
-        week: postseasonMeta.short,
+        week: `${postseasonMeta.sortWeek}${postseasonMeta.suffix}`,
         sortWeek: postseasonMeta.sortWeek,
         homeAway: row.home_or_away || null,
         opponent: row.opponent || null,
