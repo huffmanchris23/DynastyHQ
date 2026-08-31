@@ -39,6 +39,27 @@ function safeNum(v: any, fallback = 0): number {
   return isNaN(n) ? fallback : n;
 }
 
+// game_preview.week uses plain numbers for the regular season ("0".."14")
+// but text labels for postseason stages ("Conference Championships",
+// "Bowl Week 1", etc.) — every other week-scoped table (ap_poll, team_stats,
+// top_25_schedule, playoff_rankings, coaching_hotseats, heisman_trophy,
+// passing/rushing/receiving, conference_standings) still expects a plain
+// integer in its own `week` column. This is the single mapping between the
+// two, so postseason weeks resolve to the same number everywhere.
+const POSTSEASON_WEEK_MAP: Record<string, number> = {
+  'conference championships': 15,
+  'bowl week 1': 16,
+  'bowl week 2': 17,
+  'bowl week 3': 18,
+  'national championship': 19,
+};
+
+function resolveStatsWeek(label: any): number {
+  const raw = String(label ?? '').trim();
+  const mapped = POSTSEASON_WEEK_MAP[raw.toLowerCase()];
+  return mapped !== undefined ? mapped : safeNum(raw, 0);
+}
+
 function norm(s: any): string {
   return String(s || '').trim().toLowerCase();
 }
@@ -159,12 +180,21 @@ export async function getDashboardData(): Promise<DashboardData> {
   const myAsset = findAsset(assetIdx, myTeamName);
   const allAssets: TeamAsset[] = (assetRows || []).map(toTeamAsset);
 
-  // ---- 3. Figure out "current week" from live data, not the settings label.
-  // The settings row can lag behind (e.g. still says "Preseason" after
-  // Week 1 polls are already in) — trust the data instead.
-  const { data: apMaxRows } = await t('ap_poll').order('week', { ascending: false }).limit(1);
-  const { data: previewMaxRows } = apMaxRows?.length ? { data: null } : await t('game_preview').order('week', { ascending: false }).limit(1);
-  const statsWeek: number = safeNum((apMaxRows && apMaxRows[0]?.week) ?? (previewMaxRows && previewMaxRows[0]?.week) ?? 0, 0);
+  // ---- 3. Figure out "current week" from the game_preview row flagged
+  // current_week=true (same anchor row used for myTeamName above) — that
+  // flag is the single source of truth for what week the dynasty is on,
+  // regular season or postseason. Only falls back to the old
+  // MAX(ap_poll.week)/MAX(game_preview.week) heuristic if nothing is
+  // flagged yet, so a fresh dynasty with no current_week set doesn't break.
+  const currentWeekLabel = gpAnchorRows && gpAnchorRows[0] ? gpAnchorRows[0].week : null;
+  let statsWeek: number;
+  if (currentWeekLabel !== null && currentWeekLabel !== undefined) {
+    statsWeek = resolveStatsWeek(currentWeekLabel);
+  } else {
+    const { data: apMaxRows } = await t('ap_poll').order('week', { ascending: false }).limit(1);
+    const { data: previewMaxRows } = apMaxRows?.length ? { data: null } : await t('game_preview').order('week', { ascending: false }).limit(1);
+    statsWeek = safeNum((apMaxRows && apMaxRows[0]?.week) ?? (previewMaxRows && previewMaxRows[0]?.week) ?? 0, 0);
+  }
   const recapWeek = Math.max(statsWeek - 1, 0);
 
   // ---- 4. Fetch everything in parallel ----
