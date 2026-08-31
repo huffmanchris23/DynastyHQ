@@ -8,7 +8,6 @@ import { isMine as isMineFn } from '@/lib/format';
 
 export function ScheduleTeam({ d }: { d: DashboardData }) {
   const games = (d.schedule && d.schedule.games) || [];
-  const postseason = (d.schedule && d.schedule.postseason) || [];
   const cols = '28px 1fr 56px 90px';
 
   return (
@@ -40,7 +39,7 @@ export function ScheduleTeam({ d }: { d: DashboardData }) {
                   {g.week}
                 </div>
                 <div className="truncate" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>{g.homeAway === 'HOME' ? 'vs' : '@'}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>{String(g.homeAway).toUpperCase() === 'HOME' ? 'vs' : '@'}</span>
                   <Badge text={g.opponent} size={18} logoUrl={logoFor(d.assets, g.opponent)} />
                   <span className="truncate" style={{ fontWeight: 500 }}>{g.opponent}</span>
                 </div>
@@ -57,23 +56,6 @@ export function ScheduleTeam({ d }: { d: DashboardData }) {
           <EmptyState>No schedule data yet.</EmptyState>
         )}
       </div>
-      {postseason.length ? (
-        <div style={{ marginTop: 16 }}>
-          <SectionLabel>Postseason</SectionLabel>
-          <div className="table primary">
-            {postseason.map((g, i) => (
-              <Row key={i} cols="1fr 90px" first={i === 0}>
-                <div className="truncate" style={{ color: 'rgba(255,255,255,0.5)', fontStyle: 'italic' }}>
-                  {g.label}
-                </div>
-                <div className="right tabular" style={{ fontSize: 12 }}>
-                  {g.result || '—'}
-                </div>
-              </Row>
-            ))}
-          </div>
-        </div>
-      ) : null}
     </>
   );
 }
