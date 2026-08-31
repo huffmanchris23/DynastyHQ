@@ -596,11 +596,16 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   /* -------- Record + opponent asset -------- */
 
+  // Record is driven directly by every team_schedule row with a decided
+  // result — not just the regular-season `games` array — so conference
+  // championship / bowl / playoff wins and losses count toward it too.
+  // (Previously only `games` was counted, silently dropping postseason
+  // results from the displayed record.)
   let wins = 0,
     losses = 0;
-  games.forEach((g) => {
-    if (g.result === 'W') wins++;
-    else if (g.result === 'L') losses++;
+  scheduleRows.forEach((row: any) => {
+    if (row.w_or_l === 'W') wins++;
+    else if (row.w_or_l === 'L') losses++;
   });
   const myApRank = rank.ap.find((r) => norm(r.team) === norm(myTeamName));
   const myCoachesRank = rank.coaches.find((r) => norm(r.team) === norm(myTeamName));
