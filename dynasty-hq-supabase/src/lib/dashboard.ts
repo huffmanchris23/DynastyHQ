@@ -455,6 +455,19 @@ export async function getDashboardData(): Promise<DashboardData> {
   };
   const playoffBracketUrl: string | null = bracketRes.data?.[0]?.cfb_playoff_bracket_url || null;
 
+  // Once CFP rankings are live, they should drive the rank shown next to a
+  // team's name everywhere (home header, game preview) instead of the AP
+  // poll — matched via nameCanon since playoff_rankings may not spell a
+  // team's name identically to game_preview/team_schedule.
+  const findCfpRank = (teamName: any): number | null => {
+    const hit = playoff.seeds.find((s) => canon(nameCanon, s.team) === canon(nameCanon, teamName));
+    return hit ? hit.rank : null;
+  };
+  if (preview) {
+    preview.myCfpRank = findCfpRank(preview.myTeam);
+    preview.oppCfpRank = findCfpRank(preview.oppTeam);
+  }
+
   /* -------- Conference standings -------- */
 
   const conf: ConfRow[] = (confRes.data || []).map((r: any) => ({
@@ -629,6 +642,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   });
   const myApRank = rank.ap.find((r) => norm(r.team) === norm(myTeamName));
   const myCoachesRank = rank.coaches.find((r) => norm(r.team) === norm(myTeamName));
+  const myCfpRank = findCfpRank(myTeamName);
   const oppAsset = preview?.oppTeam ? findAsset(assetIdx, preview.oppTeam) : null;
 
   const result: DashboardData = {
@@ -643,7 +657,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     opponent: oppAsset,
     assets: allAssets,
     ocrHelper: ocrHelperRows || [],
-    record: { wins, losses, apRank: myApRank ? myApRank.rank : null, coachesRank: myCoachesRank ? myCoachesRank.rank : null },
+    record: { wins, losses, apRank: myApRank ? myApRank.rank : null, coachesRank: myCoachesRank ? myCoachesRank.rank : null, cfpRank: myCfpRank },
     recap,
     preview,
     preseasonPreview: { overall: null, offense: null, defense: null, aaOffense: null, aaDefense: null, acOffense: null, acDefense: null },

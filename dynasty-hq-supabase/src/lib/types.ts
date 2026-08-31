@@ -77,6 +77,9 @@ export interface Preview {
   /** Looked up from team_schedule's row for this opponent — game_preview itself has no win/loss columns. */
   oppWins: any;
   oppLosses: any;
+  /** CFP ranking (playoff_rankings), looked up by team name once playoff rankings are live — null before/if unranked. */
+  myCfpRank: number | null;
+  oppCfpRank: number | null;
 }
 
 export interface PreseasonPreview {
@@ -325,7 +328,7 @@ export interface DashboardData {
   assets: TeamAsset[];
   /** Raw ocr_helper rows (team-name crosswalk) — consumed once via format.ts's loadNameAliases(), not read directly by components. */
   ocrHelper?: any[];
-  record: { wins: number; losses: number; apRank: number | null; coachesRank: number | null };
+  record: { wins: number; losses: number; apRank: number | null; coachesRank: number | null; cfpRank: number | null };
   recap: Recap;
   preview: Preview | null;
   preseasonPreview: PreseasonPreview;
