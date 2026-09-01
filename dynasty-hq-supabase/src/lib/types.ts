@@ -77,9 +77,9 @@ export interface Preview {
   /** Looked up from team_schedule's row for this opponent — game_preview itself has no win/loss columns. */
   oppWins: any;
   oppLosses: any;
-  /** CFP ranking (playoff_rankings), looked up by team name once playoff rankings are live — null before/if unranked. */
-  myCfpRank: number | null;
-  oppCfpRank: number | null;
+  /** CFP ranking (playoff_rankings), looked up by team name once playoff rankings are live — null before/if unranked. Optional: only attached after playoff.seeds is built, later than the initial preview object literal. */
+  myCfpRank?: number | null;
+  oppCfpRank?: number | null;
 }
 
 export interface PreseasonPreview {
