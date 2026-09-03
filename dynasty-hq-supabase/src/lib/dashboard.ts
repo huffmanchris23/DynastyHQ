@@ -60,6 +60,27 @@ function resolveStatsWeek(label: any): number {
   return mapped !== undefined ? mapped : safeNum(raw, 0);
 }
 
+// Postseason rows display as their sequential week number plus a suffix
+// symbol marking the game type (legend rendered in Schedule.tsx):
+//   * = Conference Championship, + = Bowl Game, ^ = CFB Playoff Game
+// Hoisted to module level (not just inside fetchDashboardData) so both the
+// schedule-building code AND the recap fallback below can reverse-map a
+// numeric week back to the team_schedule.week_name label that produced it.
+const POSTSEASON_LABELS: Record<string, { suffix: string; sortWeek: number }> = {
+  conference_championship: { suffix: '*', sortWeek: 15 },
+  bowl_game: { suffix: '+', sortWeek: 16 },
+  playoff_round_1: { suffix: '^', sortWeek: 16 },
+  playoff_quarterfinals: { suffix: '^', sortWeek: 17 },
+  playoff_semifinals: { suffix: '^', sortWeek: 18 },
+  national_championship: { suffix: '^', sortWeek: 19 },
+};
+
+function postseasonLabelsFor(sortWeek: number): string[] {
+  return Object.entries(POSTSEASON_LABELS)
+    .filter(([, meta]) => meta.sortWeek === sortWeek)
+    .map(([label]) => label);
+}
+
 function norm(s: any): string {
   return String(s || '').trim().toLowerCase();
 }
@@ -268,8 +289,18 @@ export async function getDashboardData(): Promise<DashboardData> {
   // requiring a separate last_week_box_score entry — the schedule row
   // already gets filled in as part of the normal weekly OCR pass, so this
   // covers the score/opponent/W-L even before (or without) a full box score.
+  // `recapWeek` is always a plain number, but team_schedule only uses
+  // `week_N` naming for the regular season — postseason rows use their own
+  // exact labels (conference_championship, playoff_round_1, etc). Without
+  // checking both, this fallback silently finds nothing for any postseason
+  // week, which is why the "last game" card went blank the moment the
+  // regular season ended.
+  const recapPostseasonLabels = postseasonLabelsFor(recapWeek);
   const scheduleFallbackRow = !boxRow?.final_score
-    ? (scheduleRes.data || []).find((r: any) => String(r.week_name || '').toLowerCase() === `week_${recapWeek}`)
+    ? (scheduleRes.data || []).find((r: any) => {
+        const wn = String(r.week_name || '').toLowerCase();
+        return wn === `week_${recapWeek}` || recapPostseasonLabels.includes(wn);
+      })
     : null;
 
   const recap: Recap = {
@@ -324,18 +355,6 @@ export async function getDashboardData(): Promise<DashboardData> {
   };
 
   /* -------- Schedule (season-long, not week-scoped) -------- */
-
-  // Postseason rows display as their sequential week number plus a suffix
-  // symbol marking the game type (legend rendered in Schedule.tsx):
-  //   * = Conference Championship, + = Bowl Game, ^ = CFB Playoff Game
-  const POSTSEASON_LABELS: Record<string, { suffix: string; sortWeek: number }> = {
-    conference_championship: { suffix: '*', sortWeek: 15 },
-    bowl_game: { suffix: '+', sortWeek: 16 },
-    playoff_round_1: { suffix: '^', sortWeek: 16 },
-    playoff_quarterfinals: { suffix: '^', sortWeek: 17 },
-    playoff_semifinals: { suffix: '^', sortWeek: 18 },
-    national_championship: { suffix: '^', sortWeek: 19 },
-  };
 
   const scheduleRows = scheduleRes.data || [];
   const games: Schedule['games'] = [];
