@@ -21,7 +21,10 @@ import { DepthCharts, Recruiting } from '@/components/tabs/Roster';
 import Awards from '@/components/tabs/Awards';
 import { MyCoach, HotSeats } from '@/components/tabs/CoachingCorner';
 
-/* ============================== TAB BODY ROUTER ============================== */
+// Season/History switcher — built but hidden for now (Cincinnati transition
+// just happened; no history to show yet). Flip back to true to restore the
+// selector and the "History" placeholder view; nothing else needs to change.
+const SHOW_SEASON_SWITCHER = false;
 /* Direct port of renderTabBody(). */
 
 function TabBody({ data, tab, subtab, statType, onStatTypeChange }: {
@@ -175,7 +178,7 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
         </div>
 
         <main>
-          {season === 'history' ? (
+          {SHOW_SEASON_SWITCHER && season === 'history' ? (
             <HistoryPlaceholder />
           ) : (
             <>
@@ -203,13 +206,15 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
           )}
         </main>
 
-        <div className="season-bar">
-          <span className="lbl">Viewing</span>
-          <select className="season-select" value={season} onChange={(e) => setSeason(e.target.value as 's1' | 'history')}>
-            <option value="s1">Season 1 — Current</option>
-            <option value="history">History</option>
-          </select>
-        </div>
+        {SHOW_SEASON_SWITCHER ? (
+          <div className="season-bar">
+            <span className="lbl">Viewing</span>
+            <select className="season-select" value={season} onChange={(e) => setSeason(e.target.value as 's1' | 'history')}>
+              <option value="s1">Season 1 — Current</option>
+              <option value="history">History</option>
+            </select>
+          </div>
+        ) : null}
       </div>
 
       <Wilson />
