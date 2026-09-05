@@ -5,7 +5,7 @@ export default function ComingSoon({ label }: { label?: string }) {
         Coming Soon
       </div>
       {label ? (
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 6 }}>{label}</div>
+        <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.45)', marginTop: 6 }}>{label}</div>
       ) : null}
     </div>
   );

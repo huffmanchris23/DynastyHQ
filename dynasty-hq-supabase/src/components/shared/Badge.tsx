@@ -13,7 +13,7 @@ export default function Badge({
   /** Optional team logo URL (assets.logo_url). Falls back to text initials if missing or if the image fails to load. */
   logoUrl?: string | null;
 }) {
-  const color = mine ? 'var(--accent)' : 'rgba(255,255,255,0.75)';
+  const color = mine ? 'var(--accent)' : 'rgba(0,0,0,0.65)';
   const [broken, setBroken] = useState(false);
 
   if (logoUrl && !broken) {

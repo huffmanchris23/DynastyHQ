@@ -17,7 +17,7 @@ export default function HistoryPlaceholder() {
         <span style={{ fontWeight: 700, color: 'var(--accent)' }}>H</span>
       </div>
       <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>History Page — Coming Soon</div>
-      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', maxWidth: 280, margin: '0 auto' }}>
+      <div style={{ fontSize: 13, color: 'rgba(0,0,0,0.5)', maxWidth: 280, margin: '0 auto' }}>
         Once Season 2 kicks off, this is where you&apos;ll browse past seasons&apos; records, awards, rosters, and rankings.
       </div>
     </div>
