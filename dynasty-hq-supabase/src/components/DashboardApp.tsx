@@ -25,6 +25,8 @@ import { MyCoach, HotSeats } from '@/components/tabs/CoachingCorner';
 // just happened; no history to show yet). Flip back to true to restore the
 // selector and the "History" placeholder view; nothing else needs to change.
 const SHOW_SEASON_SWITCHER = false;
+// Wilson (AI chat assistant) — hidden for now while sharing the app around.
+const SHOW_WILSON = false;
 /* Direct port of renderTabBody(). */
 
 function TabBody({ data, tab, subtab, statType, onStatTypeChange }: {
@@ -220,7 +222,9 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
         ) : null}
       </div>
 
-      <Wilson />
+      {/* Wilson (AI chat assistant) hidden for now — SHOW_WILSON flips it
+          back on, nothing else needs to change. */}
+      {SHOW_WILSON ? <Wilson /> : null}
     </>
   );
 }
