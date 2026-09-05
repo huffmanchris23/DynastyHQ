@@ -331,6 +331,8 @@ export interface DashboardData {
   record: { wins: number; losses: number; apRank: number | null; coachesRank: number | null; cfpRank: number | null };
   recap: Recap;
   preview: Preview | null;
+  /** True once there's no real upcoming game to preview — team eliminated, bye, or season fully over. Home tab shows an "Offseason" indicator instead of the next-game card. */
+  isOffseason: boolean;
   preseasonPreview: PreseasonPreview;
   schedule: Schedule;
   rank: Rank;

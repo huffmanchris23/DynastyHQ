@@ -75,10 +75,15 @@ const POSTSEASON_LABELS: Record<string, { suffix: string; sortWeek: number }> = 
   national_championship: { suffix: '^', sortWeek: 19 },
 };
 
-function postseasonLabelsFor(sortWeek: number): string[] {
-  return Object.entries(POSTSEASON_LABELS)
-    .filter(([, meta]) => meta.sortWeek === sortWeek)
-    .map(([label]) => label);
+// Reverse of the week_name -> sortWeek mapping above, for a single
+// team_schedule row: 'week_7' -> 7, 'playoff_quarterfinals' -> 17, etc.
+// Returns null for byes/anything unrecognized.
+function sortWeekForScheduleRow(row: any): number | null {
+  const label = String(row?.week_name || '').toLowerCase();
+  const weekMatch = label.match(/^week_(\d+)$/);
+  if (weekMatch) return safeNum(weekMatch[1]);
+  const meta = POSTSEASON_LABELS[label];
+  return meta ? meta.sortWeek : null;
 }
 
 function norm(s: any): string {
@@ -289,19 +294,21 @@ export async function getDashboardData(): Promise<DashboardData> {
   // requiring a separate last_week_box_score entry — the schedule row
   // already gets filled in as part of the normal weekly OCR pass, so this
   // covers the score/opponent/W-L even before (or without) a full box score.
-  // `recapWeek` is always a plain number, but team_schedule only uses
-  // `week_N` naming for the regular season — postseason rows use their own
-  // exact labels (conference_championship, playoff_round_1, etc). Without
-  // checking both, this fallback silently finds nothing for any postseason
-  // week, which is why the "last game" card went blank the moment the
-  // regular season ended.
-  const recapPostseasonLabels = postseasonLabelsFor(recapWeek);
-  const scheduleFallbackRow = !boxRow?.final_score
-    ? (scheduleRes.data || []).find((r: any) => {
-        const wn = String(r.week_name || '').toLowerCase();
-        return wn === `week_${recapWeek}` || recapPostseasonLabels.includes(wn);
-      })
-    : null;
+  // Finds the most recently *decided* schedule row directly, rather than
+  // assuming it's always exactly `statsWeek - 1` — that assumption breaks
+  // the moment a team is eliminated (current_week may legitimately still
+  // point at the just-played elimination game itself, or nothing further
+  // ever gets a result), so searching for "the actual last result" is what
+  // stays correct through end-of-season/offseason instead of needing the
+  // current_week flag to be advanced in perfect lockstep.
+  let lastDecidedRow: any = null;
+  (scheduleRes.data || []).forEach((r: any) => {
+    if (!r.w_or_l) return;
+    const sw = sortWeekForScheduleRow(r);
+    if (sw === null) return;
+    if (!lastDecidedRow || sw > (sortWeekForScheduleRow(lastDecidedRow) as number)) lastDecidedRow = r;
+  });
+  const scheduleFallbackRow = !boxRow?.final_score ? lastDecidedRow : null;
 
   const recap: Recap = {
     myBox: boxRow?.final_score
@@ -420,7 +427,17 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   const previewRow = previewRes.data?.[0];
   let preview: Preview | null = null;
-  if (previewRow) {
+  // True once there's no real upcoming game to preview — either the
+  // current_week row is an empty future-round placeholder (team eliminated
+  // before reaching it, e.g. Semifinal row with no opponent ever filled
+  // in), or its opponent already has a decided result on team_schedule
+  // (the flag is still sitting on the just-played elimination game itself).
+  // Either way this means offseason/no-next-game, not a broken preview.
+  const isOffseason =
+    !previewRow ||
+    !previewRow.opponent ||
+    scheduleRows.some((r: any) => canon(nameCanon, r.opponent) === canon(nameCanon, previewRow.opponent) && !!r.w_or_l);
+  if (previewRow && !isOffseason) {
     // Opponent's win/loss record isn't on game_preview — pull it from the
     // matching, not-yet-played row in team_schedule instead. Matched via
     // nameCanon since the two tables store different on-screen naming
@@ -679,6 +696,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     record: { wins, losses, apRank: myApRank ? myApRank.rank : null, coachesRank: myCoachesRank ? myCoachesRank.rank : null, cfpRank: myCfpRank },
     recap,
     preview,
+    isOffseason,
     preseasonPreview: { overall: null, offense: null, defense: null, aaOffense: null, aaDefense: null, acOffense: null, acDefense: null },
     schedule,
     rank,
