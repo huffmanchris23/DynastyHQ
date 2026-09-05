@@ -51,20 +51,22 @@ a { color: inherit; }
   content: ''; display: block; height: 3px;
   background: linear-gradient(90deg, var(--dhq-navy) 0 33%, var(--dhq-tan) 33% 66%, var(--dhq-red) 66% 100%);
 }
-.header-inner { padding: 20px 16px 12px; }
+.header-inner { padding: 20px 16px 12px; background: #FFFFFF; }
 .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.header-tag { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.5); }
+.header-tag { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(0,0,0,0.45); }
 .palette-btn {
-  background: none; border: none; color: rgba(255,255,255,0.7); cursor: pointer; padding: 4px; border-radius: 2px;
+  background: none; border: none; color: rgba(0,0,0,0.55); cursor: pointer; padding: 4px; border-radius: 2px;
 }
-.palette-btn:hover { background: rgba(0,0,0,0.2); color: var(--text); }
+.palette-btn:hover { background: rgba(0,0,0,0.08); color: var(--accent); }
 
 .header-row { display: flex; align-items: flex-end; justify-content: space-between; padding-bottom: 8px; }
 .header-team { display: flex; align-items: center; gap: 10px; }
+.header-team-text { display: flex; flex-direction: column; }
 .header-team h1 { font-family: var(--font-team); color: var(--accent); font-size: 28px; font-weight: 400; margin: 0; letter-spacing: -0.01em; line-height: 1; text-transform: uppercase; transform: skewX(-8deg); transform-origin: left bottom; display: inline-block; -webkit-text-stroke: 1px currentColor; text-shadow: 0.5px 0 currentColor, -0.5px 0 currentColor, 0 0.5px currentColor, 0 -0.5px currentColor; }
+.header-team .philosophy { font-family: var(--font-team); font-style: italic; font-size: 11px; color: rgba(0,0,0,0.55); margin-top: 3px; letter-spacing: 0.01em; }
 .header-record { text-align: right; }
-.header-record .rec { font-family: var(--font-display); font-weight: 400; font-size: 28px; line-height: 1; color: #FFFFFF; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; transform: skewX(-8deg); transform-origin: right bottom; display: inline-block; -webkit-text-stroke: 1px currentColor; text-shadow: 0.5px 0 currentColor, -0.5px 0 currentColor, 0 0.5px currentColor, 0 -0.5px currentColor; }
-.header-record .rk { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.85); margin-top: 2px; }
+.header-record .rec { font-family: var(--font-team); font-weight: 400; font-size: 28px; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; transform: skewX(-8deg); transform-origin: right bottom; display: inline-block; -webkit-text-stroke: 1px currentColor; text-shadow: 0.5px 0 currentColor, -0.5px 0 currentColor, 0 0.5px currentColor, 0 -0.5px currentColor; }
+.header-record .rk { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(0,0,0,0.5); margin-top: 2px; }
 
 .badge {
   flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; font-weight: 700;
