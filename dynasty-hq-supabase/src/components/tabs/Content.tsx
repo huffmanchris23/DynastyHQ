@@ -33,10 +33,10 @@ export default function Content({ d, subtab }: { d: DashboardData; subtab: strin
             <div className="content-item-head">
               <span style={{ fontSize: 16 }}>{ICONS[key] || '📄'}</span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 10, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}>{key}</div>
+                <div style={{ fontSize: 10, textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)' }}>{key}</div>
                 <div style={{ fontSize: 14, fontWeight: 600 }}>{c.headline}</div>
               </div>
-              <span style={{ color: 'rgba(255,255,255,0.4)' }}>{open ? '▲' : '▼'}</span>
+              <span style={{ color: 'rgba(0,0,0,0.4)' }}>{open ? '▲' : '▼'}</span>
             </div>
             {open ? (
               <div className="content-body">

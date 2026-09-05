@@ -6,10 +6,14 @@ import SectionLabel from '@/components/shared/SectionLabel';
 import EmptyState from '@/components/shared/EmptyState';
 import { initials } from '@/lib/format';
 
+// Coaching background bio — hidden for now (bulky, and wasn't rendering
+// meaningfully before anyway). Flip to true to bring it back.
+const SHOW_COACHING_BACKGROUND = false;
+
 function BioRow({ label, value }: { label: string; value: any }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-      <span style={{ fontSize: 11, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}>{label}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
+      <span style={{ fontSize: 11, textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)' }}>{label}</span>
       <span style={{ fontSize: 13, fontWeight: 500 }}>{value || '—'}</span>
     </div>
   );
@@ -97,24 +101,26 @@ export function MyCoach({ d }: { d: DashboardData }) {
           </div>
         </div>
       </div>
-      <div style={{ marginTop: 16 }}>
-        <div className="card">
-          <div className="stat-label">Background</div>
-          <div style={{ fontSize: 13, lineHeight: 1.5, marginTop: 4 }}>
-            {c.background ? (
-              String(c.background)
-                .split('\n')
-                .map((line: string, i: number) => (
-                  <div key={i} style={{ marginTop: i === 0 ? 0 : 3, whiteSpace: 'nowrap' }}>
-                    {line}
-                  </div>
-                ))
-            ) : (
-              '—'
-            )}
-          </div>
+      {SHOW_COACHING_BACKGROUND ? (
+        <div style={{ marginTop: 16 }}>
+          <div className="card">
+            <div className="stat-label">Background</div>
+            <div style={{ fontSize: 13, lineHeight: 1.5, marginTop: 4 }}>
+              {c.background ? (
+                String(c.background)
+                  .split('\n')
+                  .map((line: string, i: number) => (
+                    <div key={i} style={{ marginTop: i === 0 ? 0 : 3, whiteSpace: 'nowrap' }}>
+                      {line}
+                    </div>
+                  ))
+              ) : (
+                '—'
+              )}
+            </div>
         </div>
       </div>
+      ) : null}
       <div style={{ marginTop: 16 }}>
         <SectionLabel>Career History</SectionLabel>
         <div className="table primary">
@@ -127,17 +133,17 @@ export function MyCoach({ d }: { d: DashboardData }) {
           {history.length ? (
             history.map((h, i) => (
               <Row key={i} cols={cols} first={i === 0} mine={isMineFn(myTeamName, h.team)}>
-                <div className="tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                <div className="tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.5)' }}>
                   {h.season}
                 </div>
                 <div className="truncate" style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Badge text={h.team} size={18} mine={isMineFn(myTeamName, h.team)} logoUrl={logoFor(d.assets, h.team)} />
                   <span className="truncate">{h.team}</span>
                 </div>
-                <div className="center" style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+                <div className="center" style={{ fontSize: 12, color: 'rgba(0,0,0,0.6)' }}>
                   {h.position}
                 </div>
-                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.7)' }}>
                   {numOr(h.wins)}-{numOr(h.losses)}
                 </div>
               </Row>
@@ -171,7 +177,7 @@ export function HotSeats({ d }: { d: DashboardData }) {
               <Badge text={c.team} size={18} mine={isMineFn(myTeamName, c.team)} logoUrl={logoFor(d.assets, c.team)} />
               <span className="truncate">{c.team}</span>
             </div>
-            <div className="truncate" style={{ color: 'rgba(255,255,255,0.7)' }}>
+            <div className="truncate" style={{ color: 'rgba(0,0,0,0.7)' }}>
               {c.coach}
             </div>
             <div className="right tabular" style={{ fontSize: 12, fontWeight: 600, color }}>
@@ -205,7 +211,7 @@ export function CoachMoves({ d }: { d: DashboardData }) {
           <div className="truncate" style={{ fontWeight: 500, fontSize: 14 }}>
             {m.coach}
           </div>
-          <div className="center truncate" style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>
+          <div className="center truncate" style={{ fontSize: 12, color: 'rgba(0,0,0,0.55)' }}>
             {m.oldTeam}
           </div>
           <div className="center truncate" style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)' }}>

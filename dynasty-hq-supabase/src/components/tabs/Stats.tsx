@@ -45,7 +45,7 @@ export function TeamStats({ d }: { d: DashboardData }) {
           {national.length ? (
             national.map((r, i) => (
               <Row key={i} cols={cols} first={i === 0} mine={isMineFn(myTeamName, r.team)}>
-                <div className="tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>
+                <div className="tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.45)' }}>
                   {r.rank}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
@@ -54,16 +54,16 @@ export function TeamStats({ d }: { d: DashboardData }) {
                     {r.team}
                   </span>
                 </div>
-                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.7)' }}>
                   {numOr(r.ppg)}
                 </div>
-                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.7)' }}>
                   {numOr(r.ypg)}
                 </div>
-                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.7)' }}>
                   {numOr(r.passYpg)}
                 </div>
-                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.7)' }}>
                   {numOr(r.rushYpg)}
                 </div>
               </Row>
@@ -142,16 +142,16 @@ export function PlayerStats({
           {(block.national || []).length ? (
             (block.national || []).map((r, i) => (
               <Row key={i} cols={cols} first={i === 0} mine={isMineFn(myTeamName, r.team)}>
-                <div className="tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>
+                <div className="tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.45)' }}>
                   {r.rank}
                 </div>
                 <div className="truncate" style={{ fontWeight: 500, fontSize: 14 }}>
                   {r.name}
                 </div>
-                <div className="truncate" style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>
+                <div className="truncate" style={{ fontSize: 12, color: 'rgba(0,0,0,0.55)' }}>
                   {r.team}
                 </div>
-                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.7)' }}>
                   {numOr(r.yards)}
                 </div>
               </Row>

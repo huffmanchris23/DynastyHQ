@@ -66,7 +66,7 @@ function PodcastCard({ d }: { d: DashboardData }) {
               <div
                 style={{
                   width: 72, height: 72, borderRadius: 10, flexShrink: 0,
-                  background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 30,
                 }}
               >
@@ -127,18 +127,18 @@ function LastGameCard({ d }: { d: DashboardData }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: 64 }}>
           <Badge text={box.TEAM} size={36} mine logoUrl={myLogo} />
-          <span className="truncate" style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', maxWidth: 64, textAlign: 'center' }}>
+          <span className="truncate" style={{ fontSize: 10, color: 'rgba(0,0,0,0.55)', maxWidth: 64, textAlign: 'center' }}>
             {box.TEAM}
           </span>
         </div>
         <div className="tabular" style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, display: 'flex', alignItems: 'center', gap: 6 }}>
           <span>{numOr(box.FINAL_SCORE)}</span>
-          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 16 }}>–</span>
+          <span style={{ color: 'rgba(0,0,0,0.35)', fontSize: 16 }}>–</span>
           <span>{numOr(opp?.FINAL_SCORE)}</span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: 64 }}>
           <Badge text={box.OPPONENT} size={36} logoUrl={oppLogo} />
-          <span className="truncate" style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', maxWidth: 64, textAlign: 'center' }}>
+          <span className="truncate" style={{ fontSize: 10, color: 'rgba(0,0,0,0.55)', maxWidth: 64, textAlign: 'center' }}>
             {box.OPPONENT}
           </span>
         </div>
@@ -211,11 +211,11 @@ export default function Home({ d }: { d: DashboardData }) {
     const wpMine = wpMineRaw === null ? 50 : wpMineRaw;
     const wpOpp = wpOppRaw === null ? 50 : wpOppRaw;
     const myColor = (d.team && d.team.PRIMARY_COLOR) || 'var(--accent)';
-    const oppColor = (d.opponent && d.opponent.PRIMARY_COLOR) || 'rgba(255,255,255,0.35)';
+    const oppColor = (d.opponent && d.opponent.PRIMARY_COLOR) || 'rgba(0,0,0,0.35)';
 
     nextGameCard = (
       <div className="card accent tight">
-        <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>
+        <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(0,0,0,0.4)', marginBottom: 6 }}>
           {preview.day} · {preview.date} · {preview.time} · {preview.location} · {preview.broadcast}
         </div>
         <div className="team-line">
@@ -223,7 +223,7 @@ export default function Home({ d }: { d: DashboardData }) {
             <Badge text={oppAbbr} size={28} logoUrl={d.opponent && d.opponent.LOGO_URL} />
             <span style={{ fontWeight: 600 }}>{oppTeamLabel}</span>
           </div>
-          <span className="tabular" style={{ color: 'rgba(255,255,255,0.5)' }}>
+          <span className="tabular" style={{ color: 'rgba(0,0,0,0.5)' }}>
             {oppRecW}-{oppRecL}
           </span>
         </div>
@@ -232,21 +232,21 @@ export default function Home({ d }: { d: DashboardData }) {
             <Badge text={myTeamAbbr} size={28} mine logoUrl={d.team && d.team.LOGO_URL} />
             <span style={{ fontWeight: 600 }}>{myTeamLabel}</span>
           </div>
-          <span className="tabular" style={{ color: 'rgba(255,255,255,0.5)' }}>
+          <span className="tabular" style={{ color: 'rgba(0,0,0,0.5)' }}>
             {myRecW}-{myRecL}
           </span>
         </div>
         <div className="grid-3" style={{ marginTop: 8, textAlign: 'center' }}>
           <div>
-            <div style={{ fontSize: 9, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}>Spread</div>
+            <div style={{ fontSize: 9, textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)' }}>Spread</div>
             <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2 }}>{spread}</div>
           </div>
           <div>
-            <div style={{ fontSize: 9, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}>Total O/U</div>
+            <div style={{ fontSize: 9, textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)' }}>Total O/U</div>
             <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2 }}>{total}</div>
           </div>
           <div>
-            <div style={{ fontSize: 9, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}>Moneyline</div>
+            <div style={{ fontSize: 9, textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)' }}>Moneyline</div>
             <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2 }}>{ml}</div>
           </div>
         </div>
@@ -271,7 +271,7 @@ export default function Home({ d }: { d: DashboardData }) {
           <div style={{ width: '2%' }} />
           <div style={{ width: `${Math.max(wpMine - 1, 0)}%`, background: myColor }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 10, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 10, textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)' }}>
           <span>{oppTeamLabel}</span>
           <span>{myTeamLabel}</span>
         </div>
@@ -286,10 +286,10 @@ export default function Home({ d }: { d: DashboardData }) {
       {predictorCard}
       {!preview && d.isOffseason ? (
         <div className="card primary tight" style={{ textAlign: 'center', padding: '20px 12px' }}>
-          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>
+          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(0,0,0,0.4)', fontWeight: 700 }}>
             Offseason
           </div>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>No game scheduled — check back next season.</div>
+          <div style={{ fontSize: 13, color: 'rgba(0,0,0,0.5)', marginTop: 4 }}>No game scheduled — check back next season.</div>
         </div>
       ) : null}
       <div style={{ marginTop: 16 }}>{contentBlock}</div>

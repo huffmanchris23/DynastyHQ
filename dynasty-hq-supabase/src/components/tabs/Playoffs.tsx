@@ -19,14 +19,14 @@ export function PlayoffRankings({ d }: { d: DashboardData }) {
       </Thead>
       {seeds.map((s, i) => (
         <Row key={i} cols={cols} first={i === 0} mine={isMineFn(myTeamName, s.team)}>
-          <div className="tabular" style={{ fontWeight: 700, color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>
+          <div className="tabular" style={{ fontWeight: 700, color: 'rgba(0,0,0,0.6)', fontSize: 12 }}>
             {s.rank}
           </div>
           <div className="truncate" style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
             <Badge text={s.team} size={20} mine={isMineFn(myTeamName, s.team)} logoUrl={logoFor(d.assets, s.team)} />
             <span className="truncate">{s.team}</span>
           </div>
-          <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+          <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.6)' }}>
             {numOr(s.wins, '')}-{numOr(s.losses, '')}
           </div>
         </Row>

@@ -20,11 +20,11 @@ export default function Rankings({ d, subtab }: { d: DashboardData; subtab: stri
       {list.map((r, i) => {
         const lw = r.lastWeek ?? null;
         const diff = lw !== null ? lw - r.rank : null;
-        const dirColor = diff === null || diff === 0 ? 'rgba(255,255,255,0.4)' : diff > 0 ? '#3ecf72' : '#e05a5a';
+        const dirColor = diff === null || diff === 0 ? 'rgba(0,0,0,0.4)' : diff > 0 ? '#3ecf72' : '#e05a5a';
         const dirArrow = diff === null ? '' : diff > 0 ? '▲' : diff < 0 ? '▼' : '–';
         return (
           <Row key={i} cols={cols} first={i === 0} mine={isMineFn(myTeamName, r.team)}>
-            <div className="tabular" style={{ fontWeight: 700, color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>
+            <div className="tabular" style={{ fontWeight: 700, color: 'rgba(0,0,0,0.6)', fontSize: 12 }}>
               {r.rank}
             </div>
             <div className="truncate" style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -35,7 +35,7 @@ export default function Rankings({ d, subtab }: { d: DashboardData; subtab: stri
               <span>{dirArrow}</span>
               <span>{lw ?? '—'}</span>
             </div>
-            <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+            <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.6)' }}>
               {r.wins}-{r.losses}
             </div>
           </Row>

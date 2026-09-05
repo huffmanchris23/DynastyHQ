@@ -92,7 +92,7 @@ export default function Conference({ d }: { d: DashboardData }) {
                   <div style={{ width: 22, height: 22 }} />
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="truncate" style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                  <div className="truncate" style={{ fontSize: 10, color: 'rgba(0,0,0,0.5)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                     {conference}
                   </div>
                   <div className="truncate" style={{ fontSize: 13, fontWeight: 600 }}>
@@ -100,7 +100,7 @@ export default function Conference({ d }: { d: DashboardData }) {
                   </div>
                 </div>
                 {leader ? (
-                  <div className="tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>
+                  <div className="tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.65)' }}>
                     {leader.confW ?? 0}-{leader.confL ?? 0}
                   </div>
                 ) : null}
@@ -152,16 +152,16 @@ export default function Conference({ d }: { d: DashboardData }) {
               <Badge text={c.team} size={20} mine={isMineFn(myTeamName, c.team)} logoUrl={logoFor(d.assets, c.team)} />
               <span className="truncate">{c.team}</span>
             </div>
-            <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+            <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.7)' }}>
               {c.confW ?? ''}-{c.confL ?? ''}
             </div>
-            <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+            <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.7)' }}>
               {c.overallW ?? ''}-{c.overallL ?? ''}
             </div>
-            <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+            <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.6)' }}>
               {numOr(c.pf, '')}
             </div>
-            <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+            <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.6)' }}>
               {numOr(c.pa, '')}
             </div>
           </Row>

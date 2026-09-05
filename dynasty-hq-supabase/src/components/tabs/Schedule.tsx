@@ -24,26 +24,26 @@ export function ScheduleTeam({ d }: { d: DashboardData }) {
             if (g.bye) {
               return (
                 <Row key={i} cols={cols} first={i === 0}>
-                  <div className="tabular" style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>
+                  <div className="tabular" style={{ color: 'rgba(0,0,0,0.4)', fontSize: 12 }}>
                     {g.week}
                   </div>
-                  <div style={{ gridColumn: 'span 3', fontStyle: 'italic', color: 'rgba(255,255,255,0.35)' }}>Bye</div>
+                  <div style={{ gridColumn: 'span 3', fontStyle: 'italic', color: 'rgba(0,0,0,0.35)' }}>Bye</div>
                 </Row>
               );
             }
-            const resultColor = g.result === 'W' ? '#5FA467' : g.result === 'L' ? '#C0555A' : 'rgba(255,255,255,0.3)';
+            const resultColor = g.result === 'W' ? '#5FA467' : g.result === 'L' ? '#C0555A' : 'rgba(0,0,0,0.3)';
             const scoreStr = g.result ? `${g.result} ${numOr(g.teamScore)}-${numOr(g.oppScore)}` : '—';
             return (
               <Row key={i} cols={cols} first={i === 0}>
-                <div className="tabular" style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>
+                <div className="tabular" style={{ color: 'rgba(0,0,0,0.4)', fontSize: 12 }}>
                   {g.week}
                 </div>
                 <div className="truncate" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>{String(g.homeAway).toUpperCase() === 'HOME' ? 'vs' : '@'}</span>
+                  <span style={{ color: 'rgba(0,0,0,0.4)', fontSize: 12 }}>{String(g.homeAway).toUpperCase() === 'HOME' ? 'vs' : '@'}</span>
                   <Badge text={g.opponent} size={18} logoUrl={logoFor(d.assets, g.opponent)} />
                   <span className="truncate" style={{ fontWeight: 500 }}>{g.opponent}</span>
                 </div>
-                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.5)' }}>
                   {numOr(g.oppWins)}-{numOr(g.oppLosses)}
                 </div>
                 <div className="right tabular" style={{ fontSize: 12, fontWeight: 600, color: resultColor }}>
@@ -57,7 +57,7 @@ export function ScheduleTeam({ d }: { d: DashboardData }) {
         )}
       </div>
       {games.some((g) => /[*+^]/.test(g.week)) ? (
-        <div style={{ marginTop: 8, fontSize: 11, color: 'rgba(255,255,255,0.4)', display: 'flex', gap: 12 }}>
+        <div style={{ marginTop: 8, fontSize: 11, color: 'rgba(0,0,0,0.4)', display: 'flex', gap: 12 }}>
           <span>* Conference Championship</span>
           <span>+ Bowl Game</span>
           <span>^ CFB Playoff Game</span>
@@ -81,14 +81,14 @@ export function ScheduleTop25({ d }: { d: DashboardData }) {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                   <Badge text={g.away} size={20} logoUrl={logoFor(d.assets, g.away)} />
-                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', width: 20 }}>{g.awayRank && g.awayRank !== 'N/A' ? '#' + g.awayRank : ''}</span>
+                  <span style={{ fontSize: 10, color: 'rgba(0,0,0,0.4)', width: 20 }}>{g.awayRank && g.awayRank !== 'N/A' ? '#' + g.awayRank : ''}</span>
                   <span className="truncate" style={{ fontWeight: 600, fontSize: 14 }}>
                     {g.away}
                   </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Badge text={g.home} size={20} mine={isMineFn(myTeamName, g.home)} logoUrl={logoFor(d.assets, g.home)} />
-                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', width: 20 }}>{g.homeRank && g.homeRank !== 'N/A' ? '#' + g.homeRank : ''}</span>
+                  <span style={{ fontSize: 10, color: 'rgba(0,0,0,0.4)', width: 20 }}>{g.homeRank && g.homeRank !== 'N/A' ? '#' + g.homeRank : ''}</span>
                   <span className="truncate" style={{ fontWeight: 600, fontSize: 14 }}>
                     {g.home}
                   </span>
@@ -96,9 +96,9 @@ export function ScheduleTop25({ d }: { d: DashboardData }) {
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 11, fontWeight: 500 }}>{g.time}</div>
-                <div style={{ fontSize: 8, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', fontWeight: 700, marginTop: 2 }}>{g.broadcast}</div>
+                <div style={{ fontSize: 8, textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', fontWeight: 700, marginTop: 2 }}>{g.broadcast}</div>
               </div>
-              <div style={{ textAlign: 'right', fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
+              <div style={{ textAlign: 'right', fontSize: 11, color: 'rgba(0,0,0,0.5)' }}>
                 {g.spreadFavorite} {g.spreadNumber || ''}
               </div>
             </div>

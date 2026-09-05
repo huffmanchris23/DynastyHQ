@@ -19,7 +19,7 @@ function LinkBlock({ label, link }: { label: string; link: string | null }) {
             style={{ width: '100%', height: 'auto', borderRadius: 8, display: 'block' }}
             onError={() => setBroken(true)}
           />
-          <a href={link} target="_blank" rel="noreferrer" style={{ display: 'block', textAlign: 'center', padding: '10px 0 4px', fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+          <a href={link} target="_blank" rel="noreferrer" style={{ display: 'block', textAlign: 'center', padding: '10px 0 4px', fontSize: 11, color: 'rgba(0,0,0,0.4)' }}>
             Open full size
           </a>
         </div>
@@ -66,13 +66,13 @@ function RecruitBoard({ d }: { d: DashboardData }) {
           <div className="truncate" style={{ fontWeight: 500 }}>
             {r.name}
           </div>
-          <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+          <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.6)' }}>
             {r.position}
           </div>
           <div className="right" style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)' }}>
             {'★'.repeat(r.stars || 0)}
           </div>
-          <div className="right truncate" style={{ fontSize: 10, textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)' }}>
+          <div className="right truncate" style={{ fontSize: 10, textTransform: 'uppercase', color: 'rgba(0,0,0,0.5)' }}>
             {r.status}
           </div>
         </Row>
@@ -121,16 +121,16 @@ function ClassRank({ d }: { d: DashboardData }) {
           {(rc.classRankings || []).length ? (
             (rc.classRankings || []).map((c, i) => (
               <Row key={i} cols={cols} first={i === 0} mine={isMineFn(myTeamName, c.team)}>
-                <div className="tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>
+                <div className="tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.45)' }}>
                   {c.rank}
                 </div>
                 <div className="truncate" style={{ fontWeight: 500 }}>
                   {c.team}
                 </div>
-                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.7)' }}>
                   {numOr(c.avgStars)}
                 </div>
-                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.7)' }}>
                   {numOr(c.commits)}
                 </div>
               </Row>
