@@ -17,6 +17,12 @@
   --dhq-red: #B3242A;
   --font-display: 'Anton', -apple-system, sans-serif;
   --font-label: 'Oswald', -apple-system, sans-serif;
+  /* Cincinnati's brand font. Not on Google Fonts (commercial typeface), so
+     this only actually renders as Friz Quadrata for visitors who happen to
+     have it installed locally — everyone else falls back to Georgia/serif.
+     Swap in a real next/font Google Font here (e.g. Cinzel) for guaranteed
+     consistent rendering if that's preferred over the accurate name. */
+  --font-team: 'Friz Quadrata', Georgia, 'Times New Roman', serif;
 }
 * { box-sizing: border-box; }
 html, body {
@@ -55,10 +61,10 @@ a { color: inherit; }
 
 .header-row { display: flex; align-items: flex-end; justify-content: space-between; padding-bottom: 8px; }
 .header-team { display: flex; align-items: center; gap: 10px; }
-.header-team h1 { font-family: var(--font-display); font-size: 28px; font-weight: 400; margin: 0; letter-spacing: -0.01em; line-height: 1; text-transform: uppercase; transform: skewX(-8deg); transform-origin: left bottom; display: inline-block; -webkit-text-stroke: 1px currentColor; text-shadow: 0.5px 0 currentColor, -0.5px 0 currentColor, 0 0.5px currentColor, 0 -0.5px currentColor; }
+.header-team h1 { font-family: var(--font-team); color: var(--accent); font-size: 28px; font-weight: 400; margin: 0; letter-spacing: -0.01em; line-height: 1; text-transform: uppercase; transform: skewX(-8deg); transform-origin: left bottom; display: inline-block; -webkit-text-stroke: 1px currentColor; text-shadow: 0.5px 0 currentColor, -0.5px 0 currentColor, 0 0.5px currentColor, 0 -0.5px currentColor; }
 .header-record { text-align: right; }
-.header-record .rec { font-family: var(--font-display); font-weight: 400; font-size: 28px; line-height: 1; color: #007A86; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; transform: skewX(-8deg); transform-origin: right bottom; display: inline-block; -webkit-text-stroke: 1px currentColor; text-shadow: 0.5px 0 currentColor, -0.5px 0 currentColor, 0 0.5px currentColor, 0 -0.5px currentColor; }
-.header-record .rk { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.6); margin-top: 2px; }
+.header-record .rec { font-family: var(--font-display); font-weight: 400; font-size: 28px; line-height: 1; color: #FFFFFF; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; transform: skewX(-8deg); transform-origin: right bottom; display: inline-block; -webkit-text-stroke: 1px currentColor; text-shadow: 0.5px 0 currentColor, -0.5px 0 currentColor, 0 0.5px currentColor, 0 -0.5px currentColor; }
+.header-record .rk { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.85); margin-top: 2px; }
 
 .badge {
   flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; font-weight: 700;
