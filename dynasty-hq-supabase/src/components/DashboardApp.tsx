@@ -153,7 +153,10 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
             <div className="header-row">
               <div className="header-team">
                 <Badge text={team.TEAM_NAME || '??'} size={44} mine logoUrl={team.LOGO_URL} />
-                <h1>{team.TEAM_NAME || 'Loading'}</h1>
+                <div className="header-team-text">
+                  <h1>{team.TEAM_NAME || 'Loading'}</h1>
+                  {data.myCoach?.coachingPhilosophy ? <div className="philosophy">{data.myCoach.coachingPhilosophy}</div> : null}
+                </div>
               </div>
               <div className="header-record">
                 <div className="rec">{recordStr}</div>
