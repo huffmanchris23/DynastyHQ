@@ -7,50 +7,6 @@ import SectionLabel from '@/components/shared/SectionLabel';
 import Badge from '@/components/shared/Badge';
 import EmptyState from '@/components/shared/EmptyState';
 
-/* ---------------- renderTeamPreview ---------------- */
-
-function TeamPreview({ d }: { d: DashboardData }) {
-  const p = d.preseasonPreview || ({} as DashboardData['preseasonPreview']);
-  return (
-    <>
-      <div>
-        <SectionLabel>Preseason Ratings</SectionLabel>
-        <div className="grid-3">
-          <div className="card">
-            <div className="stat-label">Overall</div>
-            <div className="stat-value">{numOr(p.overall)}</div>
-          </div>
-          <div className="card">
-            <div className="stat-label">Offense</div>
-            <div className="stat-value">{numOr(p.offense)}</div>
-          </div>
-          <div className="card">
-            <div className="stat-label">Defense</div>
-            <div className="stat-value">{numOr(p.defense)}</div>
-          </div>
-        </div>
-      </div>
-      <div style={{ marginTop: 12 }}>
-        <SectionLabel>Preseason Honors</SectionLabel>
-        <div className="grid-2">
-          <div className="card">
-            <div className="stat-label">All-Americans (Off / Def)</div>
-            <div className="stat-value" style={{ color: 'var(--accent)' }}>
-              {numOr(p.aaOffense, 0)} / {numOr(p.aaDefense, 0)}
-            </div>
-          </div>
-          <div className="card">
-            <div className="stat-label">All-Conference (Off / Def)</div>
-            <div className="stat-value" style={{ color: 'var(--accent)' }}>
-              {numOr(p.acOffense, 0)} / {numOr(p.acDefense, 0)}
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
 /* ---------------- renderHomeContent ---------------- */
 
 function NewsList({ title, items }: { title: string; items: { headline: any; subHeadline?: any; graphicUrl?: any }[] }) {
@@ -190,17 +146,39 @@ function LastGameCard({ d }: { d: DashboardData }) {
   );
 }
 
+/* ---------------- SeasonRecapCard ---------------- */
+/* Shown in place of the normal preview/recap cards during preseason (before
+   the new season's schedule is even known) — a look back at how the last
+   season ended, via whatever image is on file in playoff_bracket for this
+   week. Replaces the old TeamPreview (Preseason Ratings / Preseason Honors)
+   entirely — those sections never had real data wired to them anyway. */
+
+function SeasonRecapCard({ d }: { d: DashboardData }) {
+  if (!d.playoffBracketUrl) return null;
+  return (
+    <div className="card primary tight" style={{ marginBottom: 12 }}>
+      <SectionLabel>Last Season</SectionLabel>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={d.playoffBracketUrl}
+        alt="Final CFP Bracket"
+        style={{ width: '100%', borderRadius: 4, marginTop: 6, border: '1px solid color-mix(in srgb, var(--primary) 60%, transparent)' }}
+      />
+    </div>
+  );
+}
+
 /* ---------------- renderHome ---------------- */
 
 export default function Home({ d }: { d: DashboardData }) {
   const g = gateInfo(d);
   const contentBlock = <HomeContent d={d} />;
 
-  if (g.isLocked) {
+  if (g.isLocked || d.isPreseason) {
     return (
       <>
-        <TeamPreview d={d} />
-        <div style={{ marginTop: 16 }}>{contentBlock}</div>
+        <SeasonRecapCard d={d} />
+        {contentBlock}
       </>
     );
   }
