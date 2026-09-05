@@ -94,6 +94,7 @@ function HomeContent({ d }: { d: DashboardData }) {
     <>
       <NewsList title="Team Storyline" items={d.content ? (d.content.newspaper || []).slice(0, 1) : []} />
       <NewsList title="National Headlines" items={d.content ? (d.content.headlines || []).slice(0, 3) : []} />
+      <NewsList title="Huff's Army" items={d.content ? (d.content.huffArmy || []).slice(0, 3) : []} />
       <PodcastCard d={d} />
     </>
   );
