@@ -333,6 +333,7 @@ export interface DashboardData {
   preview: Preview | null;
   /** True once there's no real upcoming game to preview — team eliminated, bye, or season fully over. Home tab shows an "Offseason" indicator instead of the next-game card. */
   isOffseason: boolean;
+  isPreseason: boolean;
   preseasonPreview: PreseasonPreview;
   schedule: Schedule;
   rank: Rank;

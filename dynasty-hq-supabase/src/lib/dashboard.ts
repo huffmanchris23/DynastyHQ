@@ -427,6 +427,13 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   const previewRow = previewRes.data?.[0];
   let preview: Preview | null = null;
+  // True during preseason — either statsWeek hasn't reached the real season
+  // yet (negative week numbers), or the current_week row is the sentinel
+  // "n/a" opponent placeholder used before the schedule is even known.
+  // Without this check, the code below would happily build a "next game"
+  // card against a team literally named "n/a" — technically not offseason
+  // (no decided result exists to match), just not a real game yet either.
+  const isPreseason = statsWeek < 0 || (!!previewRow && norm(previewRow.opponent) === 'n/a');
   // True once there's no real upcoming game to preview — either the
   // current_week row is an empty future-round placeholder (team eliminated
   // before reaching it, e.g. Semifinal row with no opponent ever filled
@@ -434,10 +441,11 @@ export async function getDashboardData(): Promise<DashboardData> {
   // (the flag is still sitting on the just-played elimination game itself).
   // Either way this means offseason/no-next-game, not a broken preview.
   const isOffseason =
-    !previewRow ||
-    !previewRow.opponent ||
-    scheduleRows.some((r: any) => canon(nameCanon, r.opponent) === canon(nameCanon, previewRow.opponent) && !!r.w_or_l);
-  if (previewRow && !isOffseason) {
+    !isPreseason &&
+    (!previewRow ||
+      !previewRow.opponent ||
+      scheduleRows.some((r: any) => canon(nameCanon, r.opponent) === canon(nameCanon, previewRow.opponent) && !!r.w_or_l));
+  if (previewRow && !isOffseason && !isPreseason) {
     // Opponent's win/loss record isn't on game_preview — pull it from the
     // matching, not-yet-played row in team_schedule instead. Matched via
     // nameCanon since the two tables store different on-screen naming
@@ -697,6 +705,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     recap,
     preview,
     isOffseason,
+    isPreseason,
     preseasonPreview: { overall: null, offense: null, defense: null, aaOffense: null, aaDefense: null, acOffense: null, acDefense: null },
     schedule,
     rank,
