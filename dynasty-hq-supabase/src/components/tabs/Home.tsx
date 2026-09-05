@@ -305,6 +305,14 @@ export default function Home({ d }: { d: DashboardData }) {
       <LastGameCard d={d} />
       {nextGameCard}
       {predictorCard}
+      {!preview && d.isOffseason ? (
+        <div className="card primary tight" style={{ textAlign: 'center', padding: '20px 12px' }}>
+          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>
+            Offseason
+          </div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>No game scheduled — check back next season.</div>
+        </div>
+      ) : null}
       <div style={{ marginTop: 16 }}>{contentBlock}</div>
     </>
   );
