@@ -86,6 +86,23 @@ function sortWeekForScheduleRow(row: any): number | null {
   return meta ? meta.sortWeek : null;
 }
 
+// Human-readable label for the very top of the app ("Dynasty HQ — X") —
+// negative weeks predate the real schedule entirely ("Preseason"), rather
+// than literally printing "Week -1". For postseason weeks, checks the
+// actual team_schedule row first (since bowl_game/playoff_round_1 share the
+// same sortWeek and only one will actually exist for a given team).
+function displayWeekLabel(week: number, scheduleRows: any[]): string {
+  if (week < 0) return 'Preseason';
+  if (week <= 14) return `Week ${week}`;
+  const matchedRow = scheduleRows.find((r: any) => sortWeekForScheduleRow(r) === week);
+  const matchedLabel = matchedRow ? String(matchedRow.week_name || '').toLowerCase() : null;
+  const resolvedLabel =
+    matchedLabel && POSTSEASON_LABELS[matchedLabel]
+      ? matchedLabel
+      : Object.keys(POSTSEASON_LABELS).find((k) => POSTSEASON_LABELS[k].sortWeek === week);
+  return resolvedLabel ? toTitleCase(resolvedLabel.replace(/_/g, ' ')) : `Week ${week}`;
+}
+
 function norm(s: any): string {
   return String(s || '').trim().toLowerCase();
 }
@@ -247,6 +264,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     broylesRes,
     coyRes,
     myCoachRes,
+    myCoachHistoryRes,
     contentRes,
     topPerformersRes,
   ] = await Promise.all([
@@ -272,6 +290,10 @@ export async function getDashboardData(): Promise<DashboardData> {
     t('broyles_award').eq('week', statsWeek).order('rank', { ascending: true }),
     t('coach_of_the_year').eq('week', statsWeek).order('rank', { ascending: true }),
     t('my_coach'),
+    // Coaching history spans every season the dynasty has played, not just
+    // the current one — t() would scope this to the current season only,
+    // so this is a separate, deliberately season-unscoped query.
+    sb.from('my_coach').select('*').eq('dynasty_id', dynastyId).order('season', { ascending: true }),
     t('content'),
     t('top_performers').eq('week', statsWeek),
   ]);
@@ -280,7 +302,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     boxScoreRes, playerStatsRecapRes, previewRes, scheduleRes, top25Res, apRes, coachesRes,
     playoffRes, bracketRes, confRes, teamStatsRes, passingRes, rushingRes, receivingRes,
     recruitBoardRes, recruitRanksRes, depthRes, hotSeatsRes, heismanRes, broylesRes, coyRes,
-    myCoachRes, contentRes, topPerformersRes,
+    myCoachRes, myCoachHistoryRes, contentRes, topPerformersRes,
   })) {
     if ((res as any).error) throw new Error(`${name}: ${(res as any).error.message}`);
   }
@@ -629,6 +651,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   /* -------- My Coach -------- */
 
   const myCoachRow = myCoachRes.data?.[0];
+  const myCoachHistoryRows = myCoachHistoryRes.data || [];
   const myCoach: MyCoach = {
     name: myCoachRow?.name,
     overallW: myCoachRow?.career_wins,
@@ -643,15 +666,15 @@ export async function getDashboardData(): Promise<DashboardData> {
     offensePlaybook: myCoachRow?.offense,
     defensePlaybook: myCoachRow?.defense,
     coachingPhilosophy: myCoachRow?.coaching_philosophy,
-    background: myCoachRow?.background,
+    background: myCoachRow?.coaching_background,
     photoLink: myCoachRow?.image_url,
-    // Current schema carries exactly one season-history row inline on the
-    // same record (season/team/title/season_wins/season_losses). If you
-    // start tracking multi-season history, this becomes a real query
-    // against a season-by-season table instead of a single row.
-    history: myCoachRow?.team
-      ? [{ season: myCoachRow.season, team: myCoachRow.team, position: myCoachRow.title, wins: myCoachRow.season_wins, losses: myCoachRow.season_losses }]
-      : [],
+    // One row per season now exists in my_coach (season/team/title/
+    // season_wins/season_losses each carried on that season's own row), so
+    // history spans every season fetched via the season-unscoped query
+    // above — not just whatever the current season's single row says.
+    history: myCoachHistoryRows
+      .filter((r: any) => r.team)
+      .map((r: any) => ({ season: r.season, team: r.team, position: r.title, wins: r.season_wins, losses: r.season_losses })),
   };
 
   /* -------- Content -------- */
@@ -663,8 +686,9 @@ export async function getDashboardData(): Promise<DashboardData> {
     national_headline_1: 'headlines',
     national_headline_2: 'headlines',
     national_headline_3: 'headlines',
+    "huff's_army": 'huffArmy',
   };
-  const content: Content = { podcast: [], social: [], newspaper: [], headlines: [] };
+  const content: Content = { podcast: [], social: [], newspaper: [], headlines: [], huffArmy: [] };
   (contentRes.data || []).forEach((r: any) => {
     const key = CONTENT_TYPE_MAP[norm(r.content_input_type)];
     if (!key || !r.headline) return;
@@ -691,7 +715,7 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   const result: DashboardData = {
     settings: {
-      currentDataSheet: `Week ${statsWeek}`,
+      currentDataSheet: displayWeekLabel(statsWeek, scheduleRes.data || []),
       currentTeam: myTeamName,
       currentWeek: statsWeek,
       primaryColor: settingsRow.primary_color || null,

@@ -313,6 +313,8 @@ export interface Content {
   social: ContentItem[];
   newspaper: ContentItem[];
   headlines: ContentItem[];
+  /** "Huff's Army" — user's fan-group content space, replaces the old second national headline slot. */
+  huffArmy: ContentItem[];
 }
 
 export interface StoryBriefItem {
