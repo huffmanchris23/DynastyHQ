@@ -277,6 +277,9 @@ export interface MyCoachHistory {
   position: any;
   wins: any;
   losses: any;
+  /** Derived from that season's team_schedule rows — a decided win on the conference_championship row, and any playoff-stage row present at all (regardless of result). */
+  wonConfChamp: boolean;
+  madePlayoffs: boolean;
 }
 
 export interface MyCoach {

@@ -265,6 +265,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     coyRes,
     myCoachRes,
     myCoachHistoryRes,
+    allScheduleHistoryRes,
     contentRes,
     topPerformersRes,
   ] = await Promise.all([
@@ -294,6 +295,10 @@ export async function getDashboardData(): Promise<DashboardData> {
     // the current one — t() would scope this to the current season only,
     // so this is a separate, deliberately season-unscoped query.
     sb.from('my_coach').select('*').eq('dynasty_id', dynastyId).order('season', { ascending: true }),
+    // Same reasoning — need every season's schedule to know which past
+    // seasons won the conference championship / made the playoff, not just
+    // the current (empty, preseason) one.
+    sb.from('team_schedule').select('*').eq('dynasty_id', dynastyId),
     t('content'),
     t('top_performers').eq('week', statsWeek),
   ]);
@@ -302,7 +307,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     boxScoreRes, playerStatsRecapRes, previewRes, scheduleRes, top25Res, apRes, coachesRes,
     playoffRes, bracketRes, confRes, teamStatsRes, passingRes, rushingRes, receivingRes,
     recruitBoardRes, recruitRanksRes, depthRes, hotSeatsRes, heismanRes, broylesRes, coyRes,
-    myCoachRes, myCoachHistoryRes, contentRes, topPerformersRes,
+    myCoachRes, myCoachHistoryRes, allScheduleHistoryRes, contentRes, topPerformersRes,
   })) {
     if ((res as any).error) throw new Error(`${name}: ${(res as any).error.message}`);
   }
@@ -674,7 +679,14 @@ export async function getDashboardData(): Promise<DashboardData> {
     // above — not just whatever the current season's single row says.
     history: myCoachHistoryRows
       .filter((r: any) => r.team)
-      .map((r: any) => ({ season: r.season, team: r.team, position: r.title, wins: r.season_wins, losses: r.season_losses })),
+      .map((r: any) => {
+        const seasonScheduleRows = (allScheduleHistoryRes.data || []).filter((sr: any) => sr.season === r.season);
+        const wonConfChamp = seasonScheduleRows.some((sr: any) => norm(sr.week_name) === 'conference_championship' && sr.w_or_l === 'W');
+        const madePlayoffs = seasonScheduleRows.some((sr: any) =>
+          ['bowl_game', 'playoff_round_1', 'playoff_quarterfinals', 'playoff_semifinals', 'national_championship'].includes(norm(sr.week_name))
+        );
+        return { season: r.season, team: r.team, position: r.title, wins: r.season_wins, losses: r.season_losses, wonConfChamp, madePlayoffs };
+      }),
   };
 
   /* -------- Content -------- */
