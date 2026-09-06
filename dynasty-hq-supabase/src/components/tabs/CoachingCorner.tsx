@@ -125,8 +125,8 @@ export function MyCoach({ d }: { d: DashboardData }) {
         <SectionLabel>Career History</SectionLabel>
         <div className="table primary">
           <Thead cols={cols}>
-            <div style={{ textAlign: 'left' }}>Season</div>
-            <div style={{ textAlign: 'left' }}>Team</div>
+            <div>Season</div>
+            <div>Team</div>
             <div>Pos</div>
             <div>Record</div>
           </Thead>
@@ -135,6 +135,8 @@ export function MyCoach({ d }: { d: DashboardData }) {
               <Row key={i} cols={cols} first={i === 0} mine={isMineFn(myTeamName, h.team)}>
                 <div className="tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.5)' }}>
                   {h.season}
+                  {h.wonConfChamp ? '*' : ''}
+                  {h.madePlayoffs ? '^' : ''}
                 </div>
                 <div className="truncate" style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Badge text={h.team} size={18} mine={isMineFn(myTeamName, h.team)} logoUrl={logoFor(d.assets, h.team)} />
@@ -152,6 +154,12 @@ export function MyCoach({ d }: { d: DashboardData }) {
             <EmptyState>No career history yet.</EmptyState>
           )}
         </div>
+        {history.some((h) => h.wonConfChamp || h.madePlayoffs) ? (
+          <div style={{ marginTop: 8, fontSize: 11, color: 'rgba(0,0,0,0.45)', display: 'flex', gap: 12 }}>
+            <span>* Conference Championship</span>
+            <span>^ CFB Playoff Game</span>
+          </div>
+        ) : null}
       </div>
     </>
   );
