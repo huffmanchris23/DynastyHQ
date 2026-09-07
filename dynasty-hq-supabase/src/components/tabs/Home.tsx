@@ -2,7 +2,7 @@
 
 import type { DashboardData } from '@/lib/types';
 import { gateInfo } from '@/lib/gating';
-import { initials, toPct, numOr, abbrFor, logoFor } from '@/lib/format';
+import { initials, toPct, numOr, abbrFor, logoFor, rankedName } from '@/lib/format';
 import SectionLabel from '@/components/shared/SectionLabel';
 import Badge from '@/components/shared/Badge';
 import EmptyState from '@/components/shared/EmptyState';
@@ -198,8 +198,11 @@ export default function Home({ d }: { d: DashboardData }) {
     // Once CFP rankings are live, show "(N) Team Name" for ranked teams —
     // falls back to the plain name if playoff rankings aren't live yet or
     // a team is unranked.
-    const myTeamLabel = preview.myCfpRank ? `(${preview.myCfpRank}) ${preview.myTeam}` : preview.myTeam;
-    const oppTeamLabel = preview.oppCfpRank ? `(${preview.oppCfpRank}) ${preview.oppTeam}` : preview.oppTeam;
+    // Ranked label follows the team throughout the app now — CFP rank once
+    // the playoff field is set, falling back to the consolidated Top 25
+    // poll the rest of the season (see rankFor/rankedName in format.ts).
+    const myTeamLabel = rankedName(d, preview.myTeam);
+    const oppTeamLabel = rankedName(d, preview.oppTeam);
     // favorite/spread/moneyline come straight off game_preview now — no
     // mine-vs-opp comparison needed, the sheet already names the favorite.
     const favoriteAbbr = preview.favorite ? abbrFor(d.assets, preview.favorite) : null;

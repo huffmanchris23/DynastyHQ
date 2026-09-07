@@ -1,5 +1,5 @@
 import type { DashboardData } from '@/lib/types';
-import { numOr, logoFor } from '@/lib/format';
+import { numOr, logoFor, rankedName } from '@/lib/format';
 import { Row, Thead } from '@/components/shared/Row';
 import Badge from '@/components/shared/Badge';
 import SectionLabel from '@/components/shared/SectionLabel';
@@ -41,7 +41,7 @@ export function ScheduleTeam({ d }: { d: DashboardData }) {
                 <div className="truncate" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ color: 'rgba(0,0,0,0.4)', fontSize: 12 }}>{String(g.homeAway).toUpperCase() === 'HOME' ? 'vs' : '@'}</span>
                   <Badge text={g.opponent} size={18} logoUrl={logoFor(d.assets, g.opponent)} />
-                  <span className="truncate" style={{ fontWeight: 500 }}>{g.opponent}</span>
+                  <span className="truncate" style={{ fontWeight: 500 }}>{rankedName(d, g.opponent)}</span>
                 </div>
                 <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.5)' }}>
                   {numOr(g.oppWins)}-{numOr(g.oppLosses)}
