@@ -4,8 +4,11 @@ import { Row, Thead } from '@/components/shared/Row';
 import Badge from '@/components/shared/Badge';
 import EmptyState from '@/components/shared/EmptyState';
 
-export default function Rankings({ d, subtab }: { d: DashboardData; subtab: string | null }) {
-  const list = subtab === 'coaches' ? d.rank.coaches : d.rank.ap;
+export default function Rankings({ d }: { d: DashboardData }) {
+  // Consolidated Top 25 now — one screenshot, one list, no more AP/Coaches
+  // toggle. Still sourced from ap_poll under the hood (that table's now the
+  // single ranking source going forward; coaches_poll is no longer fed).
+  const list = d.rank.ap;
   const myTeamName = d.team && d.team.TEAM_NAME;
   if (!list.length) return <EmptyState>No poll data yet.</EmptyState>;
   const cols = '30px 1fr 46px 60px';

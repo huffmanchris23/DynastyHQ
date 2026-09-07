@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { DashboardData } from '@/lib/types';
-import { numOr, isMine as isMineFn, logoFor } from '@/lib/format';
+import { numOr, isMine as isMineFn, logoFor, rankedName } from '@/lib/format';
 import { Row, Thead } from '@/components/shared/Row';
 import Badge from '@/components/shared/Badge';
 import EmptyState from '@/components/shared/EmptyState';
@@ -96,7 +96,7 @@ export default function Conference({ d }: { d: DashboardData }) {
                     {conference}
                   </div>
                   <div className="truncate" style={{ fontSize: 13, fontWeight: 600 }}>
-                    {leader ? leader.team : '—'}
+                    {leader ? rankedName(d, leader.team) : '—'}
                   </div>
                 </div>
                 {leader ? (
@@ -150,7 +150,7 @@ export default function Conference({ d }: { d: DashboardData }) {
           <Row key={i} cols={cols} first={i === 0} mine={isMineFn(myTeamName, c.team)}>
             <div className="truncate" style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
               <Badge text={c.team} size={20} mine={isMineFn(myTeamName, c.team)} logoUrl={logoFor(d.assets, c.team)} />
-              <span className="truncate">{c.team}</span>
+              <span className="truncate">{rankedName(d, c.team)}</span>
             </div>
             <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.7)' }}>
               {c.confW ?? ''}-{c.confL ?? ''}
