@@ -15,7 +15,7 @@ import Home from '@/components/tabs/Home';
 import { ScheduleTeam, ScheduleTop25 } from '@/components/tabs/Schedule';
 import Rankings from '@/components/tabs/Rankings';
 import Conference from '@/components/tabs/Conference';
-import { PlayoffRankings, Bracket } from '@/components/tabs/Playoffs';
+import { Bracket } from '@/components/tabs/Playoffs';
 import { TeamStats, PlayerStats } from '@/components/tabs/Stats';
 import { DepthCharts, Recruiting } from '@/components/tabs/Roster';
 import Awards from '@/components/tabs/Awards';
@@ -54,7 +54,7 @@ function TabBody({ data, tab, subtab, statType, onStatTypeChange }: {
       return <Conference d={data} />;
     case 'playoffs':
       if (!g.playoffsUnlocked) return <LockedCard untilWeek={10} />;
-      return subtab === 'bracket' ? <Bracket d={data} /> : <PlayoffRankings d={data} />;
+      return <Bracket d={data} />;
     case 'stats':
       if (!g.statsUnlocked) return <LockedCard untilWeek={1} />;
       return subtab === 'player' ? <PlayerStats d={data} statType={statType} onStatTypeChange={onStatTypeChange} /> : <TeamStats d={data} />;
