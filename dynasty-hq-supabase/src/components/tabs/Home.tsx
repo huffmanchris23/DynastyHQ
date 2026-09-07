@@ -116,8 +116,8 @@ function LastGameCard({ d }: { d: DashboardData }) {
         <span
           style={{
             fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em',
-            color: won ? '#3ecf72' : '#e05a5a',
-            border: `1px solid ${won ? '#3ecf72' : '#e05a5a'}`,
+            color: won ? '#000000' : '#e05a5a',
+            border: `1px solid ${won ? '#000000' : '#e05a5a'}`,
             borderRadius: 4, padding: '2px 6px',
           }}
         >

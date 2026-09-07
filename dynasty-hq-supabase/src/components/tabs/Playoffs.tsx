@@ -39,7 +39,7 @@ export function Bracket({ d }: { d: DashboardData }) {
   if (!d.playoffBracketUrl) return <EmptyState>Bracket not posted yet.</EmptyState>;
   return (
     <>
-      <SectionLabel>CFP Bracket</SectionLabel>
+      <SectionLabel>CFBP Bracket</SectionLabel>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={d.playoffBracketUrl}
