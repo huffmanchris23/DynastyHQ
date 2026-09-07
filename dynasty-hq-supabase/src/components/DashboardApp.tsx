@@ -49,7 +49,7 @@ function TabBody({ data, tab, subtab, statType, onStatTypeChange }: {
     case 'schedule':
       return subtab === 'top25' ? <ScheduleTop25 d={data} /> : <ScheduleTeam d={data} />;
     case 'rankings':
-      return <Rankings d={data} subtab={subtab} />;
+      return <Rankings d={data} />;
     case 'conference':
       return <Conference d={data} />;
     case 'playoffs':
