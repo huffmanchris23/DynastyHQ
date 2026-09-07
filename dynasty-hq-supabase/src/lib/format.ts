@@ -119,6 +119,35 @@ export function abbrFor(assets: { TEAM_NAME?: any; TEAM_ABBREVIATION?: any }[] |
   return findTeamAsset(assets, nameOrAbbr)?.TEAM_ABBREVIATION || String(nameOrAbbr || '');
 }
 
+/**
+ * Finds a team's current rank for display purposes — CFP rank once the
+ * playoff field is set, falling back to the consolidated Top 25 poll the
+ * rest of the season. Resolves through the same dynamicAliases crosswalk as
+ * logoFor/abbrFor, since a poll/CFP row might spell a team differently than
+ * whatever screen we're rendering it next to.
+ */
+export function rankFor(
+  d: { rank?: { ap?: { team: any; rank: any }[] }; playoff?: { seeds?: { team: any; rank: any }[] } } | undefined,
+  teamName: any
+): number | null {
+  if (!d || !teamName) return null;
+  const canon = (name: any) => {
+    const nk = String(name || '').trim().toLowerCase();
+    return dynamicAliases[nk] || nk;
+  };
+  const target = canon(teamName);
+  const cfpHit = (d.playoff?.seeds || []).find((s) => canon(s.team) === target);
+  if (cfpHit) return Number(cfpHit.rank) || null;
+  const apHit = (d.rank?.ap || []).find((r) => canon(r.team) === target);
+  return apHit ? Number(apHit.rank) || null : null;
+}
+
+/** "(5) Ohio State" if currently ranked, otherwise just the plain name. */
+export function rankedName(d: Parameters<typeof rankFor>[0], teamName: any): string {
+  const rank = rankFor(d, teamName);
+  return rank ? `(${rank}) ${teamName}` : String(teamName || '');
+}
+
 /** Same idea as logoFor, but against the graphics (conference logo) table. */
 export function logoForConference(graphics: { conference?: any; abbreviation?: any; logoUrl?: any }[] | undefined, name: any): string | undefined {
   if (!graphics || !name) return undefined;
