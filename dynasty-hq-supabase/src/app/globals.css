@@ -12,7 +12,7 @@
 :root {
   --primary: #7A2426;
   --accent: #C9962E;
-  --bg: #FFFFFF;
+  --bg: #E4D2BA;
   --text: rgba(0,0,0,0.87);
   /* DHQ brand tokens, pulled from the crest — used for static brand chrome
      (logo, PWA icon, tab masthead) which stays fixed regardless of which
@@ -58,7 +58,7 @@ a { color: inherit; }
   content: ''; display: block; height: 3px;
   background: linear-gradient(90deg, var(--dhq-navy) 0 33%, var(--dhq-tan) 33% 66%, var(--dhq-red) 66% 100%);
 }
-.header-inner { padding: 20px 16px 12px; background: #FFFFFF; }
+.header-inner { padding: 20px 16px 12px; background: #E4D2BA; }
 .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .header-tag { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(0,0,0,0.45); }
 .palette-btn {
