@@ -107,6 +107,18 @@ function norm(s: any): string {
   return String(s || '').trim().toLowerCase();
 }
 
+// Normalizes team_schedule.w_or_l to a plain 'W'/'L' regardless of whether
+// it was entered as "W"/"L" (the convention everywhere else in the app —
+// display strings, Career History suffixes, etc.) or spelled out as
+// "WIN"/"LOSS". Anything else (blank, TBD) is null — game not yet decided.
+function normResult(v: any): 'W' | 'L' | null {
+  const s = String(v || '').trim().toUpperCase();
+  if (!s) return null;
+  if (s === 'W' || s.startsWith('WIN')) return 'W';
+  if (s === 'L' || s.startsWith('LOSS') || s.startsWith('LOSE')) return 'L';
+  return null;
+}
+
 function toTitleCase(s: string): string {
   return s.toLowerCase().replace(/(^|\s)([a-z])/g, (_m, p1, p2) => p1 + p2.toUpperCase());
 }
@@ -404,7 +416,7 @@ export async function getDashboardData(): Promise<DashboardData> {
         opponent: row.opponent || null,
         oppWins: row.opponent_wins,
         oppLosses: row.opponent_losses,
-        result: row.w_or_l || null,
+        result: normResult(row.w_or_l),
         teamScore: row.team_score,
         oppScore: row.opponent_score,
         bye: !row.home_or_away && String(row.opponent || '').toUpperCase() === 'BYE',
@@ -423,7 +435,7 @@ export async function getDashboardData(): Promise<DashboardData> {
         opponent: row.opponent || null,
         oppWins: row.opponent_wins,
         oppLosses: row.opponent_losses,
-        result: row.w_or_l || null,
+        result: normResult(row.w_or_l),
         teamScore: row.team_score,
         oppScore: row.opponent_score,
         bye: false,
@@ -431,7 +443,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       postseason.push({
         label: toTitleCase(label.replace(/_/g, ' ')),
         opponent: row.opponent || null,
-        result: row.w_or_l || null,
+        result: normResult(row.w_or_l),
       });
     }
   });
@@ -681,7 +693,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       .filter((r: any) => r.team)
       .map((r: any) => {
         const seasonScheduleRows = (allScheduleHistoryRes.data || []).filter((sr: any) => sr.season === r.season);
-        const wonConfChamp = seasonScheduleRows.some((sr: any) => norm(sr.week_name) === 'conference_championship' && sr.w_or_l === 'W');
+        const wonConfChamp = seasonScheduleRows.some((sr: any) => norm(sr.week_name) === 'conference_championship' && normResult(sr.w_or_l) === 'W');
         const madePlayoffs = seasonScheduleRows.some((sr: any) =>
           ['bowl_game', 'playoff_round_1', 'playoff_quarterfinals', 'playoff_semifinals', 'national_championship'].includes(norm(sr.week_name))
         );
@@ -717,8 +729,8 @@ export async function getDashboardData(): Promise<DashboardData> {
   let wins = 0,
     losses = 0;
   scheduleRows.forEach((row: any) => {
-    if (row.w_or_l === 'W') wins++;
-    else if (row.w_or_l === 'L') losses++;
+    if (normResult(row.w_or_l) === 'W') wins++;
+    else if (normResult(row.w_or_l) === 'L') losses++;
   });
   const myApRank = rank.ap.find((r) => norm(r.team) === norm(myTeamName));
   const myCoachesRank = rank.coaches.find((r) => norm(r.team) === norm(myTeamName));

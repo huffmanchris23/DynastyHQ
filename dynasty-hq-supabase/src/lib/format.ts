@@ -142,10 +142,10 @@ export function rankFor(
   return apHit ? Number(apHit.rank) || null : null;
 }
 
-/** "(5) Ohio State" if currently ranked, otherwise just the plain name. */
+/** "#5 Ohio State" if currently ranked, otherwise just the plain name. */
 export function rankedName(d: Parameters<typeof rankFor>[0], teamName: any): string {
   const rank = rankFor(d, teamName);
-  return rank ? `(${rank}) ${teamName}` : String(teamName || '');
+  return rank ? `#${rank} ${teamName}` : String(teamName || '');
 }
 
 /** Same idea as logoFor, but against the graphics (conference logo) table. */

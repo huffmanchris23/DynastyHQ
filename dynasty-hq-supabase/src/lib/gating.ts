@@ -27,9 +27,9 @@ export interface TabDef {
 export const TABS: TabDef[] = [
   { id: 'home', label: 'Home' },
   { id: 'schedule', label: 'Schedule', subtabs: [{ id: 'team', label: 'Team' }, { id: 'top25', label: 'Top 25' }] },
-  { id: 'rankings', label: 'Rankings' },
+  { id: 'rankings', label: 'Top 25' },
   { id: 'conference', label: 'Conference' },
-  { id: 'playoffs', label: 'Playoffs', subtabs: [{ id: 'top25', label: 'Top 25' }, { id: 'bracket', label: 'Bracket' }] },
+  { id: 'playoffs', label: 'CFBP Bracket' },
   { id: 'stats', label: 'Stats', subtabs: [{ id: 'team', label: 'Team' }, { id: 'player', label: 'Player' }] },
   { id: 'roster', label: 'Roster', subtabs: [{ id: 'depth', label: 'Depth Charts' }, { id: 'recruiting', label: 'Recruiting' }] },
   { id: 'awards', label: 'Awards', subtabs: [{ id: 'heisman', label: 'Heisman' }, { id: 'coordinator', label: 'Coordinator' }, { id: 'coach', label: 'Coach' }] },
@@ -58,7 +58,7 @@ export const TABS: TabDef[] = [
  * ~30 screenshots/week down to 9-11 — not tied to week number or data
  * presence, just a flat on/off per tab or subtab until built out.
  */
-export const COMING_SOON_TABS: string[] = ['commissioner', 'community', 'awards'];
+export const COMING_SOON_TABS: string[] = ['commissioner', 'community', 'conference', 'awards'];
 
 export const COMING_SOON_SUBTABS: Record<string, string[]> = {
   awards: ['heisman', 'coordinator', 'coach'],
