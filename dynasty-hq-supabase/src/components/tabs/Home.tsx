@@ -9,81 +9,55 @@ import EmptyState from '@/components/shared/EmptyState';
 
 /* ---------------- renderHomeContent ---------------- */
 
-function NewsList({ title, items }: { title: string; items: { headline: any; subHeadline?: any; graphicUrl?: any }[] }) {
+function DriveByList({ d }: { d: DashboardData }) {
+  const items = ((d.content && d.content.driveBy) || []).slice(0, 5);
   return (
     <div>
-      <SectionLabel>{title}</SectionLabel>
-      <div className="stack-sm">
+      <SectionLabel>Dynasty Drive-by</SectionLabel>
+      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {items.length ? (
-          items.map((n, i) => (
-            <div className="card news-card" key={i}>
-              {n.graphicUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={n.graphicUrl}
-                  alt={n.headline || ''}
-                  referrerPolicy="no-referrer"
-                  style={{ width: 60, height: 60, borderRadius: 2, objectFit: 'cover', flexShrink: 0 }}
-                />
+          items.map((item, i) => (
+            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, lineHeight: 1.4 }}>
+              {item.team ? (
+                <Badge text={item.team} size={20} logoUrl={logoFor(d.assets, item.team)} />
               ) : (
-                <div className="news-thumb">📰</div>
+                <span style={{ color: 'var(--primary)', fontWeight: 700, flexShrink: 0 }}>•</span>
               )}
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div className="news-headline">{n.headline}</div>
-                {n.subHeadline ? <div className="news-snip">{n.subHeadline}</div> : null}
-              </div>
+              <span style={{ marginTop: 1 }}>{item.headline}</span>
             </div>
           ))
         ) : (
-          <EmptyState>No stories yet this week.</EmptyState>
+          <EmptyState>No drive-by yet this week.</EmptyState>
         )}
       </div>
     </div>
   );
 }
 
-function PodcastCard({ d }: { d: DashboardData }) {
-  const podcast = (d.content && d.content.podcast) || [];
+function TopTakesList({ d }: { d: DashboardData }) {
+  const items = ((d.content && d.content.topTakes) || []).slice(0, 3);
   return (
-    <div>
-      <SectionLabel>Podcast</SectionLabel>
-      {podcast.length ? (
-        podcast.map((p, i) => (
-          <div
-            key={i}
-            className="card news-card"
-            style={{ padding: 12, gap: 14, alignItems: 'center' }}
-          >
-            {p.graphicUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={p.graphicUrl}
-                alt={p.headline || '4th and Forever'}
-                referrerPolicy="no-referrer"
-                style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }}
-              />
-            ) : (
-              <div
+    <div style={{ marginTop: 16 }}>
+      <SectionLabel>T.B.'s Top 3 Takes</SectionLabel>
+      {items.length ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {items.map((item, i) => (
+            <div key={i} className="card" style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <span
                 style={{
-                  width: 72, height: 72, borderRadius: 10, flexShrink: 0,
-                  background: 'rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 30,
+                  flexShrink: 0, width: 20, height: 20, borderRadius: '50%', background: 'var(--primary)', color: '#FFFFFF',
+                  fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
               >
-                🎙️
-              </div>
-            )}
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--accent)', fontWeight: 700, marginBottom: 3 }}>
-                4th and Forever
-              </div>
-              <div className="news-headline" style={{ fontSize: 15, lineHeight: 1.3 }}>{p.headline}</div>
-              {p.subHeadline ? <div className="news-snip" style={{ marginTop: 3 }}>{p.subHeadline}</div> : null}
+                {i + 1}
+              </span>
+              {item.team ? <Badge text={item.team} size={20} logoUrl={logoFor(d.assets, item.team)} /> : null}
+              <div style={{ fontSize: 13, lineHeight: 1.4, fontWeight: 500, marginTop: 1 }}>{item.headline}</div>
             </div>
-          </div>
-        ))
+          ))}
+        </div>
       ) : (
-        <EmptyState>No episode posted yet this week.</EmptyState>
+        <EmptyState>No takes yet this week.</EmptyState>
       )}
     </div>
   );
@@ -92,10 +66,8 @@ function PodcastCard({ d }: { d: DashboardData }) {
 function HomeContent({ d }: { d: DashboardData }) {
   return (
     <>
-      <NewsList title="Team Storyline" items={d.content ? (d.content.newspaper || []).slice(0, 1) : []} />
-      <NewsList title="National Headlines" items={d.content ? (d.content.headlines || []).slice(0, 3) : []} />
-      <NewsList title="Huff's Army" items={d.content ? (d.content.huffArmy || []).slice(0, 3) : []} />
-      <PodcastCard d={d} />
+      <DriveByList d={d} />
+      <TopTakesList d={d} />
     </>
   );
 }
