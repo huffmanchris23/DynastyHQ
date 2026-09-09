@@ -309,6 +309,8 @@ export interface ContentItem {
   contentTab: any;
   /** Optional graphic (e.g. podcast cover art) from content.content_graphic_url. */
   graphicUrl: any;
+  /** Which team this blurb is about (Dynasty Drive-by / T.B.'s Top Takes) — used to resolve a logo via logoFor(d.assets, team) instead of a generic bullet/number. */
+  team: any;
 }
 
 export interface Content {
@@ -318,6 +320,10 @@ export interface Content {
   headlines: ContentItem[];
   /** "Huff's Army" — user's fan-group content space, replaces the old second national headline slot. */
   huffArmy: ContentItem[];
+  /** "Dynasty Drive-by" — 4-5 quick one-liners from around the country. */
+  driveBy: ContentItem[];
+  /** "T.B.'s Top 3 Takes" — three hot-take blurbs. */
+  topTakes: ContentItem[];
 }
 
 export interface StoryBriefItem {

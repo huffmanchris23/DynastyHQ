@@ -711,12 +711,14 @@ export async function getDashboardData(): Promise<DashboardData> {
     national_headline_2: 'headlines',
     national_headline_3: 'headlines',
     "huff's_army": 'huffArmy',
+    drive_by: 'driveBy',
+    top_take: 'topTakes',
   };
-  const content: Content = { podcast: [], social: [], newspaper: [], headlines: [], huffArmy: [] };
+  const content: Content = { podcast: [], social: [], newspaper: [], headlines: [], huffArmy: [], driveBy: [], topTakes: [] };
   (contentRes.data || []).forEach((r: any) => {
     const key = CONTENT_TYPE_MAP[norm(r.content_input_type)];
     if (!key || !r.headline) return;
-    content[key].push({ link: null, headline: r.headline, subHeadline: r.sub_headline, homePage: null, contentTab: null, graphicUrl: r.content_graphic_url || null });
+    content[key].push({ link: null, headline: r.headline, subHeadline: r.sub_headline, homePage: null, contentTab: null, graphicUrl: r.content_graphic_url || null, team: r.team || null });
   });
 
   /* -------- Record + opponent asset -------- */
