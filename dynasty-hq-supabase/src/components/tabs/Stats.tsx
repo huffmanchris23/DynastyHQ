@@ -5,23 +5,31 @@ import Badge from '@/components/shared/Badge';
 import SectionLabel from '@/components/shared/SectionLabel';
 import EmptyState from '@/components/shared/EmptyState';
 
-export function TeamStats({ d }: { d: DashboardData }) {
-  const ts = d.teamStats || ({} as DashboardData['teamStats']);
-  const mine = ts.mine || ({} as NonNullable<DashboardData['teamStats']['mine']>);
+/**
+ * Team Stats, split offense/defense via team_stats.offense_or_defense_stat.
+ * Player-level (passing/rushing/receiving) stats were dropped — those
+ * tables no longer exist in the schema.
+ */
+export function TeamStats({ d, kind }: { d: DashboardData; kind: 'offense' | 'defense' }) {
+  const split = (d.teamStats && d.teamStats[kind]) || { national: [], mine: null };
+  const mine = split.mine || ({} as NonNullable<typeof split.mine>);
   const myTeamName = d.team && d.team.TEAM_NAME;
+  const isDefense = kind === 'defense';
   const cards = [
-    { label: 'Points/Game', value: mine.ppg },
-    { label: 'Yards/Game', value: mine.ypg },
-    { label: 'Pass Yds/Game', value: mine.passYpg },
-    { label: 'Rush Yds/Game', value: mine.rushYpg },
+    { label: isDefense ? 'Points Allowed/Game' : 'Points/Game', value: mine.ppg },
+    { label: isDefense ? 'Yards Allowed/Game' : 'Yards/Game', value: mine.ypg },
+    { label: isDefense ? 'Pass Yds Allowed/Game' : 'Pass Yds/Game', value: mine.passYpg },
+    { label: isDefense ? 'Rush Yds Allowed/Game' : 'Rush Yds/Game', value: mine.rushYpg },
   ];
-  const national = (ts.national || []).slice(0, 5);
+  // Only the top 5 nationally, per the OCR workflow (screenshot covers the
+  // top group + a separate one for our team if it falls outside that group).
+  const national = (split.national || []).slice(0, 5);
   const cols = '26px 1fr 46px 46px 56px 56px';
 
   return (
     <>
       <div>
-        <SectionLabel>{(d.team && d.team.TEAM_NAME) + ' — Season Stats'}</SectionLabel>
+        <SectionLabel>{(d.team && d.team.TEAM_NAME) + ` — Season ${isDefense ? 'Defense' : 'Offense'}`}</SectionLabel>
         <div className="grid-2">
           {cards.map((c, i) => (
             <div className="card" key={i}>
@@ -32,7 +40,7 @@ export function TeamStats({ d }: { d: DashboardData }) {
         </div>
       </div>
       <div style={{ marginTop: 16 }}>
-        <SectionLabel>National — Team Offense</SectionLabel>
+        <SectionLabel>{`National — Team ${isDefense ? 'Defense' : 'Offense'}`}</SectionLabel>
         <div className="table primary">
           <Thead cols={cols}>
             <div style={{ textAlign: 'left' }}>Rk</div>
@@ -70,94 +78,6 @@ export function TeamStats({ d }: { d: DashboardData }) {
             ))
           ) : (
             <EmptyState>No national data yet.</EmptyState>
-          )}
-        </div>
-      </div>
-    </>
-  );
-}
-
-const STAT_TYPES = [
-  { id: 'passing', label: 'Passing' },
-  { id: 'rushing', label: 'Rushing' },
-  { id: 'receiving', label: 'Receiving' },
-] as const;
-
-function TeamLeadersRow({ d }: { d: DashboardData }) {
-  const ps = d.playerStats || ({} as DashboardData['playerStats']);
-  const passing = (ps.passing?.leaders || [])[0];
-  const rushing = (ps.rushing?.leaders || [])[0];
-  const receiving = (ps.receiving?.leaders || [])[0];
-  if (!passing && !rushing && !receiving) return null;
-  return (
-    <div className="grid-3" style={{ marginBottom: 16 }}>
-      {[
-        { label: 'Passing', l: passing },
-        { label: 'Rushing', l: rushing },
-        { label: 'Receiving', l: receiving },
-      ].map((c, i) => (
-        <div className="card center" key={i}>
-          <div className="stat-label">{c.label}</div>
-          <div className="stat-name">{c.l ? c.l.name : '—'}</div>
-          <div className="stat-sub">{c.l ? `${numOr(c.l.yards)} YDS · ${numOr(c.l.td)} TD` : ''}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export function PlayerStats({
-  d,
-  statType,
-  onStatTypeChange,
-}: {
-  d: DashboardData;
-  statType: string;
-  onStatTypeChange: (id: string) => void;
-}) {
-  const key = (statType || 'passing') as keyof DashboardData['playerStats'];
-  const block = (d.playerStats && d.playerStats[key]) || { national: [], leaders: [] };
-  const myTeamName = d.team && d.team.TEAM_NAME;
-  const cols = '26px 1fr 1fr 70px';
-
-  return (
-    <>
-      <TeamLeadersRow d={d} />
-      <div className="subtab-bar">
-        {STAT_TYPES.map((s) => (
-          <button key={s.id} className={`subtab-btn ${key === s.id ? 'active' : ''}`} onClick={() => onStatTypeChange(s.id)}>
-            {s.label}
-          </button>
-        ))}
-      </div>
-      <div style={{ marginTop: 16 }}>
-        <SectionLabel>{'National — ' + key.charAt(0).toUpperCase() + key.slice(1)}</SectionLabel>
-        <div className="table primary">
-          <Thead cols={cols}>
-            <div style={{ textAlign: 'left' }}>Rk</div>
-            <div style={{ textAlign: 'left' }}>Player</div>
-            <div style={{ textAlign: 'left' }}>Team</div>
-            <div>Yds</div>
-          </Thead>
-          {(block.national || []).length ? (
-            (block.national || []).map((r, i) => (
-              <Row key={i} cols={cols} first={i === 0} mine={isMineFn(myTeamName, r.team)}>
-                <div className="tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.45)' }}>
-                  {r.rank}
-                </div>
-                <div className="truncate" style={{ fontWeight: 500, fontSize: 14 }}>
-                  {r.name}
-                </div>
-                <div className="truncate" style={{ fontSize: 12, color: 'rgba(0,0,0,0.55)' }}>
-                  {r.team}
-                </div>
-                <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.7)' }}>
-                  {numOr(r.yards)}
-                </div>
-              </Row>
-            ))
-          ) : (
-            <EmptyState>No leaderboard data yet.</EmptyState>
           )}
         </div>
       </div>

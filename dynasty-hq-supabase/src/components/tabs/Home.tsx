@@ -9,11 +9,12 @@ import EmptyState from '@/components/shared/EmptyState';
 
 /* ---------------- renderHomeContent ---------------- */
 
-function DriveByList({ d }: { d: DashboardData }) {
-  const items = ((d.content && d.content.driveBy) || []).slice(0, 5);
+function AroundTheNationList({ d }: { d: DashboardData }) {
+  // 4 quick one-liners from around the country (content_input_type = drive_by).
+  const items = ((d.content && d.content.driveBy) || []).slice(0, 4);
   return (
     <div>
-      <SectionLabel>Dynasty Drive-by</SectionLabel>
+      <SectionLabel>Around the Nation</SectionLabel>
       <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {items.length ? (
           items.map((item, i) => (
@@ -27,10 +28,19 @@ function DriveByList({ d }: { d: DashboardData }) {
             </div>
           ))
         ) : (
-          <EmptyState>No drive-by yet this week.</EmptyState>
+          <EmptyState>No blurbs yet this week.</EmptyState>
         )}
       </div>
     </div>
+  );
+}
+
+/** 🌶️ x (1, 2, 3) — spice level for each of T.B.'s three takes, hottest last. */
+function PepperRating({ level }: { level: number }) {
+  return (
+    <span style={{ flexShrink: 0, fontSize: 12, letterSpacing: '-1px', lineHeight: 1 }} aria-label={`Spice level ${level} of 3`}>
+      {'🌶️'.repeat(level)}
+    </span>
   );
 }
 
@@ -38,24 +48,38 @@ function TopTakesList({ d }: { d: DashboardData }) {
   const items = ((d.content && d.content.topTakes) || []).slice(0, 3);
   return (
     <div style={{ marginTop: 16 }}>
-      <SectionLabel>T.B.'s Top 3 Takes</SectionLabel>
-      {items.length ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {items.map((item, i) => (
-            <div key={i} className="card" style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-              <span
-                style={{
-                  flexShrink: 0, width: 20, height: 20, borderRadius: '50%', background: 'var(--primary)', color: '#FFFFFF',
-                  fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
-              >
-                {i + 1}
-              </span>
-              {item.team ? <Badge text={item.team} size={20} logoUrl={logoFor(d.assets, item.team)} /> : null}
-              <div style={{ fontSize: 13, lineHeight: 1.4, fontWeight: 500, marginTop: 1 }}>{item.headline}</div>
-            </div>
-          ))}
+      {/* Icon + large display-font title, instead of the generic SectionLabel treatment. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        <div
+          style={{
+            flexShrink: 0, width: 30, height: 30, borderRadius: 6,
+            background: 'var(--primary)', color: '#FFFFFF',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 400,
+          }}
+        >
+          TB
         </div>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 400, letterSpacing: '0.01em' }}>
+          T.B.'s Top Takes
+        </span>
+      </div>
+      {items.length ? (
+        <>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {items.map((item, i) => (
+              <div key={i} className="card" style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <PepperRating level={i + 1} />
+                {item.team ? <Badge text={item.team} size={20} logoUrl={logoFor(d.assets, item.team)} /> : null}
+                <div style={{ fontSize: 13, lineHeight: 1.4, fontWeight: 500, marginTop: 1 }}>{item.headline}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 8, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(0,0,0,0.4)' }}>
+            <span>🌮</span>
+            <span>Presented by Taco Bell</span>
+          </div>
+        </>
       ) : (
         <EmptyState>No takes yet this week.</EmptyState>
       )}
@@ -66,7 +90,7 @@ function TopTakesList({ d }: { d: DashboardData }) {
 function HomeContent({ d }: { d: DashboardData }) {
   return (
     <>
-      <DriveByList d={d} />
+      <AroundTheNationList d={d} />
       <TopTakesList d={d} />
     </>
   );

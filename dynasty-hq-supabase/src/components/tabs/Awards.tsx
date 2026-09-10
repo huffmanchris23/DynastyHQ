@@ -1,14 +1,15 @@
-import type { DashboardData, Awards as AwardsType } from '@/lib/types';
+import type { DashboardData } from '@/lib/types';
 import { isMine as isMineFn, logoFor } from '@/lib/format';
 import { Row } from '@/components/shared/Row';
 import Badge from '@/components/shared/Badge';
 import EmptyState from '@/components/shared/EmptyState';
 
-export default function Awards({ d, subtab }: { d: DashboardData; subtab: string | null }) {
-  const key = (subtab || 'heisman') as keyof AwardsType;
-  const list = (d.awards && d.awards[key]) || [];
+// Coordinator/Coach awards (Broyles/Coach of the Year) were dropped — those
+// tables no longer exist. This is Heisman-only now.
+export default function Awards({ d }: { d: DashboardData }) {
+  const list = (d.awards && d.awards.heisman) || [];
   const myTeamName = d.team && d.team.TEAM_NAME;
-  if (!list.length) return <EmptyState>No {key} race data yet.</EmptyState>;
+  if (!list.length) return <EmptyState>No Heisman race data yet.</EmptyState>;
   const cols = '22px 26px 1fr 36px';
   return (
     <div className="table primary">

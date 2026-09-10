@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { DashboardData } from '@/lib/types';
-import { numOr, isMine as isMineFn, logoFor, rankedName } from '@/lib/format';
+import { isMine as isMineFn, logoFor, rankedName } from '@/lib/format';
 import { Row, Thead } from '@/components/shared/Row';
 import Badge from '@/components/shared/Badge';
 import EmptyState from '@/components/shared/EmptyState';
@@ -61,7 +61,7 @@ export default function Conference({ d }: { d: DashboardData }) {
   if (!allRows.length) return <EmptyState>No conference data yet.</EmptyState>;
 
   const rows = allRows.filter((r) => r.conference === activeConf);
-  const cols = '1fr 48px 48px 42px 42px';
+  const cols = '1fr 60px 60px';
 
   return (
     <>
@@ -143,8 +143,6 @@ export default function Conference({ d }: { d: DashboardData }) {
           <div style={{ textAlign: 'left' }}>Team</div>
           <div>Conf</div>
           <div>Ovr</div>
-          <div>PF</div>
-          <div>PA</div>
         </Thead>
         {rows.map((c, i) => (
           <Row key={i} cols={cols} first={i === 0} mine={isMineFn(myTeamName, c.team)}>
@@ -157,12 +155,6 @@ export default function Conference({ d }: { d: DashboardData }) {
             </div>
             <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.7)' }}>
               {c.overallW ?? ''}-{c.overallL ?? ''}
-            </div>
-            <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.6)' }}>
-              {numOr(c.pf, '')}
-            </div>
-            <div className="right tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.6)' }}>
-              {numOr(c.pa, '')}
             </div>
           </Row>
         ))}
