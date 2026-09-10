@@ -22,6 +22,7 @@
   --dhq-red: #B3242A;
   --font-display: 'Anton', -apple-system, sans-serif;
   --font-label: 'Oswald', -apple-system, sans-serif;
+  --font-fun: 'Bangers', -apple-system, cursive;
   /* Cincinnati's brand font. Not on Google Fonts (commercial typeface), so
      this only actually renders as Friz Quadrata for visitors who happen to
      have it installed locally — everyone else falls back to Georgia/serif.

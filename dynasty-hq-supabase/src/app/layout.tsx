@@ -1,9 +1,12 @@
 import type { Metadata, Viewport } from 'next';
-import { Anton, Oswald } from 'next/font/google';
+import { Anton, Oswald, Bangers } from 'next/font/google';
 import './globals.css';
 
 const anton = Anton({ subsets: ['latin'], weight: '400', variable: '--font-display' });
 const oswald = Oswald({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-label' });
+// T.B.'s Top Takes — loud, marker-style font for the take text itself, to
+// match the hot-take/Barstool energy instead of reading like a spec sheet.
+const bangers = Bangers({ subsets: ['latin'], weight: '400', variable: '--font-fun' });
 
 export const metadata: Metadata = {
   title: 'Dynasty HQ',
@@ -26,7 +29,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${anton.variable} ${oswald.variable}`}>
+    <html lang="en" className={`${anton.variable} ${oswald.variable} ${bangers.variable}`}>
       <body>{children}</body>
     </html>
   );
