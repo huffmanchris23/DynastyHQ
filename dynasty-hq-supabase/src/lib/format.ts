@@ -114,6 +114,11 @@ export function logoFor(assets: { TEAM_NAME?: any; TEAM_ABBREVIATION?: any; LOGO
   return findTeamAsset(assets, nameOrAbbr)?.LOGO_URL || undefined;
 }
 
+/** Team's primary brand color, for accent bars/borders — falls back to the app's default primary when unresolved. */
+export function colorFor(assets: { TEAM_NAME?: any; TEAM_ABBREVIATION?: any; PRIMARY_COLOR?: any }[] | undefined, nameOrAbbr: any): string {
+  return findTeamAsset(assets, nameOrAbbr)?.PRIMARY_COLOR || 'var(--primary)';
+}
+
 /** Same idea as logoFor, but returns the team's abbreviation instead of a logo URL — for compact display in odds/betting lines. */
 export function abbrFor(assets: { TEAM_NAME?: any; TEAM_ABBREVIATION?: any }[] | undefined, nameOrAbbr: any): string {
   return findTeamAsset(assets, nameOrAbbr)?.TEAM_ABBREVIATION || String(nameOrAbbr || '');
