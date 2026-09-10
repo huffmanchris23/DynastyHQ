@@ -58,22 +58,22 @@ a { color: inherit; }
   content: ''; display: block; height: 3px;
   background: linear-gradient(90deg, var(--dhq-navy) 0 33%, var(--dhq-tan) 33% 66%, var(--dhq-red) 66% 100%);
 }
-.header-inner { padding: 20px 16px 12px; background: #E4D2BA; }
+.header-inner { padding: 20px 16px 12px; background: var(--accent); }
 .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.header-tag { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(0,0,0,0.7); }
+.header-tag { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: color-mix(in srgb, var(--bg) 70%, transparent); }
 .palette-btn {
-  background: none; border: none; color: rgba(0,0,0,0.55); cursor: pointer; padding: 4px; border-radius: 2px;
+  background: none; border: none; color: color-mix(in srgb, var(--bg) 60%, transparent); cursor: pointer; padding: 4px; border-radius: 2px;
 }
-.palette-btn:hover { background: rgba(0,0,0,0.08); color: var(--primary); }
+.palette-btn:hover { background: rgba(255,255,255,0.12); color: var(--bg); }
 
 .header-row { display: flex; align-items: flex-end; justify-content: space-between; padding-bottom: 8px; }
 .header-team { display: flex; align-items: center; gap: 10px; }
 .header-team-text { display: flex; flex-direction: column; }
-.header-team h1 { font-family: var(--font-team); color: var(--accent); font-size: 28px; font-weight: 400; margin: 0; letter-spacing: -0.01em; line-height: 1; text-transform: uppercase; transform: skewX(-8deg); transform-origin: left bottom; display: inline-block; -webkit-text-stroke: 1px currentColor; text-shadow: 0.5px 0 currentColor, -0.5px 0 currentColor, 0 0.5px currentColor, 0 -0.5px currentColor; }
-.header-team .philosophy { font-family: var(--font-team); font-style: italic; font-size: 11px; color: rgba(0,0,0,0.55); margin-top: 3px; letter-spacing: 0.01em; }
+.header-team h1 { font-family: var(--font-team); color: var(--bg); font-size: 28px; font-weight: 400; margin: 0; letter-spacing: -0.01em; line-height: 1; text-transform: uppercase; transform: skewX(-8deg); transform-origin: left bottom; display: inline-block; -webkit-text-stroke: 1px currentColor; text-shadow: 0.5px 0 currentColor, -0.5px 0 currentColor, 0 0.5px currentColor, 0 -0.5px currentColor; }
+.header-team .philosophy { font-family: var(--font-team); font-style: italic; font-size: 11px; color: color-mix(in srgb, var(--bg) 65%, transparent); margin-top: 3px; letter-spacing: 0.01em; }
 .header-record { text-align: right; }
-.header-record .rec { font-family: var(--font-team); font-weight: 400; font-size: 28px; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; transform: skewX(-8deg); transform-origin: right bottom; display: inline-block; -webkit-text-stroke: 1px currentColor; text-shadow: 0.5px 0 currentColor, -0.5px 0 currentColor, 0 0.5px currentColor, 0 -0.5px currentColor; }
-.header-record .rk { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(0,0,0,0.5); margin-top: 2px; }
+.header-record .rec { font-family: var(--font-team); font-weight: 400; font-size: 28px; line-height: 1; color: var(--bg); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; transform: skewX(-8deg); transform-origin: right bottom; display: inline-block; -webkit-text-stroke: 1px currentColor; text-shadow: 0.5px 0 currentColor, -0.5px 0 currentColor, 0 0.5px currentColor, 0 -0.5px currentColor; }
+.header-record .rk { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: color-mix(in srgb, var(--bg) 55%, transparent); margin-top: 2px; }
 
 .badge {
   flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; font-weight: 700;
@@ -81,19 +81,19 @@ a { color: inherit; }
 }
 
 /* ---- Tab strip ---- */
-/* Stays on the red header band — white-on-red palette kept as-is. */
+/* Sits on the red header band (--primary); tan text/underline to match the header above. */
 .tabstrip-outer { padding: 0 16px; overflow-x: auto; scrollbar-width: none; }
 .tabstrip-outer::-webkit-scrollbar { display: none; }
-.tabstrip { display: flex; gap: 2px; width: max-content; border-bottom: 1px solid rgba(0,0,0,0.25); }
+.tabstrip { display: flex; gap: 2px; width: max-content; border-bottom: 1px solid rgba(255,255,255,0.25); }
 .tab-btn {
   font-family: var(--font-label);
   padding: 8px 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
-  white-space: nowrap; border: none; border-bottom: 2px solid transparent; background: transparent; color: rgba(255,255,255,0.55);
+  white-space: nowrap; border: none; border-bottom: 2px solid transparent; background: transparent; color: color-mix(in srgb, var(--bg) 55%, transparent);
   cursor: pointer;
 }
-.tab-btn.active { color: #FFFFFF; background: rgba(0,0,0,0.22); border-bottom-color: var(--accent); }
-.tab-btn.is-coming-soon { color: rgba(255,255,255,0.28); }
-.tab-btn.is-coming-soon.active { color: rgba(255,255,255,0.55); background: rgba(0,0,0,0.22); border-bottom-color: rgba(255,255,255,0.28); }
+.tab-btn.active { color: var(--bg); background: rgba(0,0,0,0.22); border-bottom-color: var(--bg); }
+.tab-btn.is-coming-soon { color: color-mix(in srgb, var(--bg) 28%, transparent); }
+.tab-btn.is-coming-soon.active { color: color-mix(in srgb, var(--bg) 55%, transparent); background: rgba(0,0,0,0.22); border-bottom-color: color-mix(in srgb, var(--bg) 28%, transparent); }
 
 /* ---- Subtab bar ---- */
 /* Renders inside the white main content area (not the red band), so this
