@@ -2,7 +2,7 @@
 
 import type { DashboardData } from '@/lib/types';
 import { gateInfo } from '@/lib/gating';
-import { initials, toPct, numOr, abbrFor, logoFor, rankedName } from '@/lib/format';
+import { initials, toPct, numOr, abbrFor, logoFor, colorFor, rankedName } from '@/lib/format';
 import SectionLabel from '@/components/shared/SectionLabel';
 import Badge from '@/components/shared/Badge';
 import EmptyState from '@/components/shared/EmptyState';
@@ -15,20 +15,33 @@ function AroundTheNationList({ d }: { d: DashboardData }) {
   return (
     <div>
       <SectionLabel>Around the Nation</SectionLabel>
-      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {items.length ? (
-          items.map((item, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, lineHeight: 1.4 }}>
-              {item.team ? (
-                <Badge text={item.team} size={20} logoUrl={logoFor(d.assets, item.team)} />
-              ) : (
-                <span style={{ color: 'var(--primary)', fontWeight: 700, flexShrink: 0 }}>•</span>
-              )}
-              <span style={{ marginTop: 1 }}>{item.headline}</span>
-            </div>
-          ))
+          items.map((item, i) => {
+            const accent = item.team ? colorFor(d.assets, item.team) : 'var(--primary)';
+            return (
+              <div
+                key={i}
+                style={{
+                  display: 'flex', gap: 10, alignItems: 'center', fontSize: 13, lineHeight: 1.4,
+                  background: '#FFFFFF', borderRadius: 6, padding: '9px 12px',
+                  borderLeft: `4px solid ${accent}`,
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+                }}
+              >
+                {item.team ? (
+                  <Badge text={item.team} size={22} logoUrl={logoFor(d.assets, item.team)} />
+                ) : (
+                  <span style={{ color: accent, fontWeight: 900, fontSize: 16, flexShrink: 0 }}>•</span>
+                )}
+                <span style={{ fontWeight: 500 }}>{item.headline}</span>
+              </div>
+            );
+          })
         ) : (
-          <EmptyState>No blurbs yet this week.</EmptyState>
+          <div className="card">
+            <EmptyState>No blurbs yet this week.</EmptyState>
+          </div>
         )}
       </div>
     </div>
@@ -38,11 +51,19 @@ function AroundTheNationList({ d }: { d: DashboardData }) {
 /** 🌶️ x (1, 2, 3) — spice level for each of T.B.'s three takes, hottest last. */
 function PepperRating({ level }: { level: number }) {
   return (
-    <span style={{ flexShrink: 0, fontSize: 12, letterSpacing: '-1px', lineHeight: 1 }} aria-label={`Spice level ${level} of 3`}>
+    <span style={{ flexShrink: 0, fontSize: 10 + level * 2, letterSpacing: '-1px', lineHeight: 1 }} aria-label={`Spice level ${level} of 3`}>
       {'🌶️'.repeat(level)}
     </span>
   );
 }
+
+// Cards get visibly hotter as the spice level climbs — mild amber for take
+// #1, up to a deep red (matching the app's primary) for the hottest take.
+const HEAT = [
+  { bg: '#FFF6E9', border: '#E3A54B' },
+  { bg: '#FDE7D9', border: '#D9642F' },
+  { bg: '#FBDAD8', border: '#7A2426' },
+];
 
 function TopTakesList({ d }: { d: DashboardData }) {
   const items = ((d.content && d.content.topTakes) || []).slice(0, 3);
@@ -72,13 +93,24 @@ function TopTakesList({ d }: { d: DashboardData }) {
       {items.length ? (
         <>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {items.map((item, i) => (
-              <div key={i} className="card" style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <PepperRating level={i + 1} />
-                {item.team ? <Badge text={item.team} size={20} logoUrl={logoFor(d.assets, item.team)} /> : null}
-                <div style={{ fontSize: 13, lineHeight: 1.4, fontWeight: 500, marginTop: 1 }}>{item.headline}</div>
-              </div>
-            ))}
+            {items.map((item, i) => {
+              const heat = HEAT[i] || HEAT[HEAT.length - 1];
+              return (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex', gap: 10, alignItems: 'center',
+                    background: heat.bg, borderRadius: 8, padding: '10px 12px',
+                    borderLeft: `5px solid ${heat.border}`,
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+                  }}
+                >
+                  <PepperRating level={i + 1} />
+                  {item.team ? <Badge text={item.team} size={22} logoUrl={logoFor(d.assets, item.team)} /> : null}
+                  <div style={{ fontSize: 13, lineHeight: 1.4, fontWeight: 700, color: '#2A1A0F' }}>{item.headline}</div>
+                </div>
+              );
+            })}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(0,0,0,0.4)' }}>
             {d.settings.tacoBellLogoUrl ? (
@@ -259,12 +291,11 @@ export default function Home({ d }: { d: DashboardData }) {
             <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2 }}>{ml}</div>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 8, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(0,0,0,0.4)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 10 }}>
           {d.settings.dhqBetsLogoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={d.settings.dhqBetsLogoUrl} alt="DHQBets" style={{ height: 14, width: 'auto' }} />
+            <img src={d.settings.dhqBetsLogoUrl} alt="DHQBets" style={{ height: 28, width: 'auto' }} />
           ) : null}
-          <span>Brought to you by DHQBets</span>
         </div>
       </div>
     );
