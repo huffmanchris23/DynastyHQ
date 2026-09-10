@@ -48,17 +48,9 @@ function AroundTheNationList({ d }: { d: DashboardData }) {
   );
 }
 
-/** 🌶️ x (1, 2, 3) — spice level for each of T.B.'s three takes, hottest last. */
-function PepperRating({ level }: { level: number }) {
-  return (
-    <span style={{ flexShrink: 0, fontSize: 10 + level * 2, letterSpacing: '-1px', lineHeight: 1 }} aria-label={`Spice level ${level} of 3`}>
-      {'🌶️'.repeat(level)}
-    </span>
-  );
-}
-
 // Cards get visibly hotter as the spice level climbs — mild amber for take
 // #1, up to a deep red (matching the app's primary) for the hottest take.
+// (Carries the spice level on its own now — no pepper icons.)
 const HEAT = [
   { bg: '#FFF6E9', border: '#E3A54B' },
   { bg: '#FDE7D9', border: '#D9642F' },
@@ -100,14 +92,15 @@ function TopTakesList({ d }: { d: DashboardData }) {
                   key={i}
                   style={{
                     display: 'flex', gap: 10, alignItems: 'center',
-                    background: heat.bg, borderRadius: 8, padding: '10px 12px',
+                    background: heat.bg, borderRadius: 8, padding: '10px 14px',
                     borderLeft: `5px solid ${heat.border}`,
                     boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
                   }}
                 >
-                  <PepperRating level={i + 1} />
-                  {item.team ? <Badge text={item.team} size={22} logoUrl={logoFor(d.assets, item.team)} /> : null}
-                  <div style={{ fontSize: 13, lineHeight: 1.4, fontWeight: 700, color: '#2A1A0F' }}>{item.headline}</div>
+                  {item.team ? <Badge text={item.team} size={24} logoUrl={logoFor(d.assets, item.team)} /> : null}
+                  <div style={{ fontFamily: 'var(--font-fun)', fontSize: 19, lineHeight: 1.25, letterSpacing: '0.015em', color: '#2A1A0F' }}>
+                    {item.headline}
+                  </div>
                 </div>
               );
             })}
