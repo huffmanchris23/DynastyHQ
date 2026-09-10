@@ -49,18 +49,23 @@ function TopTakesList({ d }: { d: DashboardData }) {
   return (
     <div style={{ marginTop: 16 }}>
       {/* Icon + large display-font title, instead of the generic SectionLabel treatment. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <div
-          style={{
-            flexShrink: 0, width: 30, height: 30, borderRadius: 6,
-            background: 'var(--primary)', color: '#FFFFFF',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 400,
-          }}
-        >
-          TB
-        </div>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 400, letterSpacing: '0.01em' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+        {d.settings.tbIconUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={d.settings.tbIconUrl} alt="T.B. Walker" style={{ flexShrink: 0, width: 44, height: 44, borderRadius: 8, objectFit: 'cover' }} />
+        ) : (
+          <div
+            style={{
+              flexShrink: 0, width: 44, height: 44, borderRadius: 8,
+              background: 'var(--primary)', color: '#FFFFFF',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 400,
+            }}
+          >
+            TB
+          </div>
+        )}
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 400, letterSpacing: '0.01em' }}>
           T.B.'s Top Takes
         </span>
       </div>
@@ -75,8 +80,13 @@ function TopTakesList({ d }: { d: DashboardData }) {
               </div>
             ))}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 8, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(0,0,0,0.4)' }}>
-            <span>🌮</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(0,0,0,0.4)' }}>
+            {d.settings.tacoBellLogoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={d.settings.tacoBellLogoUrl} alt="Taco Bell" style={{ height: 14, width: 'auto' }} />
+            ) : (
+              <span>🌮</span>
+            )}
             <span>Presented by Taco Bell</span>
           </div>
         </>
@@ -248,6 +258,13 @@ export default function Home({ d }: { d: DashboardData }) {
             <div style={{ fontSize: 9, textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)' }}>Moneyline</div>
             <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2 }}>{ml}</div>
           </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 8, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(0,0,0,0.4)' }}>
+          {d.settings.dhqBetsLogoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={d.settings.dhqBetsLogoUrl} alt="DHQBets" style={{ height: 14, width: 'auto' }} />
+          ) : null}
+          <span>Brought to you by DHQBets</span>
         </div>
       </div>
     );

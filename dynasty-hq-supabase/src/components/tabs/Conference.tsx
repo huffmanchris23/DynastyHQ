@@ -110,7 +110,12 @@ export default function Conference({ d }: { d: DashboardData }) {
         </div>
       ) : null}
       <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-        <Badge text={activeConf} size={40} mine />
+        {d.settings.conferenceLogoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={d.settings.conferenceLogoUrl} alt={activeConf} style={{ width: 40, height: 40, objectFit: 'contain', flexShrink: 0 }} />
+        ) : (
+          <Badge text={activeConf} size={40} mine />
+        )}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="stat-label">Conference</div>
           {conferences.length > 1 ? (
