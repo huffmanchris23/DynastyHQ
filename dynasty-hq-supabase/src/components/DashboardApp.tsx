@@ -16,7 +16,7 @@ import { ScheduleTeam, ScheduleTop25 } from '@/components/tabs/Schedule';
 import Rankings from '@/components/tabs/Rankings';
 import Conference from '@/components/tabs/Conference';
 import { Bracket } from '@/components/tabs/Playoffs';
-import { TeamStats, PlayerStats } from '@/components/tabs/Stats';
+import { TeamStats } from '@/components/tabs/Stats';
 import { DepthCharts, Recruiting } from '@/components/tabs/Roster';
 import Awards from '@/components/tabs/Awards';
 import { MyCoach, HotSeats } from '@/components/tabs/CoachingCorner';
@@ -29,12 +29,10 @@ const SHOW_SEASON_SWITCHER = false;
 const SHOW_WILSON = false;
 /* Direct port of renderTabBody(). */
 
-function TabBody({ data, tab, subtab, statType, onStatTypeChange }: {
+function TabBody({ data, tab, subtab }: {
   data: DashboardData;
   tab: string;
   subtab: string | null;
-  statType: string;
-  onStatTypeChange: (id: string) => void;
 }) {
   const g = gateInfo(data);
 
@@ -57,14 +55,13 @@ function TabBody({ data, tab, subtab, statType, onStatTypeChange }: {
       return <Bracket d={data} />;
     case 'stats':
       if (!g.statsUnlocked) return <LockedCard untilWeek={1} />;
-      return subtab === 'player' ? <PlayerStats d={data} statType={statType} onStatTypeChange={onStatTypeChange} /> : <TeamStats d={data} />;
+      return <TeamStats d={data} kind={subtab === 'defense' ? 'defense' : 'offense'} />;
     case 'roster':
       if (g.isLocked) return <LockedCard untilWeek={0} />;
       return subtab === 'recruiting' ? <Recruiting d={data} /> : <DepthCharts d={data} />;
     case 'awards':
-      if (subtab === 'heisman' && !g.heismanUnlocked) return <LockedCard label="Not available yet" />;
-      if ((subtab === 'coordinator' || subtab === 'coach') && !g.awardsAdvUnlocked) return <LockedCard label="Not available yet" />;
-      return <Awards d={data} subtab={subtab} />;
+      if (!g.heismanUnlocked) return <LockedCard label="Not available yet" />;
+      return <Awards d={data} />;
     case 'coachingcorner':
       if (subtab === 'hotseat') return g.hotSeatUnlocked ? <HotSeats d={data} /> : <LockedCard label="Not available yet" />;
       return <MyCoach d={data} />;
@@ -109,7 +106,6 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
 
   const [tab, setTab] = useState('home');
   const [subtab, setSubtab] = useState<string | null>(null);
-  const [statType, setStatType] = useState('passing');
   const [season, setSeason] = useState<'s1' | 'history'>('s1');
   const [colors, setColors] = useState<ColorState>(() => {
     // Settings (set once in Supabase) wins over team colors — no more re-picking every session.
@@ -136,7 +132,9 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
   const team = data.team || ({} as NonNullable<DashboardData['team']>);
   const rec = data.record || ({} as DashboardData['record']);
   const recordStr = `${rec.wins || 0}-${rec.losses || 0}`;
-  const apRank = rec.cfpRank ? `#${rec.cfpRank} CFP` : rec.apRank ? `#${rec.apRank} AP` : 'NR';
+  // Just the rank number now — the poll is "Top 25", not "AP", so an "AP"/
+  // "CFP" suffix no longer makes sense here.
+  const apRank = rec.apRank ? `#${rec.apRank}` : 'NR';
   const currentTabDef = TABS.find((t) => t.id === tab) as TabDef | undefined;
   const g = gateInfo(data);
 
@@ -205,7 +203,7 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
                   })()
                 : null}
               <div className="stack">
-                <TabBody data={data} tab={tab} subtab={subtab} statType={statType} onStatTypeChange={setStatType} />
+                <TabBody data={data} tab={tab} subtab={subtab} />
               </div>
             </>
           )}
