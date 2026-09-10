@@ -13,7 +13,6 @@ export interface GateInfo {
   isLocked: boolean;
   statsUnlocked: boolean;
   playoffsUnlocked: boolean;
-  awardsAdvUnlocked: boolean;
   heismanUnlocked: boolean;
   hotSeatUnlocked: boolean;
 }
@@ -29,10 +28,10 @@ export const TABS: TabDef[] = [
   { id: 'schedule', label: 'Schedule', subtabs: [{ id: 'team', label: 'Team' }, { id: 'top25', label: 'Top 25' }] },
   { id: 'rankings', label: 'Top 25' },
   { id: 'conference', label: 'Conference' },
-  { id: 'playoffs', label: 'CFBP Bracket' },
-  { id: 'stats', label: 'Stats', subtabs: [{ id: 'team', label: 'Team' }, { id: 'player', label: 'Player' }] },
+  { id: 'playoffs', label: 'Playoffs' },
+  { id: 'stats', label: 'Stats', subtabs: [{ id: 'offense', label: 'Offense' }, { id: 'defense', label: 'Defense' }] },
   { id: 'roster', label: 'Roster', subtabs: [{ id: 'depth', label: 'Depth Charts' }, { id: 'recruiting', label: 'Recruiting' }] },
-  { id: 'awards', label: 'Awards', subtabs: [{ id: 'heisman', label: 'Heisman' }, { id: 'coordinator', label: 'Coordinator' }, { id: 'coach', label: 'Coach' }] },
+  { id: 'awards', label: 'Heisman' },
   { id: 'coachingcorner', label: 'Coaching Corner', subtabs: [{ id: 'mycoach', label: 'My Coach' }, { id: 'hotseat', label: 'Hot Seats' }] },
   {
     id: 'commissioner', label: 'Commissioner', subtabs: [
@@ -58,13 +57,13 @@ export const TABS: TabDef[] = [
  * ~30 screenshots/week down to 9-11 — not tied to week number or data
  * presence, just a flat on/off per tab or subtab until built out.
  */
-export const COMING_SOON_TABS: string[] = ['commissioner', 'community', 'conference', 'awards'];
+export const COMING_SOON_TABS: string[] = ['commissioner', 'community'];
 
 export const COMING_SOON_SUBTABS: Record<string, string[]> = {
-  awards: ['heisman', 'coordinator', 'coach'],
-  coachingcorner: ['hotseat'],
+  // Recruiting (my_recruit_board/national_recruit_ranks) and the national
+  // Top 25 schedule (top_25_schedule) have no data source in the current
+  // schema — parked until a new source is wired up.
   roster: ['recruiting'],
-  stats: ['player'],
   schedule: ['top25'],
 };
 
@@ -101,11 +100,9 @@ export function gateInfo(data: DashboardData | null): GateInfo {
     isLocked: hasWeekData ? week === 0 : false,
     statsUnlocked: hasWeekData ? week >= 1 : true,
     playoffsUnlocked: hasWeekData ? week >= 10 : true,
-    // Coordinator/Coach awards, Heisman, and Hot Seats aren't tied to a fixed
-    // week — they simply show up once the corresponding Supabase table
-    // actually has rows for the current season/week. No more guessing a
-    // week number.
-    awardsAdvUnlocked: (awards.coordinator && awards.coordinator.length > 0) || (awards.coach && awards.coach.length > 0),
+    // Heisman and Hot Seats aren't tied to a fixed week — they simply show
+    // up once the corresponding Supabase table actually has rows for the
+    // current season/week. No more guessing a week number.
     heismanUnlocked: !!(awards.heisman && awards.heisman.length > 0),
     hotSeatUnlocked: !!(coach.hotSeats && coach.hotSeats.length > 0),
   };
@@ -115,16 +112,11 @@ export function tabLocked(t: TabDef, g: GateInfo): boolean {
   if (t.id === 'playoffs') return !g.playoffsUnlocked;
   if (t.id === 'stats') return !g.statsUnlocked;
   if (t.id === 'roster') return g.isLocked;
+  if (t.id === 'awards') return !g.heismanUnlocked;
   return false;
 }
 
 export function subtabLockedIds(tabId: string, g: GateInfo): string[] {
   if (tabId === 'coachingcorner') return g.hotSeatUnlocked ? [] : ['hotseat'];
-  if (tabId === 'awards') {
-    const locked: string[] = [];
-    if (!g.heismanUnlocked) locked.push('heisman');
-    if (!g.awardsAdvUnlocked) locked.push('coordinator', 'coach');
-    return locked;
-  }
   return [];
 }

@@ -136,8 +136,6 @@ export interface PollEntry {
   team: any;
   wins: number;
   losses: number;
-  /** Previous week's rank, from ap_poll.last_week / coaches_poll.last_week. Null for a team's first appearance. */
-  lastWeek?: number | null;
   // Populated only if applyMovement_ is ever wired in (see snapshot.ts) —
   // unused today, kept for parity with the original dead code path.
   changeDir?: 'UP' | 'DOWN' | 'SAME' | null;
@@ -169,8 +167,6 @@ export interface ConfRow {
   confL: any;
   overallW: any;
   overallL: any;
-  pf: any;
-  pa: any;
 }
 
 export interface TeamStatsNational {
@@ -182,38 +178,15 @@ export interface TeamStatsNational {
   rushYpg: any;
 }
 
-export interface TeamStats {
+/** One side of the team_stats split (offense_or_defense_stat = 'offense' | 'defense'). */
+export interface TeamStatsSplit {
   national: TeamStatsNational[];
   mine: { team: any; ppg: any; ypg: any; passYpg: any; rushYpg: any } | null;
-  mineRank: { ppg: any; ypg: any; passYpg: any; rushYpg: any } | null;
 }
 
-export interface PlayerStatRow {
-  rank: number;
-  name: any;
-  team: any;
-  td: any;
-  yards: any;
-}
-
-export interface PlayerStatLeader {
-  name: any;
-  team: any;
-  td: any;
-  yards: any;
-  /** From top_performers.photo_url — set manually per category/week, matched by category. */
-  photoUrl?: string | null;
-}
-
-export interface PlayerStatBlock {
-  national: PlayerStatRow[];
-  leaders: PlayerStatLeader[];
-}
-
-export interface PlayerStats {
-  passing: PlayerStatBlock;
-  rushing: PlayerStatBlock;
-  receiving: PlayerStatBlock;
+export interface TeamStats {
+  offense: TeamStatsSplit;
+  defense: TeamStatsSplit;
 }
 
 export interface RecruitBoardRow {
@@ -352,7 +325,6 @@ export interface DashboardData {
   playoffBracketUrl: string | null;
   conf: ConfRow[];
   teamStats: TeamStats;
-  playerStats: PlayerStats;
   recruit: Recruit;
   roster: Roster;
   coach: Coach;

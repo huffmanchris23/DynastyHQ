@@ -23,8 +23,7 @@ import type {
   Playoff,
   ConfRow,
   TeamStats,
-  PlayerStats,
-  PlayerStatBlock,
+  TeamStatsSplit,
   Recruit,
   Roster,
   Coach,
@@ -239,165 +238,91 @@ export async function getDashboardData(): Promise<DashboardData> {
   // current_week=true (same anchor row used for myTeamName above) — that
   // flag is the single source of truth for what week the dynasty is on,
   // regular season or postseason. Only falls back to the old
-  // MAX(ap_poll.week)/MAX(game_preview.week) heuristic if nothing is
+  // MAX(top_25.week)/MAX(game_preview.week) heuristic if nothing is
   // flagged yet, so a fresh dynasty with no current_week set doesn't break.
   const currentWeekLabel = gpAnchorRows && gpAnchorRows[0] ? gpAnchorRows[0].week : null;
   let statsWeek: number;
   if (currentWeekLabel !== null && currentWeekLabel !== undefined) {
     statsWeek = resolveStatsWeek(currentWeekLabel);
   } else {
-    const { data: apMaxRows } = await t('ap_poll').order('week', { ascending: false }).limit(1);
-    const { data: previewMaxRows } = apMaxRows?.length ? { data: null } : await t('game_preview').order('week', { ascending: false }).limit(1);
-    statsWeek = safeNum((apMaxRows && apMaxRows[0]?.week) ?? (previewMaxRows && previewMaxRows[0]?.week) ?? 0, 0);
+    const { data: pollMaxRows } = await t('top_25').order('week', { ascending: false }).limit(1);
+    const { data: previewMaxRows } = pollMaxRows?.length ? { data: null } : await t('game_preview').order('week', { ascending: false }).limit(1);
+    statsWeek = safeNum((pollMaxRows && pollMaxRows[0]?.week) ?? (previewMaxRows && previewMaxRows[0]?.week) ?? 0, 0);
   }
   const recapWeek = Math.max(statsWeek - 1, 0);
 
   // ---- 4. Fetch everything in parallel ----
+  // Trimmed to the tables that actually exist in the current schema —
+  // last_week_box_score, last_week_player_stats, top_25_schedule, ap_poll,
+  // coaches_poll, playoff_rankings, passing/rushing/receiving,
+  // my_recruit_board, national_recruit_ranks, broyles_award,
+  // coach_of_the_year, and top_performers were all dropped in the schema
+  // cleanup — querying any of them throws and breaks the whole dashboard,
+  // which is what caused the "won't load" issue this pass fixes.
   const [
-    boxScoreRes,
-    playerStatsRecapRes,
     previewRes,
     scheduleRes,
     top25Res,
-    apRes,
-    coachesRes,
-    playoffRes,
     bracketRes,
     confRes,
     teamStatsRes,
-    passingRes,
-    rushingRes,
-    receivingRes,
-    recruitBoardRes,
-    recruitRanksRes,
     depthRes,
     hotSeatsRes,
     heismanRes,
-    broylesRes,
-    coyRes,
     myCoachRes,
     myCoachHistoryRes,
     allScheduleHistoryRes,
     contentRes,
-    topPerformersRes,
   ] = await Promise.all([
-    t('last_week_box_score').eq('week', recapWeek).limit(1),
-    t('last_week_player_stats').eq('week', recapWeek).limit(1),
     t('game_preview').eq('week', statsWeek).limit(1),
     t('team_schedule'),
-    t('top_25_schedule').eq('week', statsWeek),
-    t('ap_poll').eq('week', statsWeek).order('ap_poll', { ascending: true }),
-    t('coaches_poll').eq('week', statsWeek).order('coaches_poll', { ascending: true }),
-    t('playoff_rankings').eq('week', statsWeek).order('playoff_ranking', { ascending: true }),
+    t('top_25').eq('week', statsWeek).order('top_25', { ascending: true }),
     t('playoff_bracket').eq('week', statsWeek).limit(1),
     t('conference_standings').eq('week', statsWeek).order('conference', { ascending: true }).order('rank', { ascending: true }),
     t('team_stats').eq('week', statsWeek),
-    t('passing').eq('week', statsWeek),
-    t('rushing').eq('week', statsWeek),
-    t('receiving').eq('week', statsWeek),
-    t('my_recruit_board').order('stars', { ascending: false }),
-    t('national_recruit_ranks'),
     t('depth_charts').limit(1),
     t('coaching_hotseats').eq('week', statsWeek),
     t('heisman_trophy').eq('week', statsWeek).order('rank', { ascending: true }),
-    t('broyles_award').eq('week', statsWeek).order('rank', { ascending: true }),
-    t('coach_of_the_year').eq('week', statsWeek).order('rank', { ascending: true }),
     t('my_coach'),
     // Coaching history spans every season the dynasty has played, not just
     // the current one — t() would scope this to the current season only,
     // so this is a separate, deliberately season-unscoped query.
     sb.from('my_coach').select('*').eq('dynasty_id', dynastyId).order('season', { ascending: true }),
     // Same reasoning — need every season's schedule to know which past
-    // seasons won the conference championship / made the playoff, not just
-    // the current (empty, preseason) one.
+    // seasons won the conference championship / made the playoff (and, now,
+    // to compute the live career record for the Record Book below), not
+    // just the current (possibly still-empty, preseason) one.
     sb.from('team_schedule').select('*').eq('dynasty_id', dynastyId),
     t('content'),
-    t('top_performers').eq('week', statsWeek),
   ]);
 
   for (const [name, res] of Object.entries({
-    boxScoreRes, playerStatsRecapRes, previewRes, scheduleRes, top25Res, apRes, coachesRes,
-    playoffRes, bracketRes, confRes, teamStatsRes, passingRes, rushingRes, receivingRes,
-    recruitBoardRes, recruitRanksRes, depthRes, hotSeatsRes, heismanRes, broylesRes, coyRes,
-    myCoachRes, myCoachHistoryRes, allScheduleHistoryRes, contentRes, topPerformersRes,
+    previewRes, scheduleRes, top25Res, bracketRes, confRes, teamStatsRes,
+    depthRes, hotSeatsRes, heismanRes, myCoachRes, myCoachHistoryRes, allScheduleHistoryRes, contentRes,
   })) {
     if ((res as any).error) throw new Error(`${name}: ${(res as any).error.message}`);
   }
 
-  /* -------- Recap (last week's box score + leaders) -------- */
+  /* -------- Recap (last week's box score + leaders) --------
+   * No box-score/player-stats tables exist anymore — the recap is derived
+   * entirely from the most recently decided team_schedule row.
+   */
 
-  const boxRow = boxScoreRes.data?.[0];
-  const playerRow = playerStatsRecapRes.data?.[0];
-
-  // Fallback: derive last week's final score from team_schedule instead of
-  // requiring a separate last_week_box_score entry — the schedule row
-  // already gets filled in as part of the normal weekly OCR pass, so this
-  // covers the score/opponent/W-L even before (or without) a full box score.
-  // Finds the most recently *decided* schedule row directly, rather than
-  // assuming it's always exactly `statsWeek - 1` — that assumption breaks
-  // the moment a team is eliminated (current_week may legitimately still
-  // point at the just-played elimination game itself, or nothing further
-  // ever gets a result), so searching for "the actual last result" is what
-  // stays correct through end-of-season/offseason instead of needing the
-  // current_week flag to be advanced in perfect lockstep.
+  const scheduleRowsForRecap = scheduleRes.data || [];
   let lastDecidedRow: any = null;
-  (scheduleRes.data || []).forEach((r: any) => {
+  scheduleRowsForRecap.forEach((r: any) => {
     if (!r.w_or_l) return;
     const sw = sortWeekForScheduleRow(r);
     if (sw === null) return;
     if (!lastDecidedRow || sw > (sortWeekForScheduleRow(lastDecidedRow) as number)) lastDecidedRow = r;
   });
-  const scheduleFallbackRow = !boxRow?.final_score ? lastDecidedRow : null;
 
   const recap: Recap = {
-    myBox: boxRow?.final_score
-      ? {
-          TEAM: boxRow.team,
-          Q1_SCORE: boxRow.q1_score,
-          Q2_SCORE: boxRow.q2_score,
-          Q3_SCORE: boxRow.q3_score,
-          Q4_SCORE: boxRow.q4_score,
-          FINAL_SCORE: boxRow.final_score,
-          PASS_YARDS: boxRow.pass_yards,
-          RUSH_YARDS: boxRow.rush_yards,
-          TOTAL_YARDS: boxRow.total_yards,
-          TURNOVERS: boxRow.turnovers,
-          OPPONENT: boxRow.opponent,
-        }
-      : scheduleFallbackRow
-      ? {
-          TEAM: myTeamName,
-          FINAL_SCORE: scheduleFallbackRow.team_score,
-          OPPONENT: scheduleFallbackRow.opponent,
-        }
+    myBox: lastDecidedRow
+      ? { TEAM: myTeamName, FINAL_SCORE: lastDecidedRow.team_score, OPPONENT: lastDecidedRow.opponent }
       : {},
-    oppBox: boxRow?.final_score
-      ? {
-          Q1_SCORE: boxRow.opponent_q1_score,
-          Q2_SCORE: boxRow.opponent_q2_score,
-          Q3_SCORE: boxRow.opponent_q3_score,
-          Q4_SCORE: boxRow.opponent_q4_score,
-          FINAL_SCORE: boxRow.opponent_final_score,
-          PASS_YARDS: boxRow.opponent_pass_yards,
-          RUSH_YARDS: boxRow.opponent_rush_yards,
-          TOTAL_YARDS: boxRow.opponent_total_yards,
-          TURNOVERS: boxRow.opponent_turnovers,
-        }
-      : scheduleFallbackRow
-      ? { FINAL_SCORE: scheduleFallbackRow.opponent_score }
-      : {},
-    leaders: {
-      team: playerRow?.team,
-      passing: playerRow?.passing_name
-        ? { name: playerRow.passing_name, yards: playerRow.passing_yards, td: playerRow.passing_tds }
-        : null,
-      rushing: playerRow?.rushing_name
-        ? [{ name: playerRow.rushing_name, yards: playerRow.rushing_yards, td: playerRow.rushing_tds }]
-        : [],
-      receiving: playerRow?.receiving_name
-        ? [{ name: playerRow.receiving_name, yards: playerRow.receiving_yards, td: playerRow.receiving_tds }]
-        : [],
-    },
+    oppBox: lastDecidedRow ? { FINAL_SCORE: lastDecidedRow.opponent_score } : {},
+    leaders: { team: null, passing: null, rushing: [], receiving: [] },
   };
 
   /* -------- Schedule (season-long, not week-scoped) -------- */
@@ -449,18 +374,13 @@ export async function getDashboardData(): Promise<DashboardData> {
   });
   games.sort((a, b) => a.sortWeek - b.sortWeek);
 
-  const top25: Top25Game[] = (top25Res.data || []).map((row: any) => ({
-    away: row.away_team,
-    awayRank: row.away_rank,
-    home: row.home_team,
-    homeRank: row.home_rank,
-    time: row.time_of_game || '',
-    broadcast: row.broadcast,
-    spreadFavorite: row.spread_favorite,
-    spreadNumber: row.spread_value,
-  }));
+  // top_25_schedule (national Top 25 matchups for the week) was dropped —
+  // no data source for this anymore, so it's always empty. The Schedule
+  // tab's "Top 25" subtab stays parked in Coming Soon until a new source
+  // is wired up.
+  const top25Games: Top25Game[] = [];
 
-  const schedule: Schedule = { games, postseason, top25 };
+  const schedule: Schedule = { games, postseason, top25: top25Games };
 
   /* -------- Preview (flat shape — see types.ts) -------- */
 
@@ -518,6 +438,9 @@ export async function getDashboardData(): Promise<DashboardData> {
   }
 
   /* -------- Rankings -------- */
+  // Single consolidated Top 25 now (coaches_poll was dropped) — still keyed
+  // as `rank.ap` internally to avoid touching every call site, but it's
+  // sourced from `top_25` and there's no `coaches` list fed anymore.
 
   const toPoll = (rows: any[], rankCol: string): PollEntry[] =>
     rows.map((r) => ({
@@ -525,31 +448,17 @@ export async function getDashboardData(): Promise<DashboardData> {
       team: r.team,
       wins: safeNum(r.wins),
       losses: safeNum(r.losses),
-      lastWeek: r.last_week !== null && r.last_week !== undefined && r.last_week !== '' ? safeNum(r.last_week) : null,
     }));
-  const rank = { ap: toPoll(apRes.data || [], 'ap_poll'), coaches: toPoll(coachesRes.data || [], 'coaches_poll') };
+  const rank = { ap: toPoll(top25Res.data || [], 'top_25'), coaches: [] as PollEntry[] };
 
-  /* -------- Playoff -------- */
+  /* -------- Playoff --------
+   * playoff_rankings (CFP seed list) was dropped — no data source anymore,
+   * so seeds is always empty. rankFor()/rankedName() fall straight through
+   * to the Top 25 poll, which is the only ranking source left.
+   */
 
-  const playoff: Playoff = {
-    seeds: (playoffRes.data || [])
-      .filter((r: any) => r.team)
-      .map((r: any) => ({ rank: safeNum(r.playoff_ranking), team: r.team, wins: r.wins, losses: r.losses })),
-  };
+  const playoff: Playoff = { seeds: [] };
   const playoffBracketUrl: string | null = bracketRes.data?.[0]?.cfb_playoff_bracket_url || null;
-
-  // Once CFP rankings are live, they should drive the rank shown next to a
-  // team's name everywhere (home header, game preview) instead of the AP
-  // poll — matched via nameCanon since playoff_rankings may not spell a
-  // team's name identically to game_preview/team_schedule.
-  const findCfpRank = (teamName: any): number | null => {
-    const hit = playoff.seeds.find((s) => canon(nameCanon, s.team) === canon(nameCanon, teamName));
-    return hit ? hit.rank : null;
-  };
-  if (preview) {
-    preview.myCfpRank = findCfpRank(preview.myTeam);
-    preview.oppCfpRank = findCfpRank(preview.oppTeam);
-  }
 
   /* -------- Conference standings -------- */
 
@@ -561,95 +470,57 @@ export async function getDashboardData(): Promise<DashboardData> {
     confL: r.conference_losses,
     overallW: r.overall_wins,
     overallL: r.overall_losses,
-    pf: r.points_for,
-    pa: r.points_against,
   }));
 
-  /* -------- Team stats -------- */
+  /* -------- Team stats (now split offense/defense via
+     team_stats.offense_or_defense_stat) -------- */
 
   const teamStatsRows = teamStatsRes.data || [];
-  const teamStats: TeamStats = {
-    national: teamStatsRows
-      .filter((r: any) => /^\d+$/.test(String(r.national_rank)))
-      .sort((a: any, b: any) => safeNum(a.national_rank) - safeNum(b.national_rank))
-      .map((r: any) => ({
-        rank: safeNum(r.national_rank),
-        team: r.team,
-        ppg: r.points_per_game,
-        ypg: r.yards_per_game,
-        passYpg: r.pass_yards_per_game,
-        rushYpg: r.rush_yards_per_game,
-      })),
-    mine: (() => {
-      const r = teamStatsRows.find((r: any) => norm(r.national_rank) === 'user_team');
-      return r ? { team: r.team, ppg: r.points_per_game, ypg: r.yards_per_game, passYpg: r.pass_yards_per_game, rushYpg: r.rush_yards_per_game } : null;
-    })(),
-    // No per-category rank row in the new schema (old sheet's
-    // USER_TEAM_RANK_FOR_CATEGORY row has no equivalent table/column).
-    mineRank: null,
-  };
-
-  /* -------- Player stats -------- */
-
-  // Photos set manually per category (passing/rushing/receiving) in top_performers —
-  // matched by category, not by name, since the leader can change week to week.
-  const topPerformerPhoto: Record<string, string | null> = {};
-  (topPerformersRes.data || []).forEach((r: any) => {
-    const cat = norm(r.category);
-    if (cat) topPerformerPhoto[cat] = r.photo_url || null;
-  });
-
-  function playerBlock(rows: any[], category: string): PlayerStatBlock {
+  function statsSplit(kind: 'offense' | 'defense'): TeamStatsSplit {
+    const rows = teamStatsRows.filter((r: any) => norm(r.offense_or_defense_stat) === kind);
     return {
       national: rows
-        .filter((r) => /^\d+$/.test(String(r.rank)))
-        .sort((a, b) => safeNum(a.rank) - safeNum(b.rank))
-        .map((r) => ({ rank: safeNum(r.rank), name: r.name, team: r.team, td: r.tds, yards: r.yards })),
-      leaders: rows
-        .filter((r) => norm(r.rank).startsWith('user_team'))
-        .map((r) => ({ name: r.name, team: r.team, td: r.tds, yards: r.yards, photoUrl: topPerformerPhoto[category] || null })),
+        .filter((r: any) => /^\d+$/.test(String(r.national_rank)))
+        .sort((a: any, b: any) => safeNum(a.national_rank) - safeNum(b.national_rank))
+        .map((r: any) => ({
+          rank: safeNum(r.national_rank),
+          team: r.team,
+          ppg: r.points_per_game,
+          ypg: r.yards_per_game,
+          passYpg: r.pass_yards_per_game,
+          rushYpg: r.rush_yards_per_game,
+        })),
+      mine: (() => {
+        const r = rows.find((r: any) => norm(r.national_rank) === 'user_team');
+        return r ? { team: r.team, ppg: r.points_per_game, ypg: r.yards_per_game, passYpg: r.pass_yards_per_game, rushYpg: r.rush_yards_per_game } : null;
+      })(),
     };
   }
-  const playerStats: PlayerStats = {
-    passing: playerBlock(passingRes.data || [], 'passing'),
-    rushing: playerBlock(rushingRes.data || [], 'rushing'),
-    receiving: playerBlock(receivingRes.data || [], 'receiving'),
-  };
+  const teamStats: TeamStats = { offense: statsSplit('offense'), defense: statsSplit('defense') };
 
-  /* -------- Recruiting -------- */
+  /* -------- Recruiting --------
+   * my_recruit_board / national_recruit_ranks were dropped — no data
+   * source, and the Recruiting subtab stays parked in Coming Soon anyway.
+   */
 
-  const recruitRankRows = recruitRanksRes.data || [];
-  const recruit: Recruit = {
-    board: (recruitBoardRes.data || []).map((r: any) => ({ name: r.name, position: r.position, stars: safeNum(r.stars), status: r.status })),
-    classRankings: recruitRankRows
-      .filter((r: any) => /^\d+$/.test(String(r.class_rankings)))
-      .sort((a: any, b: any) => safeNum(a.class_rankings) - safeNum(b.class_rankings))
-      .map((r: any) => ({ rank: safeNum(r.class_rankings), team: r.team, avgStars: r.average_star, commits: r.number_of_commits })),
-    myClass: (() => {
-      const r = recruitRankRows.find((r: any) => norm(r.class_rankings) === 'user_team');
-      return r ? { team: r.team, avgStars: r.average_star, commits: r.number_of_commits } : null;
-    })(),
-  };
+  const recruit: Recruit = { board: [], classRankings: [], myClass: null };
 
-  /* -------- Roster (depth charts only — see note below) -------- */
+  /* -------- Roster (depth charts only) -------- */
 
-  // Old schema also had PLAYERS_LEAVING and DRAFT_RESULTS sub-sections;
-  // the new depth_charts table only carries depth chart links. Add
-  // corresponding columns/tables later if those need to come back.
   const depthRow = depthRes.data?.[0];
   const roster: Roster = {
     depthChartLinkOffense: depthRow?.offense_depth_chart_url || null,
     depthChartLinkDefense: depthRow?.defense_depth_chart_url || null,
   };
 
-  /* -------- Coach (hot seats only — "moves" has no data source anymore) -------- */
+  /* -------- Coach (hot seats only — "moves" has no data source) -------- */
 
   const coach: Coach = {
     hotSeats: (hotSeatsRes.data || []).map((r: any) => ({ team: r.team, coach: r.coach, security: r.job_security })),
     moves: [],
   };
 
-  /* -------- Awards -------- */
+  /* -------- Awards (Heisman only — Broyles/COY tables were dropped) -------- */
 
   const toAwardRow = (r: any): { rank: number; name: any; team: any; pos: any } => ({
     rank: safeNum(r.rank),
@@ -659,20 +530,33 @@ export async function getDashboardData(): Promise<DashboardData> {
   });
   const awards: Awards = {
     heisman: (heismanRes.data || []).filter((r: any) => r.name).map(toAwardRow),
-    // broyles_award = real-life name for the top-assistant-coach award, maps to the old "coordinator" block.
-    coordinator: (broylesRes.data || []).filter((r: any) => r.name).map(toAwardRow),
-    // coach_of_the_year has no position column — pos will just render blank, which is correct for a HC award.
-    coach: (coyRes.data || []).filter((r: any) => r.name).map((r: any) => ({ rank: safeNum(r.rank), name: r.name, team: r.team, pos: null })),
+    coordinator: [],
+    coach: [],
   };
 
   /* -------- My Coach -------- */
 
   const myCoachRow = myCoachRes.data?.[0];
   const myCoachHistoryRows = myCoachHistoryRes.data || [];
+  const allScheduleHistoryRows = allScheduleHistoryRes.data || [];
+
+  // Record Book "Overall" used to read straight off my_coach.career_wins /
+  // career_losses — static fields Chris has to remember to update every
+  // week, which is why they kept lagging behind the real season. Now it's
+  // computed live from every decided game across every season's
+  // team_schedule, so it can never fall out of sync again.
+  let liveOverallW = 0;
+  let liveOverallL = 0;
+  allScheduleHistoryRows.forEach((r: any) => {
+    const res = normResult(r.w_or_l);
+    if (res === 'W') liveOverallW++;
+    else if (res === 'L') liveOverallL++;
+  });
+
   const myCoach: MyCoach = {
     name: myCoachRow?.name,
-    overallW: myCoachRow?.career_wins,
-    overallL: myCoachRow?.career_losses,
+    overallW: liveOverallW,
+    overallL: liveOverallL,
     bowlWins: myCoachRow?.bowl_wins,
     confTitles: myCoachRow?.conference_championships,
     playoffApps: myCoachRow?.playoff_apperances,
@@ -692,7 +576,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     history: myCoachHistoryRows
       .filter((r: any) => r.team)
       .map((r: any) => {
-        const seasonScheduleRows = (allScheduleHistoryRes.data || []).filter((sr: any) => sr.season === r.season);
+        const seasonScheduleRows = allScheduleHistoryRows.filter((sr: any) => sr.season === r.season);
         const wonConfChamp = seasonScheduleRows.some((sr: any) => norm(sr.week_name) === 'conference_championship' && normResult(sr.w_or_l) === 'W');
         const madePlayoffs = seasonScheduleRows.some((sr: any) =>
           ['bowl_game', 'playoff_round_1', 'playoff_quarterfinals', 'playoff_semifinals', 'national_championship'].includes(norm(sr.week_name))
@@ -726,8 +610,6 @@ export async function getDashboardData(): Promise<DashboardData> {
   // Record is driven directly by every team_schedule row with a decided
   // result — not just the regular-season `games` array — so conference
   // championship / bowl / playoff wins and losses count toward it too.
-  // (Previously only `games` was counted, silently dropping postseason
-  // results from the displayed record.)
   let wins = 0,
     losses = 0;
   scheduleRows.forEach((row: any) => {
@@ -735,8 +617,6 @@ export async function getDashboardData(): Promise<DashboardData> {
     else if (normResult(row.w_or_l) === 'L') losses++;
   });
   const myApRank = rank.ap.find((r) => norm(r.team) === norm(myTeamName));
-  const myCoachesRank = rank.coaches.find((r) => norm(r.team) === norm(myTeamName));
-  const myCfpRank = findCfpRank(myTeamName);
   const oppAsset = preview?.oppTeam ? findAsset(assetIdx, preview.oppTeam) : null;
 
   const result: DashboardData = {
@@ -751,7 +631,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     opponent: oppAsset,
     assets: allAssets,
     ocrHelper: ocrHelperRows || [],
-    record: { wins, losses, apRank: myApRank ? myApRank.rank : null, coachesRank: myCoachesRank ? myCoachesRank.rank : null, cfpRank: myCfpRank },
+    record: { wins, losses, apRank: myApRank ? myApRank.rank : null, coachesRank: null, cfpRank: null },
     recap,
     preview,
     isOffseason,
@@ -763,7 +643,6 @@ export async function getDashboardData(): Promise<DashboardData> {
     playoffBracketUrl,
     conf,
     teamStats,
-    playerStats,
     recruit,
     roster,
     coach,
@@ -786,26 +665,23 @@ function buildStoryBrief(d: Partial<DashboardData>, myTeamName: any): StoryBrief
   const items: StoryBriefItem[] = [];
   const upper = (s: any) => String(s || '').toUpperCase();
 
-  (['ap', 'coaches'] as const).forEach((pollKey) => {
-    const list = (d.rank && d.rank[pollKey]) || [];
-    const mine = list.find((r) => upper(r.team) === upper(myTeamName));
-    const pollLabel = pollKey === 'ap' ? 'AP Poll' : 'Coaches Poll';
-    if (mine) {
-      if (mine.enteredPoll) {
-        items.push({ tag: 'Notable', text: `${myTeamName} entered the ${pollLabel} at #${mine.rank}.` });
-      } else if ((mine.changeNum ?? 0) >= 5) {
-        items.push({
-          tag: 'Notable',
-          text: `${myTeamName} ${mine.changeDir === 'UP' ? 'jumped' : 'dropped'} ${mine.changeNum} spots in the ${pollLabel} to #${mine.rank}.`,
-        });
-      } else if (mine.rank <= 10 && mine.changeNum) {
-        items.push({
-          tag: 'Top 10',
-          text: `${myTeamName} moved ${mine.changeDir === 'UP' ? 'up' : 'down'} ${mine.changeNum} within the Top 10 (${pollLabel}), now #${mine.rank}.`,
-        });
-      }
+  const list = (d.rank && d.rank.ap) || [];
+  const mine = list.find((r) => upper(r.team) === upper(myTeamName));
+  if (mine) {
+    if (mine.enteredPoll) {
+      items.push({ tag: 'Notable', text: `${myTeamName} entered the Top 25 at #${mine.rank}.` });
+    } else if ((mine.changeNum ?? 0) >= 5) {
+      items.push({
+        tag: 'Notable',
+        text: `${myTeamName} ${mine.changeDir === 'UP' ? 'jumped' : 'dropped'} ${mine.changeNum} spots in the Top 25 to #${mine.rank}.`,
+      });
+    } else if (mine.rank <= 10 && mine.changeNum) {
+      items.push({
+        tag: 'Top 10',
+        text: `${myTeamName} moved ${mine.changeDir === 'UP' ? 'up' : 'down'} ${mine.changeNum} within the Top 10, now #${mine.rank}.`,
+      });
     }
-  });
+  }
 
   const my = d.recap && d.recap.myBox;
   if (my && my.FINAL_SCORE !== undefined) {
