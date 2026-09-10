@@ -23,11 +23,16 @@ export interface TeamAsset {
 export interface Settings {
   currentDataSheet?: string;
   currentTeam?: string;
-  /** Numeric week derived from live data (max week present in ap_poll/game_preview), not the raw settings label. */
+  /** Numeric week derived from live data (max week present in top_25/game_preview), not the raw settings label. */
   currentWeek?: any;
   /** App theme colors set manually in settings.primary_color/secondary_color — takes priority over team colors so the picker doesn't need to be re-set every session. */
   primaryColor?: string | null;
   secondaryColor?: string | null;
+  /** Static branding assets, one spot each, set once in settings — not weekly data. */
+  tbIconUrl?: string | null;
+  tacoBellLogoUrl?: string | null;
+  dhqBetsLogoUrl?: string | null;
+  conferenceLogoUrl?: string | null;
 }
 
 export interface RecapLeader {

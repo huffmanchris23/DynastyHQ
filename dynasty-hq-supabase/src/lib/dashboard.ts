@@ -587,20 +587,25 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   /* -------- Content -------- */
 
-  const CONTENT_TYPE_MAP: Record<string, keyof Content> = {
-    podcast: 'podcast',
-    social_media: 'social',
-    team_news: 'newspaper',
-    national_headline_1: 'headlines',
-    national_headline_2: 'headlines',
-    national_headline_3: 'headlines',
-    "huff's_army": 'huffArmy',
-    drive_by: 'driveBy',
-    top_take: 'topTakes',
+  // content_input_type is free text Chris types by hand, not a fixed enum
+  // (e.g. "Dynasty Drive-By", "T.B.'s Top 3 Take") — matched by keyword
+  // rather than an exact string so small wording variance doesn't silently
+  // drop rows the way the original exact-match map did.
+  const classifyContentType = (raw: any): keyof Content | null => {
+    const s = norm(raw);
+    if (!s) return null;
+    if (s.includes('drive')) return 'driveBy';
+    if (s.includes('top') && (s.includes('take') || s.includes('takes'))) return 'topTakes';
+    if (s.includes('podcast')) return 'podcast';
+    if (s.includes('social')) return 'social';
+    if (s.includes('news') || s.includes('team_news')) return 'newspaper';
+    if (s.includes('headline')) return 'headlines';
+    if (s.includes('army')) return 'huffArmy';
+    return null;
   };
   const content: Content = { podcast: [], social: [], newspaper: [], headlines: [], huffArmy: [], driveBy: [], topTakes: [] };
   (contentRes.data || []).forEach((r: any) => {
-    const key = CONTENT_TYPE_MAP[norm(r.content_input_type)];
+    const key = classifyContentType(r.content_input_type);
     if (!key || !r.headline) return;
     content[key].push({ link: null, headline: r.headline, subHeadline: r.sub_headline, homePage: null, contentTab: null, graphicUrl: r.content_graphic_url || null, team: r.team || null });
   });
@@ -626,6 +631,10 @@ export async function getDashboardData(): Promise<DashboardData> {
       currentWeek: statsWeek,
       primaryColor: settingsRow.primary_color || null,
       secondaryColor: settingsRow.secondary_color || null,
+      tbIconUrl: settingsRow.tb_icon_url || null,
+      tacoBellLogoUrl: settingsRow.taco_bell_logo_url || null,
+      dhqBetsLogoUrl: settingsRow.dhqbets_logo_url || null,
+      conferenceLogoUrl: settingsRow.conference_logo_url || null,
     },
     team: myAsset,
     opponent: oppAsset,
