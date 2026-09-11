@@ -98,7 +98,13 @@ function TopTakesList({ d }: { d: DashboardData }) {
                   }}
                 >
                   {item.team ? <Badge text={item.team} size={24} logoUrl={logoFor(d.assets, item.team)} /> : null}
-                  <div style={{ fontFamily: 'var(--font-fun)', fontSize: 19, lineHeight: 1.25, letterSpacing: '0.015em', color: '#2A1A0F' }}>
+                  <div
+                    style={{
+                      fontFamily: 'var(--font-fun)', fontSize: 15, lineHeight: 1.1, letterSpacing: '0.03em',
+                      textTransform: 'uppercase', color: '#2A1A0F',
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0,
+                    }}
+                  >
                     {item.headline}
                   </div>
                 </div>
