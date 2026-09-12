@@ -20,6 +20,7 @@ import { TeamStats } from '@/components/tabs/Stats';
 import { DepthCharts, Recruiting } from '@/components/tabs/Roster';
 import Awards from '@/components/tabs/Awards';
 import { MyCoach, HotSeats } from '@/components/tabs/CoachingCorner';
+import FourthAndForever from '@/components/tabs/FourthAndForever';
 
 // Season/History switcher — built but hidden for now (Cincinnati transition
 // just happened; no history to show yet). Flip back to true to restore the
@@ -68,6 +69,8 @@ function TabBody({ data, tab, subtab }: {
     case 'commissioner':
     case 'community':
       return <ComingSoon />;
+    case 'takes':
+      return <FourthAndForever d={data} />;
     default:
       return null;
   }
