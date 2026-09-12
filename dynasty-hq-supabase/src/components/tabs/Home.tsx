@@ -187,8 +187,8 @@ export default function Home({ d }: { d: DashboardData }) {
 
     nextGameCard = (
       <div className="card accent tight">
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', paddingTop: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
             <span>
               {/* Only join the parts that actually have a value — preview.time
                   is usually blank (Chris doesn't fill it in via OCR), and
@@ -216,7 +216,7 @@ export default function Home({ d }: { d: DashboardData }) {
             <img
               src={d.settings.dhqBetsLogoUrl}
               alt="DHQBets"
-              style={{ height: 40, width: 'auto', flexShrink: 0, transform: 'rotate(-6deg)' }}
+              style={{ height: 32, width: 'auto', flexShrink: 0, transform: 'rotate(6deg)' }}
             />
           ) : null}
         </div>

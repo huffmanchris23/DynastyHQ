@@ -104,16 +104,20 @@ function TakesGraphic({ d }: { d: DashboardData }) {
 // table. headline doubles as the episode title.
 function LatestEpisode({ d }: { d: DashboardData }) {
   const ep = ((d.content && d.content.podcast) || [])[0];
+  // Show-art thumbnail comes from settings.podcast_thumbnail_url (static,
+  // set once) — falls back to a per-episode content_graphic_url if you
+  // ever post one instead.
+  const thumb = d.settings.podcastThumbnailUrl || ep?.graphicUrl || null;
   return (
     <div style={{ marginTop: 20 }}>
       <SectionLabel>Latest 4th & Forever</SectionLabel>
-      {ep ? (
+      {ep || thumb ? (
         <div className="card tight" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          {ep.graphicUrl ? (
+          {thumb ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={ep.graphicUrl} alt={ep.headline || 'Episode thumbnail'} style={{ width: 64, height: 64, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+            <img src={thumb} alt={ep?.headline || 'Episode thumbnail'} style={{ width: 64, height: 64, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
           ) : null}
-          <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3 }}>{ep.headline}</div>
+          <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3 }}>{ep?.headline}</div>
         </div>
       ) : (
         <div className="card tight">
