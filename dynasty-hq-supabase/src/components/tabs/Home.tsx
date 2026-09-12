@@ -48,91 +48,10 @@ function AroundTheNationList({ d }: { d: DashboardData }) {
   );
 }
 
-// Cards get visibly hotter as the spice level climbs — mild amber for take
-// #1, up to a deep red (matching the app's primary) for the hottest take.
-// (Carries the spice level on its own now — no pepper icons.)
-const HEAT = [
-  { bg: '#FFF6E9', border: '#E3A54B' },
-  { bg: '#FDE7D9', border: '#D9642F' },
-  { bg: '#FBDAD8', border: '#7A2426' },
-];
-
-function TopTakesList({ d }: { d: DashboardData }) {
-  const items = ((d.content && d.content.topTakes) || []).slice(0, 3);
-  return (
-    <div style={{ marginTop: 16 }}>
-      {/* Icon + large display-font title, instead of the generic SectionLabel treatment. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-        {d.settings.tbIconUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={d.settings.tbIconUrl} alt="T.B. Walker" style={{ flexShrink: 0, width: 44, height: 44, borderRadius: 8, objectFit: 'cover' }} />
-        ) : (
-          <div
-            style={{
-              flexShrink: 0, width: 44, height: 44, borderRadius: 8,
-              background: 'var(--primary)', color: '#FFFFFF',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 400,
-            }}
-          >
-            TB
-          </div>
-        )}
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 400, letterSpacing: '0.01em' }}>
-          T.B.'s Top Takes
-        </span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(0,0,0,0.4)' }}>
-        {d.settings.tacoBellLogoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={d.settings.tacoBellLogoUrl} alt="Taco Bell" style={{ height: 14, width: 'auto' }} />
-        ) : (
-          <span>🌮</span>
-        )}
-        <span>Presented by Taco Bell</span>
-      </div>
-      {items.length ? (
-        <>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {items.map((item, i) => {
-              const heat = HEAT[i] || HEAT[HEAT.length - 1];
-              return (
-                <div
-                  key={i}
-                  style={{
-                    display: 'flex', gap: 10, alignItems: 'center',
-                    background: heat.bg, borderRadius: 8, padding: '10px 14px',
-                    borderLeft: `5px solid ${heat.border}`,
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
-                  }}
-                >
-                  {item.team ? <Badge text={item.team} size={24} logoUrl={logoFor(d.assets, item.team)} /> : null}
-                  <div
-                    style={{
-                      fontFamily: 'var(--font-fun)', fontSize: 13, lineHeight: 1.3, letterSpacing: '0.01em',
-                      color: '#2A1A0F',
-                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0,
-                    }}
-                  >
-                    {item.headline}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      ) : (
-        <EmptyState>No takes yet this week.</EmptyState>
-      )}
-    </div>
-  );
-}
-
 function HomeContent({ d }: { d: DashboardData }) {
   return (
     <>
       <AroundTheNationList d={d} />
-      <TopTakesList d={d} />
     </>
   );
 }
@@ -146,17 +65,17 @@ function LastGameCard({ d }: { d: DashboardData }) {
   const won = numOr(box.FINAL_SCORE, 0) > numOr(opp?.FINAL_SCORE, 0);
   const myLogo = d.team?.LOGO_URL || logoFor(d.assets, box.TEAM);
   const oppLogo = logoFor(d.assets, box.OPPONENT);
-  // W/L chip sits with whichever team actually won, not a fixed corner —
-  // it used to sit top-right regardless of outcome, which read as
-  // attached to the opponent even on games we won.
-  const resultChip = (isWinner: boolean) =>
+  // Result badge sits right on top of whichever team's logo actually won —
+  // it used to be a separate chip in a fixed top-right spot regardless of
+  // outcome, which read as attached to the opponent even on games we won.
+  const resultBadge = (isWinner: boolean) =>
     isWinner ? (
       <span
         style={{
-          fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em',
-          color: won ? '#000000' : '#e05a5a',
-          border: `1px solid ${won ? '#000000' : '#e05a5a'}`,
-          borderRadius: 4, padding: '1px 5px', marginTop: 2,
+          position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%',
+          background: won ? '#1E9E4A' : '#C0392B', color: '#FFFFFF',
+          fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          border: '2px solid var(--bg)',
         }}
       >
         {won ? 'W' : 'L'}
@@ -166,24 +85,28 @@ function LastGameCard({ d }: { d: DashboardData }) {
     <div className="card primary tight" style={{ marginBottom: 12 }}>
       <SectionLabel>Last Game</SectionLabel>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: 64 }}>
-          <Badge text={box.TEAM} size={36} mine logoUrl={myLogo} />
-          <span className="truncate" style={{ fontSize: 10, color: 'rgba(0,0,0,0.55)', maxWidth: 64, textAlign: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: 76 }}>
+          <div style={{ position: 'relative' }}>
+            <Badge text={box.TEAM} size={48} mine logoUrl={myLogo} />
+            {resultBadge(won)}
+          </div>
+          <span className="truncate" style={{ fontSize: 10, color: 'rgba(0,0,0,0.55)', maxWidth: 76, textAlign: 'center' }}>
             {box.TEAM}
           </span>
-          {resultChip(won)}
         </div>
         <div className="tabular" style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, display: 'flex', alignItems: 'center', gap: 6 }}>
           <span>{numOr(box.FINAL_SCORE)}</span>
           <span style={{ color: 'rgba(0,0,0,0.35)', fontSize: 16 }}>–</span>
           <span>{numOr(opp?.FINAL_SCORE)}</span>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: 64 }}>
-          <Badge text={box.OPPONENT} size={36} logoUrl={oppLogo} />
-          <span className="truncate" style={{ fontSize: 10, color: 'rgba(0,0,0,0.55)', maxWidth: 64, textAlign: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: 76 }}>
+          <div style={{ position: 'relative' }}>
+            <Badge text={box.OPPONENT} size={48} logoUrl={oppLogo} />
+            {resultBadge(!won)}
+          </div>
+          <span className="truncate" style={{ fontSize: 10, color: 'rgba(0,0,0,0.55)', maxWidth: 76, textAlign: 'center' }}>
             {box.OPPONENT}
           </span>
-          {resultChip(!won)}
         </div>
       </div>
     </div>
@@ -266,12 +189,16 @@ export default function Home({ d }: { d: DashboardData }) {
           <img
             src={d.settings.dhqBetsLogoUrl}
             alt="DHQBets"
-            style={{ position: 'absolute', top: 8, right: 8, height: 40, width: 'auto' }}
+            style={{ position: 'absolute', top: 14, right: 14, height: 40, width: 'auto', transform: 'rotate(-6deg)' }}
           />
         ) : null}
-        <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(0,0,0,0.4)', marginBottom: 6, paddingRight: d.settings.dhqBetsLogoUrl ? 52 : 0, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(0,0,0,0.4)', marginBottom: 6, paddingRight: d.settings.dhqBetsLogoUrl ? 58 : 0, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
           <span>
-            {preview.day} · {preview.date} · {preview.time} · {preview.location}
+            {/* Only join the parts that actually have a value — preview.time
+                is usually blank (Chris doesn't fill it in via OCR), and
+                joining it unconditionally left a stray " · · " in the
+                middle of this line. */}
+            {[preview.day, preview.date, preview.time, preview.location].filter(Boolean).join(' · ')}
           </span>
           {preview.broadcast ? (
             /^https?:\/\//i.test(String(preview.broadcast)) ? (
