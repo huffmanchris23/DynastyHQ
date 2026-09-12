@@ -1,12 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Anton, Oswald, Bangers } from 'next/font/google';
 import './globals.css';
-
-const anton = Anton({ subsets: ['latin'], weight: '400', variable: '--font-display' });
-const oswald = Oswald({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-label' });
-// T.B.'s Top Takes — loud, marker-style font for the take text itself, to
-// match the hot-take/Barstool energy instead of reading like a spec sheet.
-const bangers = Bangers({ subsets: ['latin'], weight: '400', variable: '--font-fun' });
 
 export const metadata: Metadata = {
   title: 'Dynasty HQ',
@@ -29,7 +22,21 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${anton.variable} ${oswald.variable} ${bangers.variable}`}>
+    <html lang="en">
+      <head>
+        {/* Loaded via a plain <link> instead of next/font/google — next/font's
+            build-time variable injection kept silently failing to actually
+            swap the rendered font (Anton/Bangers never visibly changed
+            across several attempts), so this sidesteps that pipeline
+            entirely. A <link> either loads the font or it doesn't; there's
+            no CSS-variable indirection left to go wrong. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Bangers&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body>{children}</body>
     </html>
   );

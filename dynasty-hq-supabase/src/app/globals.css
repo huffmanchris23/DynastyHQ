@@ -23,6 +23,11 @@
   --font-display: 'Anton', -apple-system, sans-serif;
   --font-label: 'Oswald', -apple-system, sans-serif;
   --font-fun: 'Bangers', -apple-system, cursive;
+  /* Loaded via a <link> tag in layout.tsx's <head>, not next/font/google —
+     see the comment there for why. These are now the single source of
+     truth for these three variables; don't add a next/font loader back in
+     alongside this without removing this block, or it's the same bug
+     again. */
   /* Cincinnati's brand font. Not on Google Fonts (commercial typeface), so
      this only actually renders as Friz Quadrata for visitors who happen to
      have it installed locally — everyone else falls back to Georgia/serif.
