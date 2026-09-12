@@ -112,12 +112,14 @@ function LatestEpisode({ d }: { d: DashboardData }) {
     <div style={{ marginTop: 20 }}>
       <SectionLabel>Latest 4th & Forever</SectionLabel>
       {ep || thumb ? (
-        <div className="card tight" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div className="card tight" style={{ padding: 0, overflow: 'hidden' }}>
           {thumb ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={thumb} alt={ep?.headline || 'Episode thumbnail'} style={{ width: 64, height: 64, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+            <img src={thumb} alt={ep?.headline || 'Episode thumbnail'} style={{ width: '100%', height: 'auto', display: 'block' }} />
           ) : null}
-          <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3 }}>{ep?.headline}</div>
+          {ep?.headline ? (
+            <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3, padding: '10px 12px' }}>{ep.headline}</div>
+          ) : null}
         </div>
       ) : (
         <div className="card tight">
