@@ -29,13 +29,13 @@ function TopTakesList({ d }: { d: DashboardData }) {
               flexShrink: 0, width: 44, height: 44, borderRadius: 8,
               background: 'var(--primary)', color: '#FFFFFF',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 400,
+              fontFamily: 'var(--font-fun)', fontSize: 18,
             }}
           >
             TB
           </div>
         )}
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 400, letterSpacing: '0.01em' }}>
+        <span style={{ fontFamily: 'var(--font-fun)', fontSize: 34, letterSpacing: '0.02em' }}>
           T.B.'s Top Takes
         </span>
       </div>
@@ -65,8 +65,8 @@ function TopTakesList({ d }: { d: DashboardData }) {
                 {item.team ? <Badge text={item.team} size={24} logoUrl={logoFor(d.assets, item.team)} /> : null}
                 <div
                   style={{
-                    fontFamily: 'var(--font-fun)', fontSize: 13, lineHeight: 1.3, letterSpacing: '0.01em',
-                    color: '#2A1A0F',
+                    fontFamily: 'inherit', fontSize: 13, lineHeight: 1.3,
+                    fontWeight: 500, color: '#2A1A0F',
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0,
                   }}
                 >
@@ -104,17 +104,22 @@ function TakesGraphic({ d }: { d: DashboardData }) {
 // table. headline doubles as the episode title.
 function LatestEpisode({ d }: { d: DashboardData }) {
   const ep = ((d.content && d.content.podcast) || [])[0];
-  if (!ep) return null;
   return (
     <div style={{ marginTop: 20 }}>
       <SectionLabel>Latest 4th & Forever</SectionLabel>
-      <div className="card tight" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-        {ep.graphicUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={ep.graphicUrl} alt={ep.headline || 'Episode thumbnail'} style={{ width: 64, height: 64, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
-        ) : null}
-        <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3 }}>{ep.headline}</div>
-      </div>
+      {ep ? (
+        <div className="card tight" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {ep.graphicUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={ep.graphicUrl} alt={ep.headline || 'Episode thumbnail'} style={{ width: 64, height: 64, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+          ) : null}
+          <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3 }}>{ep.headline}</div>
+        </div>
+      ) : (
+        <div className="card tight">
+          <EmptyState>No episode posted yet.</EmptyState>
+        </div>
+      )}
     </div>
   );
 }

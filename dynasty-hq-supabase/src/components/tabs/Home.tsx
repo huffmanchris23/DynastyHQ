@@ -94,10 +94,13 @@ function LastGameCard({ d }: { d: DashboardData }) {
             {box.TEAM}
           </span>
         </div>
-        <div className="tabular" style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span>{numOr(box.FINAL_SCORE)}</span>
-          <span style={{ color: 'rgba(0,0,0,0.35)', fontSize: 16 }}>–</span>
-          <span>{numOr(opp?.FINAL_SCORE)}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(0,0,0,0.4)', fontWeight: 600 }}>Final</div>
+          <div className="tabular" style={{ fontFamily: 'inherit', fontSize: 26, fontWeight: 400, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>{numOr(box.FINAL_SCORE)}</span>
+            <span style={{ color: 'rgba(0,0,0,0.35)', fontSize: 16 }}>–</span>
+            <span>{numOr(opp?.FINAL_SCORE)}</span>
+          </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: 76 }}>
           <div style={{ position: 'relative' }}>
@@ -183,33 +186,38 @@ export default function Home({ d }: { d: DashboardData }) {
     const oppColor = (d.opponent && d.opponent.PRIMARY_COLOR) || 'rgba(0,0,0,0.35)';
 
     nextGameCard = (
-      <div className="card accent tight" style={{ position: 'relative' }}>
-        {d.settings.dhqBetsLogoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={d.settings.dhqBetsLogoUrl}
-            alt="DHQBets"
-            style={{ position: 'absolute', top: 14, right: 14, height: 40, width: 'auto', transform: 'rotate(-6deg)' }}
-          />
-        ) : null}
-        <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(0,0,0,0.4)', marginBottom: 6, paddingRight: d.settings.dhqBetsLogoUrl ? 58 : 0, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-          <span>
-            {/* Only join the parts that actually have a value — preview.time
-                is usually blank (Chris doesn't fill it in via OCR), and
-                joining it unconditionally left a stray " · · " in the
-                middle of this line. */}
-            {[preview.day, preview.date, preview.time, preview.location].filter(Boolean).join(' · ')}
-          </span>
-          {preview.broadcast ? (
-            /^https?:\/\//i.test(String(preview.broadcast)) ? (
-              // Chris can drop a broadcast-network icon URL in here instead
-              // of plain text — auto-detected by the URL, no data-shape
-              // change needed on his end.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={preview.broadcast} alt="Broadcast" style={{ height: 14, width: 'auto' }} />
-            ) : (
-              <span>· {preview.broadcast}</span>
-            )
+      <div className="card accent tight">
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', paddingTop: 6 }}>
+            <span>
+              {/* Only join the parts that actually have a value — preview.time
+                  is usually blank (Chris doesn't fill it in via OCR), and
+                  joining it unconditionally left a stray " · · " in the
+                  middle of this line. */}
+              {[preview.day, preview.date, preview.time, preview.location].filter(Boolean).join(' · ')}
+            </span>
+            {preview.broadcast ? (
+              /^https?:\/\//i.test(String(preview.broadcast)) ? (
+                // Chris can drop a broadcast-network icon URL in here instead
+                // of plain text — auto-detected by the URL, no data-shape
+                // change needed on his end.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={preview.broadcast} alt="Broadcast" style={{ height: 14, width: 'auto' }} />
+              ) : (
+                <span>· {preview.broadcast}</span>
+              )
+            ) : null}
+          </div>
+          {d.settings.dhqBetsLogoUrl ? (
+            // Sits in its own flex slot next to the meta line now, instead
+            // of absolutely positioned over the card — that was overlapping
+            // the team rows underneath it.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={d.settings.dhqBetsLogoUrl}
+              alt="DHQBets"
+              style={{ height: 40, width: 'auto', flexShrink: 0, transform: 'rotate(-6deg)' }}
+            />
           ) : null}
         </div>
         <div className="team-line">
