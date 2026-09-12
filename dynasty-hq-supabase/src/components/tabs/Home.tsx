@@ -24,7 +24,7 @@ function AroundTheNationList({ d }: { d: DashboardData }) {
                 key={i}
                 style={{
                   display: 'flex', gap: 10, alignItems: 'center', fontSize: 13, lineHeight: 1.4,
-                  background: '#FFFFFF', borderRadius: 6, padding: '9px 12px',
+                  background: 'var(--bg)', borderRadius: 6, padding: '9px 12px',
                   borderLeft: `4px solid ${accent}`,
                   boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
                 }}
@@ -82,6 +82,15 @@ function TopTakesList({ d }: { d: DashboardData }) {
           T.B.'s Top Takes
         </span>
       </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(0,0,0,0.4)' }}>
+        {d.settings.tacoBellLogoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={d.settings.tacoBellLogoUrl} alt="Taco Bell" style={{ height: 14, width: 'auto' }} />
+        ) : (
+          <span>🌮</span>
+        )}
+        <span>Presented by Taco Bell</span>
+      </div>
       {items.length ? (
         <>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -100,8 +109,8 @@ function TopTakesList({ d }: { d: DashboardData }) {
                   {item.team ? <Badge text={item.team} size={24} logoUrl={logoFor(d.assets, item.team)} /> : null}
                   <div
                     style={{
-                      fontFamily: 'var(--font-fun)', fontSize: 15, lineHeight: 1.1, letterSpacing: '0.03em',
-                      textTransform: 'uppercase', color: '#2A1A0F',
+                      fontFamily: 'var(--font-fun)', fontSize: 13, lineHeight: 1.3, letterSpacing: '0.01em',
+                      color: '#2A1A0F',
                       whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0,
                     }}
                   >
@@ -110,15 +119,6 @@ function TopTakesList({ d }: { d: DashboardData }) {
                 </div>
               );
             })}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(0,0,0,0.4)' }}>
-            {d.settings.tacoBellLogoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={d.settings.tacoBellLogoUrl} alt="Taco Bell" style={{ height: 14, width: 'auto' }} />
-            ) : (
-              <span>🌮</span>
-            )}
-            <span>Presented by Taco Bell</span>
           </div>
         </>
       ) : (
@@ -146,27 +146,32 @@ function LastGameCard({ d }: { d: DashboardData }) {
   const won = numOr(box.FINAL_SCORE, 0) > numOr(opp?.FINAL_SCORE, 0);
   const myLogo = d.team?.LOGO_URL || logoFor(d.assets, box.TEAM);
   const oppLogo = logoFor(d.assets, box.OPPONENT);
+  // W/L chip sits with whichever team actually won, not a fixed corner —
+  // it used to sit top-right regardless of outcome, which read as
+  // attached to the opponent even on games we won.
+  const resultChip = (isWinner: boolean) =>
+    isWinner ? (
+      <span
+        style={{
+          fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em',
+          color: won ? '#000000' : '#e05a5a',
+          border: `1px solid ${won ? '#000000' : '#e05a5a'}`,
+          borderRadius: 4, padding: '1px 5px', marginTop: 2,
+        }}
+      >
+        {won ? 'W' : 'L'}
+      </span>
+    ) : null;
   return (
     <div className="card primary tight" style={{ marginBottom: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <SectionLabel>Last Game</SectionLabel>
-        <span
-          style={{
-            fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em',
-            color: won ? '#000000' : '#e05a5a',
-            border: `1px solid ${won ? '#000000' : '#e05a5a'}`,
-            borderRadius: 4, padding: '2px 6px',
-          }}
-        >
-          {won ? 'W' : 'L'}
-        </span>
-      </div>
+      <SectionLabel>Last Game</SectionLabel>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: 64 }}>
           <Badge text={box.TEAM} size={36} mine logoUrl={myLogo} />
           <span className="truncate" style={{ fontSize: 10, color: 'rgba(0,0,0,0.55)', maxWidth: 64, textAlign: 'center' }}>
             {box.TEAM}
           </span>
+          {resultChip(won)}
         </div>
         <div className="tabular" style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, display: 'flex', alignItems: 'center', gap: 6 }}>
           <span>{numOr(box.FINAL_SCORE)}</span>
@@ -178,6 +183,7 @@ function LastGameCard({ d }: { d: DashboardData }) {
           <span className="truncate" style={{ fontSize: 10, color: 'rgba(0,0,0,0.55)', maxWidth: 64, textAlign: 'center' }}>
             {box.OPPONENT}
           </span>
+          {resultChip(!won)}
         </div>
       </div>
     </div>
@@ -254,9 +260,30 @@ export default function Home({ d }: { d: DashboardData }) {
     const oppColor = (d.opponent && d.opponent.PRIMARY_COLOR) || 'rgba(0,0,0,0.35)';
 
     nextGameCard = (
-      <div className="card accent tight">
-        <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(0,0,0,0.4)', marginBottom: 6 }}>
-          {preview.day} · {preview.date} · {preview.time} · {preview.location} · {preview.broadcast}
+      <div className="card accent tight" style={{ position: 'relative' }}>
+        {d.settings.dhqBetsLogoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={d.settings.dhqBetsLogoUrl}
+            alt="DHQBets"
+            style={{ position: 'absolute', top: 8, right: 8, height: 40, width: 'auto' }}
+          />
+        ) : null}
+        <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(0,0,0,0.4)', marginBottom: 6, paddingRight: d.settings.dhqBetsLogoUrl ? 52 : 0, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+          <span>
+            {preview.day} · {preview.date} · {preview.time} · {preview.location}
+          </span>
+          {preview.broadcast ? (
+            /^https?:\/\//i.test(String(preview.broadcast)) ? (
+              // Chris can drop a broadcast-network icon URL in here instead
+              // of plain text — auto-detected by the URL, no data-shape
+              // change needed on his end.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={preview.broadcast} alt="Broadcast" style={{ height: 14, width: 'auto' }} />
+            ) : (
+              <span>· {preview.broadcast}</span>
+            )
+          ) : null}
         </div>
         <div className="team-line">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -289,12 +316,6 @@ export default function Home({ d }: { d: DashboardData }) {
             <div style={{ fontSize: 9, textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)' }}>Moneyline</div>
             <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2 }}>{ml}</div>
           </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 10 }}>
-          {d.settings.dhqBetsLogoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={d.settings.dhqBetsLogoUrl} alt="DHQBets" style={{ height: 28, width: 'auto' }} />
-          ) : null}
         </div>
       </div>
     );
