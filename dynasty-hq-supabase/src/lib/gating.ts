@@ -49,6 +49,7 @@ export const TABS: TabDef[] = [
       { id: 'contact', label: 'Contact' },
     ],
   },
+  { id: 'takes', label: '4th & Forever' },
 ];
 
 /**
