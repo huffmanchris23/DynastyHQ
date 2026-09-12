@@ -25,7 +25,7 @@ export default function Badge({
         width={size}
         height={size}
         referrerPolicy="no-referrer"
-        style={{ width: size, height: size, objectFit: 'contain', borderRadius: '50%' }}
+        style={{ width: size, height: size, objectFit: 'contain' }}
         onError={() => setBroken(true)}
       />
     );
