@@ -33,6 +33,8 @@ export interface Settings {
   tacoBellLogoUrl?: string | null;
   dhqBetsLogoUrl?: string | null;
   conferenceLogoUrl?: string | null;
+  /** Static show-art thumbnail for "Latest 4th & Forever" — settings.podcast_thumbnail_url, not per-episode. */
+  podcastThumbnailUrl?: string | null;
 }
 
 export interface RecapLeader {

@@ -635,6 +635,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       tacoBellLogoUrl: settingsRow.taco_bell_logo_url || null,
       dhqBetsLogoUrl: settingsRow.dhqbets_logo_url || null,
       conferenceLogoUrl: settingsRow.conference_logo_url || null,
+      podcastThumbnailUrl: settingsRow.podcast_thumbnail_url || null,
     },
     team: myAsset,
     opponent: oppAsset,
