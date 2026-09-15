@@ -18,6 +18,11 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   themeColor: '#12233F',
+  // Needed for env(safe-area-inset-top) in globals.css to report a real
+  // value on iOS home-screen installs — without this the header content
+  // draws under the status bar (notch/pill/clock/battery) instead of
+  // being pushed below it.
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

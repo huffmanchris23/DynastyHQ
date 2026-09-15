@@ -64,7 +64,11 @@ a { color: inherit; }
   content: ''; display: block; height: 3px;
   background: linear-gradient(90deg, var(--dhq-navy) 0 33%, var(--dhq-tan) 33% 66%, var(--dhq-red) 66% 100%);
 }
-.header-inner { padding: 20px 16px 12px; background: var(--accent); }
+/* padding-top uses env(safe-area-inset-top) so the header always clears the
+   device status bar on installed/PWA views — previously a flat 20px, which
+   was only just enough for a single-line team name and let a two-line name
+   (e.g. "Louisiana-Monroe") push up underneath the status bar icons. */
+.header-inner { padding: max(20px, env(safe-area-inset-top)) 16px 12px; background: var(--accent); }
 .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .header-tag { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: color-mix(in srgb, var(--bg) 70%, transparent); }
 .palette-btn {
