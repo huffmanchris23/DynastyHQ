@@ -73,11 +73,12 @@ a { color: inherit; }
 .palette-btn:hover { background: rgba(255,255,255,0.12); color: var(--bg); }
 
 .header-row { display: flex; align-items: flex-end; justify-content: space-between; padding-bottom: 8px; }
-.header-team { display: flex; align-items: center; gap: 10px; }
-.header-team-text { display: flex; flex-direction: column; }
-.header-team h1 { font-family: var(--font-team); color: var(--bg); font-size: 28px; font-weight: 400; margin: 0; letter-spacing: -0.01em; line-height: 1; text-transform: uppercase; transform: skewX(-8deg); transform-origin: left bottom; display: inline-block; -webkit-text-stroke: 1px currentColor; text-shadow: 0.5px 0 currentColor, -0.5px 0 currentColor, 0 0.5px currentColor, 0 -0.5px currentColor; }
+.header-team { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; }
+.header-team-text { display: flex; flex-direction: column; min-width: 0; }
+.header-team h1 { font-family: var(--font-team); color: var(--bg); font-size: 28px; font-weight: 400; margin: 0; letter-spacing: -0.01em; line-height: 1.05; text-transform: uppercase; transform: skewX(-8deg); transform-origin: left bottom; display: inline-block; -webkit-text-stroke: 1px currentColor; text-shadow: 0.5px 0 currentColor, -0.5px 0 currentColor, 0 0.5px currentColor, 0 -0.5px currentColor; overflow-wrap: break-word; word-break: break-word; }
 .header-team .philosophy { font-family: var(--font-team); font-style: italic; font-size: 11px; color: color-mix(in srgb, var(--bg) 65%, transparent); margin-top: 3px; letter-spacing: 0.01em; }
-.header-record { text-align: right; }
+.header-record { text-align: right; flex-shrink: 0; white-space: nowrap; margin-left: 10px; }
+.header-record .rec { white-space: nowrap; }
 .header-record .rec { font-family: var(--font-team); font-weight: 400; font-size: 28px; line-height: 1; color: var(--bg); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; transform: skewX(-8deg); transform-origin: right bottom; display: inline-block; -webkit-text-stroke: 1px currentColor; text-shadow: 0.5px 0 currentColor, -0.5px 0 currentColor, 0 0.5px currentColor, 0 -0.5px currentColor; }
 .header-record .rk { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: color-mix(in srgb, var(--bg) 55%, transparent); margin-top: 2px; }
 
