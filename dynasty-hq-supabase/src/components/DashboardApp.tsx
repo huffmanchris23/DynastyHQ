@@ -138,6 +138,10 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
   // Just the rank number now — the poll is "Top 25", not "AP", so an "AP"/
   // "CFP" suffix no longer makes sense here.
   const apRank = rec.apRank ? `#${rec.apRank}` : 'NR';
+  // Heuristic: names past ~13 characters (e.g. "Louisiana-Monroe") tend to
+  // wrap to a second line in the header at this font size — size the logo
+  // up to match so it doesn't look undersized next to a taller name block.
+  const headerLogoSize = (team.TEAM_NAME || '').length > 13 ? 56 : 44;
   const currentTabDef = TABS.find((t) => t.id === tab) as TabDef | undefined;
   const g = gateInfo(data);
 
@@ -155,7 +159,10 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
             </div>
             <div className="header-row">
               <div className="header-team">
-                <Badge text={team.TEAM_NAME || '??'} size={44} mine logoUrl={team.LOGO_URL} />
+                {/* Long team names (e.g. "Louisiana-Monroe") wrap the header
+                    to two lines — bump the logo up to match instead of
+                    letting it look small next to a taller name block. */}
+                <Badge text={team.TEAM_NAME || '??'} size={headerLogoSize} mine logoUrl={team.LOGO_URL} />
                 <div className="header-team-text">
                   <h1>{team.TEAM_NAME || 'Loading'}</h1>
                   {team.TEAM_MASCOT ? <div className="philosophy">{team.TEAM_MASCOT}</div> : null}
