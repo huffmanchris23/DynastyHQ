@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabaseClient';
-import { getCurrentContext, buildFileName, SCREEN_TYPES, type ScreenType } from '@/lib/ocrShared';
+import { getCurrentContext, buildFileName, sniffImageMediaType, SCREEN_TYPES, type ScreenType } from '@/lib/ocrShared';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
   const sb = getSupabase();
 
   const { error } = await sb.storage.from(ctx.bucket).upload(fileName, buffer, {
-    contentType: 'image/png',
+    contentType: sniffImageMediaType(buffer),
     upsert: true, // re-uploading the same slot overwrites, per house rule
   });
 

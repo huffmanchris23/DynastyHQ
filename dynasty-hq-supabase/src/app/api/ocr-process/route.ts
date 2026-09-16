@@ -6,6 +6,7 @@ import {
   guideScreenType,
   dynastyIdFor,
   contextColumnsFor,
+  sniffImageMediaType,
   USER_ID,
   SCREEN_TYPES,
   type ScreenType,
@@ -115,7 +116,9 @@ async function processOneImage({
   if (dlErr) return { status: 'skipped_failed', error: `download: ${dlErr.message}` };
 
   const arrayBuffer = await blob.arrayBuffer();
-  const imageBase64 = Buffer.from(arrayBuffer).toString('base64');
+  const imageBuffer = Buffer.from(arrayBuffer);
+  const imageBase64 = imageBuffer.toString('base64');
+  const mediaType = sniffImageMediaType(imageBuffer);
 
   const variantCol = guide.name_variant_column;
   const nameOptions = helperRows.map((r) => (variantCol ? r[variantCol] || r.team_name : r.team_name));
@@ -149,7 +152,7 @@ Numeric fields must be JSON numbers, not quoted strings. If a value isn't visibl
           {
             role: 'user',
             content: [
-              { type: 'image', source: { type: 'base64', media_type: 'image/png', data: imageBase64 } },
+              { type: 'image', source: { type: 'base64', media_type: mediaType, data: imageBase64 } },
               { type: 'text', text: 'Extract the data per the rules above.' },
             ],
           },
