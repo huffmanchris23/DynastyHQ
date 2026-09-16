@@ -103,7 +103,11 @@ export function gateInfo(data: DashboardData | null): GateInfo {
   const coach = (data && data.coach) || { hotSeats: [], moves: [] };
   return {
     week,
-    isLocked: hasWeekData ? week === 0 : false,
+    // Week 0 is a real, playable week (the season opener) — only weeks
+    // before it (a fresh dynasty that hasn't started yet) should lock the
+    // preview card and Roster. Previously this locked at week === 0 too,
+    // hiding both even after the opener's data existed.
+    isLocked: hasWeekData ? week < 0 : false,
     statsUnlocked: hasWeekData ? week >= 1 : true,
     playoffsUnlocked: hasWeekData ? week >= 10 : true,
     // Heisman and Hot Seats aren't tied to a fixed week — they simply show

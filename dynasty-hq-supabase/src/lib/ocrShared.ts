@@ -134,3 +134,13 @@ export async function getCurrentContext(): Promise<CurrentContext> {
 export function buildFileName(slot: ScreenType, week: number): string {
   return `w${week}_${slot}.png`;
 }
+
+// The PlayStation app (and others) export screenshots as JPEG regardless of
+// the .png filename convention we use for matching — Anthropic's API
+// rejects a mismatch between declared media_type and actual bytes, so this
+// sniffs the real format from the file's magic bytes instead of trusting
+// the extension or assuming PNG.
+export function sniffImageMediaType(buffer: Buffer): 'image/png' | 'image/jpeg' {
+  const isPng = buffer.length >= 8 && buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47;
+  return isPng ? 'image/png' : 'image/jpeg'; // JPEG magic (FF D8 FF) covers everything else we expect here
+}
