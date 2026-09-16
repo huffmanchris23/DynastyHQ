@@ -88,7 +88,7 @@ export async function POST() {
       status: result.status,
       rows_written: result.rowsWritten || 0,
       raw_response: result.rawResponse || null,
-      error_message: result.error || null,
+      error_message: result.error || (result.issues && result.issues.length ? result.issues.join(' | ').slice(0, 4000) : null),
     });
   }
 
@@ -111,7 +111,7 @@ async function processOneImage({
   guide: GuideRow;
   helperRows: any[];
   ctx: { season: number; week: number };
-}): Promise<{ status: string; rowsWritten?: number; rawResponse?: string; error?: string }> {
+}): Promise<{ status: string; rowsWritten?: number; rawResponse?: string; error?: string; issues?: string[] }> {
   const { data: blob, error: dlErr } = await sb.storage.from(bucket).download(fileName);
   if (dlErr) return { status: 'skipped_failed', error: `download: ${dlErr.message}` };
 
@@ -165,8 +165,13 @@ Numeric fields must be JSON numbers, not quoted strings. If a value isn't visibl
       const rows = JSON.parse(cleaned);
       if (!Array.isArray(rows)) throw new Error('Model did not return a JSON array.');
 
-      const written = await writeRows({ sb, guide, rows, variantToCanonical, ctx });
-      return { status: attempt === 0 ? 'success' : 'retried_success', rowsWritten: written, rawResponse: raw.slice(0, 4000) };
+      const { written, issues } = await writeRows({ sb, guide, rows, variantToCanonical, ctx });
+      return {
+        status: attempt === 0 ? 'success' : 'retried_success',
+        rowsWritten: written,
+        rawResponse: raw.slice(0, 4000),
+        issues: issues.length ? issues.slice(0, 10) : undefined,
+      };
     } catch (err: any) {
       lastErr = err?.message || String(err);
     }
@@ -186,9 +191,10 @@ async function writeRows({
   rows: any[];
   variantToCanonical: Record<string, string>;
   ctx: { season: number; week: number };
-}): Promise<number> {
+}): Promise<{ written: number; issues: string[] }> {
   const cols = contextColumnsFor(guide.target_table);
-  let count = 0;
+  let written = 0;
+  const issues: string[] = [];
 
   for (const row of rows) {
     const mapped: Record<string, any> = {};
@@ -204,26 +210,55 @@ async function writeRows({
 
     mapped.user_id = USER_ID;
     mapped.dynasty_id = dynastyIdFor(guide.target_table);
+
+    // Season is constant for the whole screenshot — always stamp it from
+    // the run's context. Week is NOT constant for every guide: team_schedule
+    // spans many different weeks in one screenshot, so its week comes from
+    // each row's own on-screen number (captured above via field_map, key
+    // "week") rather than the run's current week. Every other guide's rows
+    // all belong to the same current week, so those get stamped from ctx.
     mapped[cols.seasonCol] = cols.seasonValue(ctx.season);
-    mapped[cols.weekCol] = cols.weekValue(ctx.week);
+    if (guide.target_table === 'team_schedule') {
+      if (mapped.week === null || mapped.week === undefined || isNaN(Number(mapped.week))) {
+        issues.push(`row skipped — no usable "week" number in the model's output: ${JSON.stringify(row)}`);
+        continue;
+      }
+      mapped[cols.weekCol] = cols.weekValue(Number(mapped.week));
+      delete mapped.week; // not a real column — week_name is
+    } else {
+      mapped[cols.weekCol] = cols.weekValue(ctx.week);
+    }
+
     if (guide.screen_type === 'stats_offense') mapped.offense_or_defense_stat = 'offense';
     if (guide.screen_type === 'stats_defense') mapped.offense_or_defense_stat = 'defense';
 
     let query = sb.from(guide.target_table).select('id');
     for (const key of guide.match_keys) {
+      if (mapped[key] === undefined || mapped[key] === null) {
+        issues.push(`row skipped — match key "${key}" is missing: ${JSON.stringify(row)}`);
+        query = null as any;
+        break;
+      }
       query = query.eq(key, mapped[key]);
     }
+    if (!query) continue;
+
     const { data: existing, error: findErr } = await query.limit(1);
-    if (findErr) continue; // leave this one row unwritten rather than abort the whole batch
+    if (findErr) {
+      issues.push(`find failed on ${JSON.stringify(row)}: ${findErr.message}`);
+      continue;
+    }
 
     if (existing && existing[0]) {
       const { error: updErr } = await sb.from(guide.target_table).update(mapped).eq('id', existing[0].id);
-      if (!updErr) count++;
+      if (updErr) issues.push(`update failed on ${JSON.stringify(row)}: ${updErr.message}`);
+      else written++;
     } else {
       const { error: insErr } = await sb.from(guide.target_table).insert(mapped);
-      if (!insErr) count++;
+      if (insErr) issues.push(`insert failed on ${JSON.stringify(row)}: ${insErr.message}`);
+      else written++;
     }
   }
 
-  return count;
+  return { written, issues };
 }
