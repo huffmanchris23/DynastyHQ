@@ -58,7 +58,7 @@ export const TABS: TabDef[] = [
  * ~30 screenshots/week down to 9-11 — not tied to week number or data
  * presence, just a flat on/off per tab or subtab until built out.
  */
-export const COMING_SOON_TABS: string[] = ['commissioner', 'community'];
+export const COMING_SOON_TABS: string[] = ['community'];
 
 export const COMING_SOON_SUBTABS: Record<string, string[]> = {
   // Recruiting (my_recruit_board/national_recruit_ranks) and the national
@@ -66,6 +66,11 @@ export const COMING_SOON_SUBTABS: Record<string, string[]> = {
   // schema — parked until a new source is wired up.
   roster: ['recruiting'],
   schedule: ['top25'],
+  // Commissioner tab: only Upload (the OCR pipeline) is built. Settings,
+  // Schedule Assistant, and League History stay parked until each gets
+  // built out — carved out individually rather than gating the whole
+  // Commissioner tab, since Upload needed to ship on its own.
+  commissioner: ['settings', 'scheduleassistant', 'leaguehistory'],
 };
 
 export function isComingSoonTab(tabId: string): boolean {
