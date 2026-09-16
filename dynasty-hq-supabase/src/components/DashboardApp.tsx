@@ -21,6 +21,7 @@ import { DepthCharts, Recruiting } from '@/components/tabs/Roster';
 import Awards from '@/components/tabs/Awards';
 import { MyCoach, HotSeats } from '@/components/tabs/CoachingCorner';
 import FourthAndForever from '@/components/tabs/FourthAndForever';
+import Upload from '@/components/tabs/Commissioner';
 
 // Season/History switcher — built but hidden for now (Cincinnati transition
 // just happened; no history to show yet). Flip back to true to restore the
@@ -67,6 +68,10 @@ function TabBody({ data, tab, subtab }: {
       if (subtab === 'hotseat') return g.hotSeatUnlocked ? <HotSeats d={data} /> : <LockedCard label="Not available yet" />;
       return <MyCoach d={data} />;
     case 'commissioner':
+      // Only 'upload' is built — settings/scheduleassistant/leaguehistory
+      // are already caught by isComingSoonSubtab above, so reaching this
+      // case with any other subtab shouldn't happen, but fall back safely.
+      return subtab === 'upload' ? <Upload /> : <ComingSoon />;
     case 'community':
       return <ComingSoon />;
     case 'takes':
