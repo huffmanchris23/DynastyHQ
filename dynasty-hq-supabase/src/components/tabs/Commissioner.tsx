@@ -161,6 +161,9 @@ export default function Upload() {
                 : r.status === 'skipped'
                 ? `skipped — ${r.reason}`
                 : `failed — ${r.error}`}
+              {r.issues && r.issues.length ? (
+                <div style={{ color: '#b00020', fontSize: 11, marginTop: 2 }}>{r.issues.length} row(s) had issues — see audit log</div>
+              ) : null}
             </div>
           ))}
         </div>
