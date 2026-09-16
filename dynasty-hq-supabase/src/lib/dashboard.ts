@@ -273,6 +273,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     myCoachHistoryRes,
     allScheduleHistoryRes,
     contentRes,
+    bestMatchupsRes,
   ] = await Promise.all([
     t('game_preview').eq('week', statsWeek).limit(1),
     t('team_schedule'),
@@ -294,11 +295,15 @@ export async function getDashboardData(): Promise<DashboardData> {
     // just the current (possibly still-empty, preseason) one.
     sb.from('team_schedule').select('*').eq('dynasty_id', dynastyId),
     t('content'),
+    // best_matchups uses a bigint dynasty_id (see ocrShared.ts's note on
+    // mixed column types), unlike every other table t() is scoped for —
+    // querying it directly rather than through t() to send the right type.
+    sb.from('best_matchups').select('*').eq('dynasty_id', Number(dynastyId)).eq('season', season).eq('week', statsWeek),
   ]);
 
   for (const [name, res] of Object.entries({
     previewRes, scheduleRes, top25Res, bracketRes, confRes, teamStatsRes,
-    depthRes, hotSeatsRes, heismanRes, myCoachRes, myCoachHistoryRes, allScheduleHistoryRes, contentRes,
+    depthRes, hotSeatsRes, heismanRes, myCoachRes, myCoachHistoryRes, allScheduleHistoryRes, contentRes, bestMatchupsRes,
   })) {
     if ((res as any).error) throw new Error(`${name}: ${(res as any).error.message}`);
   }
@@ -374,11 +379,20 @@ export async function getDashboardData(): Promise<DashboardData> {
   });
   games.sort((a, b) => a.sortWeek - b.sortWeek);
 
-  // top_25_schedule (national Top 25 matchups for the week) was dropped —
-  // no data source for this anymore, so it's always empty. The Schedule
-  // tab's "Top 25" subtab stays parked in Coming Soon until a new source
-  // is wired up.
-  const top25Games: Top25Game[] = [];
+  // "Best Matchups" — national marquee games of the week, sourced from the
+  // OCR pipeline's best_matchups table. Reuses the Top25Game shape that was
+  // already built for this subtab; awayRank/homeRank stay unset since this
+  // screen doesn't carry a ranking, just the matchup and the line.
+  const top25Games: Top25Game[] = (bestMatchupsRes.data || []).map((row: any) => ({
+    away: row.away_team,
+    awayRank: null,
+    home: row.home_team,
+    homeRank: null,
+    time: row.time,
+    broadcast: row.broadcast,
+    spreadFavorite: row.favorite,
+    spreadNumber: row.spread,
+  }));
 
   const schedule: Schedule = { games, postseason, top25: top25Games };
 
