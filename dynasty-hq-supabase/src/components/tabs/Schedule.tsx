@@ -70,10 +70,10 @@ export function ScheduleTeam({ d }: { d: DashboardData }) {
 export function ScheduleTop25({ d }: { d: DashboardData }) {
   const games = (d.schedule && d.schedule.top25) || [];
   const myTeamName = d.team && d.team.TEAM_NAME;
-  if (!games.length) return <EmptyState>No ranked matchups posted yet.</EmptyState>;
+  if (!games.length) return <EmptyState>No matchups posted yet.</EmptyState>;
   return (
     <>
-      <SectionLabel>Ranked Matchups</SectionLabel>
+      <SectionLabel>Best Matchups</SectionLabel>
       <div className="stack-sm">
         {games.map((g, i) => (
           <div className="card accent tight" key={i}>
@@ -81,16 +81,14 @@ export function ScheduleTop25({ d }: { d: DashboardData }) {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                   <Badge text={g.away} size={20} logoUrl={logoFor(d.assets, g.away)} />
-                  <span style={{ fontSize: 10, color: 'rgba(0,0,0,0.4)', width: 20 }}>{g.awayRank && g.awayRank !== 'N/A' ? '#' + g.awayRank : ''}</span>
                   <span className="truncate" style={{ fontWeight: 600, fontSize: 14 }}>
-                    {g.away}
+                    {rankedName(d, g.away)}
                   </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Badge text={g.home} size={20} mine={isMineFn(myTeamName, g.home)} logoUrl={logoFor(d.assets, g.home)} />
-                  <span style={{ fontSize: 10, color: 'rgba(0,0,0,0.4)', width: 20 }}>{g.homeRank && g.homeRank !== 'N/A' ? '#' + g.homeRank : ''}</span>
                   <span className="truncate" style={{ fontWeight: 600, fontSize: 14 }}>
-                    {g.home}
+                    {rankedName(d, g.home)}
                   </span>
                 </div>
               </div>
