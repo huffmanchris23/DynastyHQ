@@ -505,8 +505,16 @@ export async function getDashboardData(): Promise<DashboardData> {
           rushYpg: r.rush_yards_per_game,
         })),
       mine: (() => {
-        const r = rows.find((r: any) => norm(r.national_rank) === 'user_team');
-        return r ? { team: r.team, ppg: r.points_per_game, ypg: r.yards_per_game, passYpg: r.pass_yards_per_game, rushYpg: r.rush_yards_per_game } : null;
+        // Previously required a literal national_rank sentinel of
+        // 'user_team' — a manual-OCR convention nothing in the automated
+        // pipeline writes anymore. Matching by team name instead works
+        // whether the team's row came from the top-group screenshot (it's
+        // genuinely ranked there) or a second screenshot dedicated to just
+        // this team, with no special-casing needed either way.
+        const r = rows.find((r: any) => norm(r.team) === norm(myTeamName));
+        return r
+          ? { team: r.team, ppg: r.points_per_game, ypg: r.yards_per_game, passYpg: r.pass_yards_per_game, rushYpg: r.rush_yards_per_game }
+          : null;
       })(),
     };
   }
@@ -595,7 +603,14 @@ export async function getDashboardData(): Promise<DashboardData> {
         const madePlayoffs = seasonScheduleRows.some((sr: any) =>
           ['bowl_game', 'playoff_round_1', 'playoff_quarterfinals', 'playoff_semifinals', 'national_championship'].includes(norm(sr.week_name))
         );
-        return { season: r.season, team: r.team, position: r.title, wins: r.season_wins, losses: r.season_losses, wonConfChamp, madePlayoffs };
+        // season_wins/season_losses on my_coach were manual fields nobody
+        // was writing to anymore (not part of the OCR pipeline, and not
+        // something that should be — same reasoning as overallW/overallL
+        // above). Computed live from that season's schedule instead, so a
+        // season in progress always shows its real current record.
+        const wins = seasonScheduleRows.filter((sr: any) => normResult(sr.w_or_l) === 'W').length;
+        const losses = seasonScheduleRows.filter((sr: any) => normResult(sr.w_or_l) === 'L').length;
+        return { season: r.season, team: r.team, position: r.title, wins, losses, wonConfChamp, madePlayoffs };
       }),
   };
 

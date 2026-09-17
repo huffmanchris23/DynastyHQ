@@ -25,7 +25,7 @@ export interface TabDef {
 
 export const TABS: TabDef[] = [
   { id: 'home', label: 'Home' },
-  { id: 'schedule', label: 'Schedule', subtabs: [{ id: 'top25', label: 'Best Matchups' }, { id: 'team', label: 'Team Schedule' }] },
+  { id: 'schedule', label: 'Schedule', subtabs: [{ id: 'team', label: 'Team Schedule' }, { id: 'top25', label: 'Best Matchups' }] },
   { id: 'rankings', label: 'Top 25' },
   { id: 'conference', label: 'Conference' },
   { id: 'playoffs', label: 'Playoffs' },
