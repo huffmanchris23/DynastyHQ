@@ -77,7 +77,7 @@ export async function POST() {
       continue;
     }
 
-    const result = await processOneImage({ sb, anthropic, bucket: ctx.bucket, fileName: file.name, guide, helperRows: helperRows || [], ctx });
+    const result = await processOneImage({ sb, anthropic, bucket: ctx.bucket, fileName: file.name, slot, guide, helperRows: helperRows || [], ctx });
     summary.push({ file: file.name, screen_type: guide.screen_type, ...result });
 
     await sb.from('ocr_audit_log').insert({
@@ -100,6 +100,7 @@ async function processOneImage({
   anthropic,
   bucket,
   fileName,
+  slot,
   guide,
   helperRows,
   ctx,
@@ -108,6 +109,7 @@ async function processOneImage({
   anthropic: Anthropic;
   bucket: string;
   fileName: string;
+  slot: string;
   guide: GuideRow;
   helperRows: any[];
   ctx: { season: number; week: number };
@@ -128,12 +130,17 @@ async function processOneImage({
     variantToCanonical[key] = r.team_name;
   });
 
+  const isMyTeamOnlyPart = /_2$/.test(slot) && (guide.screen_type === 'stats_offense' || guide.screen_type === 'stats_defense');
+  const partNote = isMyTeamOnlyPart
+    ? '\n\nIMPORTANT — this is the SECOND screenshot for this category, only sent when Chris\u2019s own team wasn\u2019t visible in the first (top-group) screenshot. This screenshot shows ONLY his team, scrolled to find it. Extract exactly ONE row: his team\u2019s row, with whatever national_rank and stats are shown for it. Do not include any other team, even if one is partially visible at the edge of the screen.'
+    : '';
+
   const systemPrompt = `You extract structured data from a single College Football 27 screenshot for Dynasty HQ, a personal dynasty tracker.
 
 Screen type: ${guide.screen_type}
 
 Rules for this screen:
-${guide.extraction_rules}
+${guide.extraction_rules}${partNote}
 
 Every team name you output must be copied EXACTLY from this list of known values — do not invent, abbreviate, or reformat a name that isn't already on this list:
 ${nameOptions.join(', ')}
