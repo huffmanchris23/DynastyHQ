@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type SlotStatus = 'idle' | 'uploading' | 'done' | 'error';
 
@@ -39,7 +39,24 @@ export default function Upload() {
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [processError, setProcessError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(true);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  useEffect(() => {
+    fetch('/api/ocr-upload')
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.uploadedSlots) {
+          const initial: Record<string, SlotStatus> = {};
+          for (const slot of json.uploadedSlots) initial[slot] = 'done';
+          setStatus(initial);
+        }
+      })
+      .catch(() => {
+        // Non-fatal — slots just start blank, same as before this existed.
+      })
+      .finally(() => setChecking(false));
+  }, []);
 
   async function handlePick(slotId: string, file: File | null) {
     if (!file) return;
@@ -81,8 +98,9 @@ export default function Upload() {
       <div className="card">
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Weekly Screenshots</div>
         <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.5)' }}>
-          Upload whichever screens you have for this week. Re-tapping a slot replaces its screenshot. Nothing gets
-          processed until you hit Process Week below.
+          {checking
+            ? 'Checking what\u2019s already uploaded for this week\u2026'
+            : 'Upload whichever screens you have for this week. Re-tapping a slot replaces its screenshot. Nothing gets processed until you hit Process Week below.'}
         </div>
       </div>
 
@@ -126,19 +144,19 @@ export default function Upload() {
       <button
         type="button"
         onClick={handleProcessWeek}
-        disabled={processing || !anyUploaded}
+        disabled={processing || checking || !anyUploaded}
         style={{
           width: '100%',
           padding: '14px',
           borderRadius: 10,
           border: 'none',
-          background: anyUploaded ? 'var(--primary)' : 'rgba(0,0,0,0.15)',
+          background: anyUploaded && !checking ? 'var(--primary)' : 'rgba(0,0,0,0.15)',
           color: '#fff',
           fontWeight: 700,
           fontSize: 15,
         }}
       >
-        {processing ? 'Processing…' : 'Process Week'}
+        {processing ? 'Processing…' : checking ? 'Checking…' : 'Process Week'}
       </button>
 
       {processError ? (
