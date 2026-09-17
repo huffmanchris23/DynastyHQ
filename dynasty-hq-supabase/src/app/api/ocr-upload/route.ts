@@ -6,6 +6,26 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+export async function GET() {
+  let ctx;
+  try {
+    ctx = await getCurrentContext();
+  } catch (err: any) {
+    return NextResponse.json({ error: `Couldn't resolve current week: ${err?.message || err}` }, { status: 500 });
+  }
+
+  const sb = getSupabase();
+  const { data: files, error } = await sb.storage.from(ctx.bucket).list('', { limit: 100 });
+  if (error) return NextResponse.json({ error: `Couldn't list bucket: ${error.message}` }, { status: 500 });
+
+  const prefix = `w${ctx.week}_`;
+  const uploadedSlots = (files || [])
+    .filter((f) => f.name.startsWith(prefix) && f.name.endsWith('.png'))
+    .map((f) => f.name.slice(prefix.length, -'.png'.length));
+
+  return NextResponse.json({ week: ctx.week, uploadedSlots });
+}
+
 // Body: { slot: ScreenType, imageBase64: string (data URL or raw base64) }
 export async function POST(req: Request) {
   let body: { slot?: string; imageBase64?: string };
