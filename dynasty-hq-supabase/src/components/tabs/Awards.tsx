@@ -10,7 +10,7 @@ export default function Awards({ d }: { d: DashboardData }) {
   const list = (d.awards && d.awards.heisman) || [];
   const myTeamName = d.team && d.team.TEAM_NAME;
   if (!list.length) return <EmptyState>No Heisman race data yet.</EmptyState>;
-  const cols = '22px 26px 1fr 36px';
+  const cols = '28px 34px 1fr 42px';
   return (
     <div className="table primary">
       {list.map((p, i) => (
@@ -18,10 +18,12 @@ export default function Awards({ d }: { d: DashboardData }) {
           <div className="tabular" style={{ fontWeight: 700, color: 'rgba(0,0,0,0.45)', fontSize: 12 }}>
             {p.rank}
           </div>
-          <Badge text={p.team} size={24} mine={isMineFn(myTeamName, p.team)} logoUrl={logoFor(d.assets, p.team)} />
-          <div className="truncate">
-            <span style={{ fontWeight: 600, fontSize: 14 }}>{p.name}</span>
-            <span style={{ color: 'rgba(0,0,0,0.45)', fontSize: 12 }}> · {p.team}</span>
+          <div style={{ paddingRight: 6 }}>
+            <Badge text={p.team} size={24} mine={isMineFn(myTeamName, p.team)} logoUrl={logoFor(d.assets, p.team)} />
+          </div>
+          <div className="truncate" style={{ paddingLeft: 4 }}>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>{p.name}</div>
+            <div style={{ color: 'rgba(0,0,0,0.45)', fontSize: 12, marginTop: 1 }}>{p.team}</div>
           </div>
           <div className="right" style={{ fontSize: 12, fontWeight: 600, color: 'rgba(0,0,0,0.55)' }}>
             {p.pos}

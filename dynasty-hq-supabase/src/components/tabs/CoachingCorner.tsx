@@ -169,7 +169,7 @@ export function HotSeats({ d }: { d: DashboardData }) {
   const list = (d.coach && d.coach.hotSeats) || [];
   const myTeamName = d.team && d.team.TEAM_NAME;
   if (!list.length) return <EmptyState>No hot seat data yet — populated starting Week 2.</EmptyState>;
-  const cols = '1fr 1fr 60px';
+  const cols = '1.3fr 0.9fr 52px';
   return (
     <div className="table primary">
       <Thead cols={cols}>
@@ -185,7 +185,7 @@ export function HotSeats({ d }: { d: DashboardData }) {
               <Badge text={c.team} size={18} mine={isMineFn(myTeamName, c.team)} logoUrl={logoFor(d.assets, c.team)} />
               <span className="truncate">{c.team}</span>
             </div>
-            <div className="truncate" style={{ color: 'rgba(0,0,0,0.7)' }}>
+            <div className="truncate" style={{ color: 'rgba(0,0,0,0.7)', paddingLeft: 10 }}>
               {c.coach}
             </div>
             <div className="right tabular" style={{ fontSize: 12, fontWeight: 600, color }}>
