@@ -294,7 +294,10 @@ export async function getDashboardData(): Promise<DashboardData> {
     // to compute the live career record for the Record Book below), not
     // just the current (possibly still-empty, preseason) one.
     sb.from('team_schedule').select('*').eq('dynasty_id', dynastyId),
-    t('content'),
+    // content had no week filter at all, so it pulled the whole season's
+    // history unordered — old weeks could (and did) crowd out this week's
+    // fresh content depending on row order. Scoped to the current week.
+    t('content').eq('week', String(statsWeek)),
     // best_matchups uses a bigint dynasty_id (see ocrShared.ts's note on
     // mixed column types), unlike every other table t() is scoped for —
     // querying it directly rather than through t() to send the right type.
