@@ -48,47 +48,10 @@ function AroundTheNationList({ d }: { d: DashboardData }) {
   );
 }
 
-function TopTakesList({ d }: { d: DashboardData }) {
-  // T.B.'s hot takes (content_input_type = "T.B. Top 3 Take") had no
-  // display surface anywhere in the app — same pattern as Around the
-  // Nation, just a different content bucket.
-  const items = ((d.content && d.content.topTakes) || []).slice(0, 3);
-  if (!items.length) return null;
-  return (
-    <div>
-      <SectionLabel>T.B.'s Top Takes</SectionLabel>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {items.map((item, i) => {
-          const accent = item.team ? colorFor(d.assets, item.team) : 'var(--accent)';
-          return (
-            <div
-              key={i}
-              style={{
-                display: 'flex', gap: 10, alignItems: 'center', fontSize: 13, lineHeight: 1.4,
-                background: 'var(--bg)', borderRadius: 6, padding: '9px 12px',
-                borderLeft: `4px solid ${accent}`,
-                boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
-              }}
-            >
-              {item.team ? (
-                <Badge text={item.team} size={22} logoUrl={logoFor(d.assets, item.team)} />
-              ) : (
-                <span style={{ color: accent, fontWeight: 900, fontSize: 16, flexShrink: 0 }}>•</span>
-              )}
-              <span style={{ fontWeight: 500 }}>{item.headline}</span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 function HomeContent({ d }: { d: DashboardData }) {
   return (
     <>
       <AroundTheNationList d={d} />
-      <TopTakesList d={d} />
     </>
   );
 }

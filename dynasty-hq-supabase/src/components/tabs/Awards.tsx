@@ -1,6 +1,6 @@
 import type { DashboardData } from '@/lib/types';
 import { isMine as isMineFn, logoFor } from '@/lib/format';
-import { Row } from '@/components/shared/Row';
+import { Row, Thead } from '@/components/shared/Row';
 import Badge from '@/components/shared/Badge';
 import EmptyState from '@/components/shared/EmptyState';
 
@@ -29,6 +29,12 @@ export default function Awards({ d }: { d: DashboardData }) {
     <>
       {header}
       <div className="table primary">
+        <Thead cols={cols}>
+          <div />
+          <div />
+          <div style={{ textAlign: 'left' }}>Player</div>
+          <div>Pos</div>
+        </Thead>
         {list.map((p, i) => (
           <Row key={i} cols={cols} first={i === 0} mine={isMineFn(myTeamName, p.team)}>
             <div className="tabular" style={{ fontWeight: 700, color: 'rgba(0,0,0,0.45)', fontSize: 12 }}>
