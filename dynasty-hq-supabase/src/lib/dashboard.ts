@@ -544,11 +544,12 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   /* -------- Awards (Heisman only — Broyles/COY tables were dropped) -------- */
 
-  const toAwardRow = (r: any): { rank: number; name: any; team: any; pos: any } => ({
+  const toAwardRow = (r: any): { rank: number; name: any; team: any; pos: any; class: any } => ({
     rank: safeNum(r.rank),
     name: r.name,
     team: r.team,
     pos: r.position,
+    class: r.class,
   });
   const awards: Awards = {
     heisman: (heismanRes.data || []).filter((r: any) => r.name).map(toAwardRow),
@@ -665,6 +666,8 @@ export async function getDashboardData(): Promise<DashboardData> {
       dhqBetsLogoUrl: settingsRow.dhqbets_logo_url || null,
       conferenceLogoUrl: settingsRow.conference_logo_url || null,
       podcastThumbnailUrl: settingsRow.podcast_thumbnail_url || null,
+      heismanLogoUrl: settingsRow.heisman_logo_url || null,
+      currentYear: settingsRow.current_year || null,
     },
     team: myAsset,
     opponent: oppAsset,

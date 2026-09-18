@@ -35,6 +35,8 @@ export interface Settings {
   conferenceLogoUrl?: string | null;
   /** Static show-art thumbnail for "Latest 4th & Forever" — settings.podcast_thumbnail_url, not per-episode. */
   podcastThumbnailUrl?: string | null;
+  heismanLogoUrl?: string | null;
+  currentYear?: number | null;
 }
 
 export interface RecapLeader {
@@ -243,6 +245,7 @@ export interface AwardRow {
   name: any;
   team: any;
   pos: any;
+  class?: any;
 }
 
 export interface Awards {
