@@ -53,6 +53,14 @@ export async function POST() {
     .select('team_name, name_in_schedule, name_in_polls, name_in_playoffs, name_in_stats, name_in_preview, name_in_betting');
   if (helperErr) return NextResponse.json({ error: `ocr_helper: ${helperErr.message}` }, { status: 500 });
 
+  const { data: previewRows, error: previewErr } = await sb
+    .from('game_preview')
+    .select('team')
+    .eq('current_week', true)
+    .limit(1);
+  if (previewErr) return NextResponse.json({ error: `game_preview: ${previewErr.message}` }, { status: 500 });
+  const myTeamName = previewRows?.[0]?.team || null;
+
   const prefix = `w${ctx.week}_`;
   const { data: files, error: listErr } = await sb.storage.from(ctx.bucket).list('', { limit: 100 });
   if (listErr) return NextResponse.json({ error: `Couldn't list bucket "${ctx.bucket}": ${listErr.message}` }, { status: 500 });
@@ -77,7 +85,7 @@ export async function POST() {
       continue;
     }
 
-    const result = await processOneImage({ sb, anthropic, bucket: ctx.bucket, fileName: file.name, slot, guide, helperRows: helperRows || [], ctx });
+    const result = await processOneImage({ sb, anthropic, bucket: ctx.bucket, fileName: file.name, slot, guide, helperRows: helperRows || [], myTeamName, ctx });
     summary.push({ file: file.name, screen_type: guide.screen_type, ...result });
 
     await sb.from('ocr_audit_log').insert({
@@ -103,6 +111,7 @@ async function processOneImage({
   slot,
   guide,
   helperRows,
+  myTeamName,
   ctx,
 }: {
   sb: ReturnType<typeof getSupabase>;
@@ -112,6 +121,7 @@ async function processOneImage({
   slot: string;
   guide: GuideRow;
   helperRows: any[];
+  myTeamName: string | null;
   ctx: { season: number; week: number };
 }): Promise<{ status: string; rowsWritten?: number; rawResponse?: string; error?: string; issues?: string[] }> {
   const { data: blob, error: dlErr } = await sb.storage.from(bucket).download(fileName);
@@ -172,7 +182,19 @@ Numeric fields must be JSON numbers, not quoted strings. If a value isn't visibl
       const rows = JSON.parse(cleaned);
       if (!Array.isArray(rows)) throw new Error('Model did not return a JSON array.');
 
-      const { written, issues } = await writeRows({ sb, guide, rows, variantToCanonical, ctx });
+      // For a "my team only" second screenshot, don't trust the model to
+      // self-limit to one row — a scrolled-to view often has neighboring
+      // ranks still visible, and the model sometimes includes them despite
+      // the instruction above. Filter to the matching team server-side.
+      let finalRows = rows;
+      if (isMyTeamOnlyPart && myTeamName) {
+        const myVariant = variantCol ? helperRows.find((r: any) => r.team_name === myTeamName)?.[variantCol] || myTeamName : myTeamName;
+        const norm = (s: any) => String(s || '').trim().toLowerCase();
+        finalRows = rows.filter((r: any) => norm(r.team) === norm(myVariant) || norm(r.team) === norm(myTeamName));
+        if (!finalRows.length) finalRows = rows.slice(0, 1); // fallback rather than silently writing nothing
+      }
+
+      const { written, issues } = await writeRows({ sb, guide, rows: finalRows, variantToCanonical, ctx });
       return {
         status: attempt === 0 ? 'success' : 'retried_success',
         rowsWritten: written,
