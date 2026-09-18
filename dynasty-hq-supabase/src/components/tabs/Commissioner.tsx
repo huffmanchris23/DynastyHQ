@@ -36,14 +36,18 @@ function fileToBase64(file: File): Promise<string> {
 
 export default function Upload() {
   const [status, setStatus] = useState<Record<string, SlotStatus>>({});
+  const [week, setWeek] = useState<number | null>(null);
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [processError, setProcessError] = useState<string | null>(null);
   const [checking, setChecking] = useState(true);
+  const [advancing, setAdvancing] = useState(false);
+  const [advanceError, setAdvanceError] = useState<string | null>(null);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  useEffect(() => {
-    fetch('/api/ocr-upload')
+  function refreshUploadedSlots() {
+    setChecking(true);
+    return fetch('/api/ocr-upload')
       .then((r) => r.json())
       .then((json) => {
         if (json.uploadedSlots) {
@@ -51,11 +55,16 @@ export default function Upload() {
           for (const slot of json.uploadedSlots) initial[slot] = 'done';
           setStatus(initial);
         }
+        if (typeof json.week === 'number') setWeek(json.week);
       })
       .catch(() => {
         // Non-fatal — slots just start blank, same as before this existed.
       })
       .finally(() => setChecking(false));
+  }
+
+  useEffect(() => {
+    refreshUploadedSlots();
   }, []);
 
   async function handlePick(slotId: string, file: File | null) {
@@ -91,12 +100,30 @@ export default function Upload() {
     }
   }
 
+  async function handleAdvanceWeek() {
+    setAdvancing(true);
+    setAdvanceError(null);
+    try {
+      const res = await fetch('/api/ocr-advance-week', { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || 'Could not advance the week');
+      setResult(null);
+      await refreshUploadedSlots();
+    } catch (err: any) {
+      setAdvanceError(err?.message || String(err));
+    } finally {
+      setAdvancing(false);
+    }
+  }
+
   const anyUploaded = Object.values(status).some((s) => s === 'done');
 
   return (
     <div className="stack-sm">
       <div className="card">
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Weekly Screenshots</div>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
+          Weekly Screenshots{week !== null ? ` — Week ${week}` : ''}
+        </div>
         <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.5)' }}>
           {checking
             ? 'Checking what\u2019s already uploaded for this week\u2026'
@@ -184,6 +211,33 @@ export default function Upload() {
               ) : null}
             </div>
           ))}
+        </div>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={handleAdvanceWeek}
+        disabled={advancing || checking || week === null}
+        style={{
+          width: '100%',
+          padding: '12px',
+          borderRadius: 10,
+          border: '1px solid rgba(0,0,0,0.15)',
+          background: 'transparent',
+          color: 'var(--primary)',
+          fontWeight: 700,
+          fontSize: 14,
+        }}
+      >
+        {advancing ? 'Advancing…' : week !== null ? `Advance to Week ${week + 1}` : 'Advance Week'}
+      </button>
+      <div style={{ fontSize: 11, color: 'rgba(0,0,0,0.45)', textAlign: 'center' }}>
+        Only advance once this week is fully processed — the checklist above resets for the new week.
+      </div>
+
+      {advanceError ? (
+        <div className="card" style={{ color: '#b00020' }}>
+          {advanceError}
         </div>
       ) : null}
     </div>
