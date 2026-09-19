@@ -5,6 +5,7 @@ import { gateInfo } from '@/lib/gating';
 import { initials, toPct, numOr, abbrFor, logoFor, colorFor, rankedName } from '@/lib/format';
 import SectionLabel from '@/components/shared/SectionLabel';
 import Badge from '@/components/shared/Badge';
+import NetworkLogo from '@/components/shared/NetworkLogo';
 import EmptyState from '@/components/shared/EmptyState';
 
 /* ---------------- renderHomeContent ---------------- */
@@ -197,15 +198,10 @@ export default function Home({ d }: { d: DashboardData }) {
               {[preview.day, preview.date, preview.time, preview.location].filter(Boolean).join(' · ')}
             </span>
             {preview.broadcast ? (
-              /^https?:\/\//i.test(String(preview.broadcast)) ? (
-                // Chris can drop a broadcast-network icon URL in here instead
-                // of plain text — auto-detected by the URL, no data-shape
-                // change needed on his end.
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={preview.broadcast} alt="Broadcast" style={{ height: 14, width: 'auto' }} />
-              ) : (
-                <span>· {preview.broadcast}</span>
-              )
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <span>·</span>
+                <NetworkLogo network={preview.broadcast} height={12} />
+              </span>
             ) : null}
           </div>
           {d.settings.dhqBetsLogoUrl ? (

@@ -2,6 +2,7 @@ import type { DashboardData } from '@/lib/types';
 import { numOr, logoFor, rankedName } from '@/lib/format';
 import { Row, Thead } from '@/components/shared/Row';
 import Badge from '@/components/shared/Badge';
+import NetworkLogo from '@/components/shared/NetworkLogo';
 import SectionLabel from '@/components/shared/SectionLabel';
 import EmptyState from '@/components/shared/EmptyState';
 import { isMine as isMineFn } from '@/lib/format';
@@ -94,7 +95,9 @@ export function ScheduleTop25({ d }: { d: DashboardData }) {
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 11, fontWeight: 500 }}>{g.time}</div>
-                <div style={{ fontSize: 8, textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', fontWeight: 700, marginTop: 2 }}>{g.broadcast}</div>
+                <div style={{ marginTop: 2, display: 'flex', justifyContent: 'center' }}>
+                  <NetworkLogo network={g.broadcast} />
+                </div>
               </div>
               <div style={{ textAlign: 'right', fontSize: 11, color: 'rgba(0,0,0,0.5)' }}>
                 {g.spreadFavorite} {g.spreadNumber || ''}
