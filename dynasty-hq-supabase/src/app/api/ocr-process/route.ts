@@ -12,6 +12,7 @@ import {
   type ScreenType,
 } from '@/lib/ocrShared';
 import { computeMatchupOdds } from '@/lib/engines/odds';
+import { assignBroadcasts, type SlateGame, type SlateTeam } from '@/lib/engines/broadcast';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -68,6 +69,13 @@ export async function POST() {
     };
   });
 
+  const { data: assetRows, error: assetErr } = await sb.from('assets').select('team_name, team_conference');
+  if (assetErr) return NextResponse.json({ error: `assets: ${assetErr.message}` }, { status: 500 });
+  const conferenceByName: Record<string, string | null> = {};
+  (assetRows || []).forEach((r: any) => {
+    conferenceByName[r.team_name] = r.team_conference || null;
+  });
+
   const { data: previewRows, error: previewErr } = await sb
     .from('game_preview')
     .select('team')
@@ -86,6 +94,7 @@ export async function POST() {
   }
 
   const summary: any[] = [];
+  let touchedBestMatchup = false;
 
   for (const file of weekFiles) {
     const slot = file.name.slice(prefix.length, -'.png'.length) as ScreenType;
@@ -99,6 +108,7 @@ export async function POST() {
       summary.push({ file: file.name, status: 'skipped', reason: `no active ocr_screen_guides row for "${guideType}"` });
       continue;
     }
+    if (guide.screen_type === 'best_matchup') touchedBestMatchup = true;
 
     const result = await processOneImage({ sb, anthropic, bucket: ctx.bucket, fileName: file.name, slot, guide, helperRows: helperRows || [], ratingsByName, myTeamName, ctx });
     summary.push({ file: file.name, screen_type: guide.screen_type, ...result });
@@ -115,7 +125,93 @@ export async function POST() {
     });
   }
 
-  return NextResponse.json({ season: ctx.season, week: ctx.week, results: summary });
+  let broadcastSummary: any = null;
+  if (touchedBestMatchup) {
+    broadcastSummary = await runBroadcastEngine({ sb, ctx, ratingsByName, conferenceByName });
+  }
+
+  return NextResponse.json({ season: ctx.season, week: ctx.week, results: summary, broadcast: broadcastSummary });
+}
+
+// Re-scores broadcast assignments across the WHOLE week's slate at once
+// (all 5 best_matchups games plus Mr. Huffman's own game_preview game, if
+// that week's row already has team/opponent/game_time filled in) — network
+// picks depend on which other games share a time slot, so this can't run
+// per-file the way the odds engine does. Always recomputes from what's
+// currently in the DB for this season/week, so it's safe to re-run on
+// every "Process Week" batch that touched a best_matchup screenshot.
+async function runBroadcastEngine({
+  sb,
+  ctx,
+  ratingsByName,
+  conferenceByName,
+}: {
+  sb: ReturnType<typeof getSupabase>;
+  ctx: { season: number; week: number };
+  ratingsByName: Record<string, { overall: number; offense: number; defense: number; homeState: string | null }>;
+  conferenceByName: Record<string, string | null>;
+}) {
+  const toSlateTeam = (name: string | null): SlateTeam | null => {
+    if (!name) return null;
+    const r = ratingsByName[name];
+    if (!r) return null;
+    return { name, overall: r.overall, conference: conferenceByName[name] ?? null };
+  };
+
+  const games: SlateGame[] = [];
+  const issues: string[] = [];
+
+  const { data: matchupRows, error: matchupErr } = await sb
+    .from('best_matchups')
+    .select('id, home_team, away_team, time')
+    .eq('season', ctx.season)
+    .eq('week', ctx.week);
+  if (matchupErr) return { error: `best_matchups: ${matchupErr.message}` };
+
+  (matchupRows || []).forEach((row: any) => {
+    const home = toSlateTeam(row.home_team);
+    const away = toSlateTeam(row.away_team);
+    if (!home || !away) {
+      issues.push(`best_matchups row ${row.id} skipped — missing ratings for "${row.home_team}"/"${row.away_team}"`);
+      return;
+    }
+    games.push({ id: `best_matchups:${row.id}`, homeTeam: home, awayTeam: away, time: row.time });
+  });
+
+  const { data: previewRows, error: previewErr } = await sb
+    .from('game_preview')
+    .select('id, team, opponent, home_team, game_time')
+    .eq('season', ctx.season)
+    .eq('current_week', true)
+    .limit(1);
+  if (previewErr) return { error: `game_preview: ${previewErr.message}` };
+
+  const preview = previewRows?.[0];
+  if (preview && preview.team && preview.opponent && preview.game_time) {
+    const homeName = preview.home_team || preview.team;
+    const awayName = homeName === preview.team ? preview.opponent : preview.team;
+    const home = toSlateTeam(homeName);
+    const away = toSlateTeam(awayName);
+    if (home && away) {
+      games.push({ id: `game_preview:${preview.id}`, homeTeam: home, awayTeam: away, time: preview.game_time });
+    } else {
+      issues.push(`game_preview row ${preview.id} skipped — missing ratings for "${homeName}"/"${awayName}"`);
+    }
+  }
+
+  if (games.length === 0) return { assigned: 0, issues };
+
+  const assignments = assignBroadcasts(games);
+
+  for (const a of assignments) {
+    const [table, idStr] = a.id.split(':');
+    const id = Number(idStr);
+    const column = table === 'game_preview' ? 'game_broadcast' : 'broadcast';
+    const { error } = await sb.from(table).update({ [column]: a.broadcast }).eq('id', id);
+    if (error) issues.push(`broadcast write failed for ${a.id}: ${error.message}`);
+  }
+
+  return { assigned: assignments.length, issues };
 }
 
 async function processOneImage({
