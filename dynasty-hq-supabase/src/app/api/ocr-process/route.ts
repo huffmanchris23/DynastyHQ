@@ -11,6 +11,7 @@ import {
   SCREEN_TYPES,
   type ScreenType,
 } from '@/lib/ocrShared';
+import { computeMatchupOdds } from '@/lib/engines/odds';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -50,8 +51,22 @@ export async function POST() {
 
   const { data: helperRows, error: helperErr } = await sb
     .from('ocr_helper')
-    .select('team_name, name_in_schedule, name_in_polls, name_in_playoffs, name_in_stats, name_in_preview, name_in_betting');
+    .select(
+      'team_name, name_in_schedule, name_in_polls, name_in_playoffs, name_in_stats, name_in_preview, name_in_betting, overall_rating, offense_rating, defense_rating, home_state'
+    );
   if (helperErr) return NextResponse.json({ error: `ocr_helper: ${helperErr.message}` }, { status: 500 });
+
+  // Ratings + home state, keyed by canonical team_name — the odds engine
+  // needs these for whichever two teams a given best_matchups row names.
+  const ratingsByName: Record<string, { overall: number; offense: number; defense: number; homeState: string | null }> = {};
+  (helperRows || []).forEach((r: any) => {
+    ratingsByName[r.team_name] = {
+      overall: Number(r.overall_rating),
+      offense: Number(r.offense_rating),
+      defense: Number(r.defense_rating),
+      homeState: r.home_state || null,
+    };
+  });
 
   const { data: previewRows, error: previewErr } = await sb
     .from('game_preview')
@@ -85,7 +100,7 @@ export async function POST() {
       continue;
     }
 
-    const result = await processOneImage({ sb, anthropic, bucket: ctx.bucket, fileName: file.name, slot, guide, helperRows: helperRows || [], myTeamName, ctx });
+    const result = await processOneImage({ sb, anthropic, bucket: ctx.bucket, fileName: file.name, slot, guide, helperRows: helperRows || [], ratingsByName, myTeamName, ctx });
     summary.push({ file: file.name, screen_type: guide.screen_type, ...result });
 
     await sb.from('ocr_audit_log').insert({
@@ -111,6 +126,7 @@ async function processOneImage({
   slot,
   guide,
   helperRows,
+  ratingsByName,
   myTeamName,
   ctx,
 }: {
@@ -121,6 +137,7 @@ async function processOneImage({
   slot: string;
   guide: GuideRow;
   helperRows: any[];
+  ratingsByName: Record<string, { overall: number; offense: number; defense: number; homeState: string | null }>;
   myTeamName: string | null;
   ctx: { season: number; week: number };
 }): Promise<{ status: string; rowsWritten?: number; rawResponse?: string; error?: string; issues?: string[] }> {
@@ -194,7 +211,7 @@ Numeric fields must be JSON numbers, not quoted strings. If a value isn't visibl
         if (!finalRows.length) finalRows = rows.slice(0, 1); // fallback rather than silently writing nothing
       }
 
-      const { written, issues } = await writeRows({ sb, guide, rows: finalRows, variantToCanonical, ctx });
+      const { written, issues } = await writeRows({ sb, guide, rows: finalRows, variantToCanonical, ctx, slot, ratingsByName });
       return {
         status: attempt === 0 ? 'success' : 'retried_success',
         rowsWritten: written,
@@ -214,12 +231,16 @@ async function writeRows({
   rows,
   variantToCanonical,
   ctx,
+  slot,
+  ratingsByName,
 }: {
   sb: ReturnType<typeof getSupabase>;
   guide: GuideRow;
   rows: any[];
   variantToCanonical: Record<string, string>;
   ctx: { season: number; week: number };
+  slot: string;
+  ratingsByName: Record<string, { overall: number; offense: number; defense: number; homeState: string | null }>;
 }): Promise<{ written: number; issues: string[] }> {
   const cols = contextColumnsFor(guide.target_table);
   let written = 0;
@@ -261,6 +282,21 @@ async function writeRows({
     if (guide.screen_type === 'stats_offense') mapped.offense_or_defense_stat = 'offense';
     if (guide.screen_type === 'stats_defense') mapped.offense_or_defense_stat = 'defense';
 
+    // best_matchup_1..5 slots each own exactly one best_matchups row for
+    // the week, keyed by this number rather than by team names — team
+    // names alone aren't a stable match key here because the odds engine
+    // (below) doesn't rewrite home_team/away_team, so nothing about this
+    // row's team columns is guaranteed to match what a prior week's guess
+    // might have written.
+    if (guide.screen_type === 'best_matchup') {
+      const slotMatch = /_(\d+)$/.exec(slot);
+      if (!slotMatch) {
+        issues.push(`row skipped — couldn't read a matchup number from slot "${slot}"`);
+        continue;
+      }
+      mapped.matchup_number = Number(slotMatch[1]);
+    }
+
     let query = sb.from(guide.target_table).select('id');
     for (const key of guide.match_keys) {
       if (mapped[key] === undefined || mapped[key] === null) {
@@ -278,16 +314,83 @@ async function writeRows({
       continue;
     }
 
-    if (existing && existing[0]) {
-      const { error: updErr } = await sb.from(guide.target_table).update(mapped).eq('id', existing[0].id);
-      if (updErr) issues.push(`update failed on ${JSON.stringify(row)}: ${updErr.message}`);
-      else written++;
+    let rowId: any = existing && existing[0] ? existing[0].id : null;
+
+    if (rowId) {
+      const { error: updErr } = await sb.from(guide.target_table).update(mapped).eq('id', rowId);
+      if (updErr) {
+        issues.push(`update failed on ${JSON.stringify(row)}: ${updErr.message}`);
+        continue;
+      }
+      written++;
     } else {
-      const { error: insErr } = await sb.from(guide.target_table).insert(mapped);
-      if (insErr) issues.push(`insert failed on ${JSON.stringify(row)}: ${insErr.message}`);
-      else written++;
+      const { data: inserted, error: insErr } = await sb.from(guide.target_table).insert(mapped).select('id').limit(1);
+      if (insErr) {
+        issues.push(`insert failed on ${JSON.stringify(row)}: ${insErr.message}`);
+        continue;
+      }
+      written++;
+      rowId = inserted?.[0]?.id ?? null;
+    }
+
+    if (guide.screen_type === 'best_matchup' && rowId) {
+      const oddsIssue = await applyOddsEngine({ sb, rowId, mapped, ratingsByName });
+      if (oddsIssue) issues.push(oddsIssue);
     }
   }
 
   return { written, issues };
+}
+
+// Runs the deterministic odds engine (src/lib/engines/odds.ts) against a
+// just-written best_matchups row and writes the result straight back onto
+// the same row. Ratings-lookup failures are reported as issues rather than
+// thrown — a missing rating shouldn't take down the rest of the week's
+// batch, it should just leave that one row's odds fields untouched (null)
+// so it's obviously incomplete rather than silently wrong.
+async function applyOddsEngine({
+  sb,
+  rowId,
+  mapped,
+  ratingsByName,
+}: {
+  sb: ReturnType<typeof getSupabase>;
+  rowId: any;
+  mapped: Record<string, any>;
+  ratingsByName: Record<string, { overall: number; offense: number; defense: number; homeState: string | null }>;
+}): Promise<string | null> {
+  const homeName = mapped.home_team;
+  const awayName = mapped.away_team;
+  const homeRatings = ratingsByName[homeName];
+  const awayRatings = ratingsByName[awayName];
+
+  if (!homeName || !awayName || !homeRatings || !awayRatings) {
+    return `odds engine skipped for row ${rowId} — missing ratings for "${homeName}" and/or "${awayName}"`;
+  }
+
+  const odds = computeMatchupOdds({
+    homeTeam: { name: homeName, ...homeRatings },
+    awayTeam: { name: awayName, ...awayRatings },
+    connector: mapped.connector,
+    gameLocation: mapped.game_location,
+    homeWins: Number(mapped.home_wins ?? 0),
+    homeLosses: Number(mapped.home_losses ?? 0),
+    awayWins: Number(mapped.away_wins ?? 0),
+    awayLosses: Number(mapped.away_losses ?? 0),
+  });
+
+  const { error } = await sb
+    .from('best_matchups')
+    .update({
+      is_neutral_site: odds.isNeutralSite,
+      home_field_team: odds.homeFieldTeam,
+      favorite: odds.favorite,
+      spread: odds.spread,
+      favorite_win_probability: odds.favoriteWinProbability,
+      favorite_moneyline: odds.favoriteMoneyline,
+      total_over_under: odds.totalOverUnder,
+    })
+    .eq('id', rowId);
+
+  return error ? `odds engine write failed for row ${rowId}: ${error.message}` : null;
 }
