@@ -15,6 +15,16 @@ export const SCREEN_TYPES = [
   'team_schedule_1',
   'team_schedule_2',
   'best_matchups',
+  // The 5 tracked biggest games of the week, one screenshot per game (the
+  // Scores/Schedules screen with that game's row selected so its detail
+  // panel — records, date/time, location — shows on the right). Each
+  // slot's guide row is "best_matchup" (singular), found the same way
+  // stats_offense_1/_2 both resolve to "stats_offense" below.
+  'best_matchup_1',
+  'best_matchup_2',
+  'best_matchup_3',
+  'best_matchup_4',
+  'best_matchup_5',
   'conference_standings',
   'top25',
   'stats_offense_1',
