@@ -14,7 +14,12 @@ interface Slot {
 const SLOTS: Slot[] = [
   { id: 'team_schedule_1', label: 'Team Schedule (1 of 2)' },
   { id: 'team_schedule_2', label: 'Team Schedule (2 of 2)' },
-  { id: 'best_matchups', label: 'Best Matchups' },
+  { id: 'best_matchups', label: 'Best Matchups (grid, optional)' },
+  { id: 'best_matchup_1', label: 'Matchup 1 of 5' },
+  { id: 'best_matchup_2', label: 'Matchup 2 of 5' },
+  { id: 'best_matchup_3', label: 'Matchup 3 of 5' },
+  { id: 'best_matchup_4', label: 'Matchup 4 of 5' },
+  { id: 'best_matchup_5', label: 'Matchup 5 of 5' },
   { id: 'conference_standings', label: 'Conference Standings' },
   { id: 'top25', label: 'Top 25' },
   { id: 'stats_offense_1', label: 'Offense Stats (1 of 2)' },
