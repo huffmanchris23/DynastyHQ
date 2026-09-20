@@ -13,6 +13,9 @@ import {
 } from '@/lib/ocrShared';
 import { computeMatchupOdds } from '@/lib/engines/odds';
 import { assignBroadcasts, type SlateGame, type SlateTeam } from '@/lib/engines/broadcast';
+import { buildContentSystemPrompt, parseContentResponse, DRIVE_BY_TYPE, TOP_TAKE_TYPE } from '@/lib/engines/content';
+
+const CONTENT_MODEL = 'claude-sonnet-5';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -95,6 +98,7 @@ export async function POST() {
 
   const summary: any[] = [];
   let touchedBestMatchup = false;
+  let touchedResults = false;
 
   for (const file of weekFiles) {
     const slot = file.name.slice(prefix.length, -'.png'.length) as ScreenType;
@@ -109,6 +113,7 @@ export async function POST() {
       continue;
     }
     if (guide.screen_type === 'best_matchup') touchedBestMatchup = true;
+    if (guide.screen_type === 'last_week_results') touchedResults = true;
 
     const result = await processOneImage({ sb, anthropic, bucket: ctx.bucket, fileName: file.name, slot, guide, helperRows: helperRows || [], ratingsByName, myTeamName, ctx });
     summary.push({ file: file.name, screen_type: guide.screen_type, ...result });
@@ -130,7 +135,93 @@ export async function POST() {
     broadcastSummary = await runBroadcastEngine({ sb, ctx, ratingsByName, conferenceByName });
   }
 
-  return NextResponse.json({ season: ctx.season, week: ctx.week, results: summary, broadcast: broadcastSummary });
+  let contentSummary: any = null;
+  if (touchedResults) {
+    contentSummary = await runContentEngine({ sb, anthropic, ctx });
+  }
+
+  return NextResponse.json({ season: ctx.season, week: ctx.week, results: summary, broadcast: broadcastSummary, content: contentSummary });
+}
+
+// Gathers every relevant data source for the week (not just the new
+// last_week_results screenshot — the Top 25, this week's best_matchups,
+// Heisman race, coaching hot seats, and conference standings too), asks
+// Claude to write this week's Dynasty Drive-By + T.B.'s Top 3 Takes, and
+// writes the results into `content`. Deletes this week's existing rows of
+// those two types first so re-running (e.g. a corrected screenshot) is
+// idempotent rather than piling up duplicates.
+async function runContentEngine({
+  sb,
+  anthropic,
+  ctx,
+}: {
+  sb: ReturnType<typeof getSupabase>;
+  anthropic: Anthropic;
+  ctx: { season: number; week: number };
+}) {
+  const [lastWeekResults, currentTop25, biggestGamesThisWeek, heismanRace, coachingHotSeats, conferenceStandings] = await Promise.all([
+    sb.from('weekly_results').select('home_team, away_team, home_score, away_score, home_rank, away_rank').eq('season', ctx.season).eq('week', ctx.week - 1),
+    sb.from('ap_poll').select('rank, team, wins, losses').eq('season', ctx.season).eq('week', String(ctx.week)),
+    sb.from('best_matchups').select('home_team, away_team, home_rank, away_rank, favorite, spread, favorite_moneyline, total_over_under, broadcast, game_date, time').eq('season', ctx.season).eq('week', ctx.week),
+    sb.from('heisman_trophy').select('rank, name, team, position, class').eq('season', ctx.season).eq('week', ctx.week),
+    sb.from('coaching_hotseats').select('team, coach, job_security').eq('season', ctx.season).eq('week', ctx.week),
+    sb.from('conference_standings').select('team, overall_wins, overall_losses, conference_wins, conference_losses').eq('season', String(ctx.season)),
+  ]);
+
+  const firstError = [lastWeekResults, currentTop25, biggestGamesThisWeek, heismanRace, coachingHotSeats, conferenceStandings].find((r) => r.error)?.error;
+  if (firstError) return { error: `content engine data fetch failed: ${firstError.message}` };
+
+  const context = {
+    lastWeekResults: lastWeekResults.data || [],
+    currentTop25: currentTop25.data || [],
+    biggestGamesThisWeek: biggestGamesThisWeek.data || [],
+    heismanRace: heismanRace.data || [],
+    coachingHotSeats: coachingHotSeats.data || [],
+    conferenceStandings: conferenceStandings.data || [],
+  };
+
+  if (context.lastWeekResults.length === 0 && context.currentTop25.length === 0) {
+    return { skipped: true, reason: 'no usable data found for this week' };
+  }
+
+  let raw: string;
+  try {
+    const msg = await anthropic.messages.create({
+      model: CONTENT_MODEL,
+      max_tokens: 2048,
+      system: buildContentSystemPrompt(context),
+      messages: [{ role: 'user', content: "Write this week's Dynasty Drive-By and T.B.'s Top 3 Takes per the rules above." }],
+    });
+    const textBlock = msg.content.find((b: any) => b.type === 'text') as any;
+    raw = (textBlock?.text || '').trim();
+  } catch (err: any) {
+    return { error: `content engine API call failed: ${err?.message || err}` };
+  }
+
+  let parsed;
+  try {
+    parsed = parseContentResponse(raw);
+  } catch (err: any) {
+    return { error: `content engine couldn't parse the model's output: ${err?.message || err}`, rawResponse: raw };
+  }
+
+  const { error: delErr } = await sb
+    .from('content')
+    .delete()
+    .eq('season', ctx.season)
+    .eq('week', String(ctx.week))
+    .in('content_input_type', [DRIVE_BY_TYPE, TOP_TAKE_TYPE]);
+  if (delErr) return { error: `content engine failed clearing old rows: ${delErr.message}` };
+
+  const rows = [
+    ...parsed.driveBy.map((item) => ({ season: ctx.season, week: String(ctx.week), content_input_type: DRIVE_BY_TYPE, team: item.team, headline: item.headline })),
+    ...parsed.topTakes.map((item) => ({ season: ctx.season, week: String(ctx.week), content_input_type: TOP_TAKE_TYPE, team: item.team, headline: item.headline })),
+  ];
+
+  const { error: insErr } = await sb.from('content').insert(rows);
+  if (insErr) return { error: `content engine write failed: ${insErr.message}` };
+
+  return { written: rows.length, driveBy: parsed.driveBy.length, topTakes: parsed.topTakes.length };
 }
 
 // Re-scores broadcast assignments across the WHOLE week's slate at once
