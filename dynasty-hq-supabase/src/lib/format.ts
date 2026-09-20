@@ -161,8 +161,8 @@ export function rankedName(d: Parameters<typeof rankFor>[0], teamName: any): str
  * assets.logo_url. Unlike team logos there's no DB table backing this one;
  * the public storage URL is fully predictable, so it's just built directly.
  * Chris needs to upload one PNG per network the broadcast engine can output:
- * ABC, ESPN, ESPN2, ESPNU, FOX, FS1, CBS, NBC. "TBD" intentionally has no
- * logo — callers should fall back to plain text for it.
+ * ABC, ESPN, ESPN2, ESPN+, FOX, CBS, NBC. FS1 and ESPNU are not used. "TBD"
+ * intentionally has no logo — callers should fall back to plain text for it.
  */
 const NETWORK_LOGO_BASE = 'https://ytukpycyzldgahvimyoh.supabase.co/storage/v1/object/public/network_logos';
 
