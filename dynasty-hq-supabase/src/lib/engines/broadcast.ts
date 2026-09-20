@@ -21,9 +21,9 @@
  *     same network: the one with the higher combined (home + away)
  *     overall rating wins it.
  *   - Overflow beyond ESPN/ABC/FOX/CBS/NBC in one bucket spills to
- *     ESPN2, then ESPNU, then FS1, best remaining game first. Beyond
- *     that (shouldn't happen with this league's game count) falls back
- *     to 'TBD'.
+ *     ESPN2, then ESPN+, best remaining game first. Beyond that
+ *     (shouldn't happen with this league's game count) falls back to
+ *     'TBD'. FS1 and ESPNU are deliberately not used.
  */
 
 export interface SlateTeam {
@@ -46,7 +46,7 @@ export interface BroadcastAssignment {
   broadcast: string;
 }
 
-const FALLBACK_NETWORKS = ['ABC', 'ESPN', 'ESPN2', 'ESPNU', 'FS1'];
+const FALLBACK_NETWORKS = ['ABC', 'ESPN', 'ESPN2', 'ESPN+'];
 
 function combinedRating(g: SlateGame): number {
   return g.homeTeam.overall + g.awayTeam.overall;
