@@ -217,6 +217,25 @@ export default function Upload() {
               ) : null}
             </div>
           ))}
+          {[
+            { label: 'Broadcast engine', v: result.broadcast },
+            { label: 'Game preview odds', v: result.gamePreviewOdds },
+            { label: 'Content engine', v: result.content },
+          ].map(({ label, v }) =>
+            v ? (
+              <div key={label} style={{ fontSize: 13, padding: '4px 0', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                <strong>{label}</strong>:{' '}
+                {v.error
+                  ? <span style={{ color: '#b00020' }}>failed — {v.error}</span>
+                  : v.skipped
+                  ? `skipped — ${v.reason}`
+                  : `${v.written ?? v.assigned ?? 0} row(s) written`}
+                {v.issues && v.issues.length ? (
+                  <div style={{ color: '#b00020', fontSize: 11, marginTop: 2 }}>{v.issues.join(' | ')}</div>
+                ) : null}
+              </div>
+            ) : null
+          )}
         </div>
       ) : null}
 
