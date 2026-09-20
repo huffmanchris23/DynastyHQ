@@ -110,6 +110,8 @@ export async function POST() {
   const summary: any[] = [];
   let touchedBestMatchup = false;
   let touchedResults = false;
+  const touchedStatsCategories = new Set<'offense' | 'defense'>();
+  const statsTeamsWritten: Record<'offense' | 'defense', Set<string>> = { offense: new Set(), defense: new Set() };
 
   for (const file of weekFiles) {
     const slot = file.name.slice(prefix.length, -'.png'.length) as ScreenType;
@@ -125,9 +127,13 @@ export async function POST() {
     }
     if (guide.screen_type === 'best_matchup') touchedBestMatchup = true;
     if (guide.screen_type === 'last_week_results') touchedResults = true;
+    if (guide.screen_type === 'stats_offense') touchedStatsCategories.add('offense');
+    if (guide.screen_type === 'stats_defense') touchedStatsCategories.add('defense');
 
     const result = await processOneImage({ sb, anthropic, bucket: ctx.bucket, fileName: file.name, slot, guide, helperRows: helperRows || [], ratingsByName, myTeamName, ctx });
     summary.push({ file: file.name, screen_type: guide.screen_type, ...result });
+    if (guide.screen_type === 'stats_offense') (result.teamsWritten || []).forEach((t) => statsTeamsWritten.offense.add(t));
+    if (guide.screen_type === 'stats_defense') (result.teamsWritten || []).forEach((t) => statsTeamsWritten.defense.add(t));
 
     await sb.from('ocr_audit_log').insert({
       season: ctx.season,
@@ -139,6 +145,31 @@ export async function POST() {
       raw_response: result.rawResponse || null,
       error_message: result.error || (result.issues && result.issues.length ? result.issues.join(' | ').slice(0, 4000) : null),
     });
+  }
+
+  // team_stats is a "this week's top group" snapshot, not an append-only
+  // log — a team that scrolled out of the visible top group since the
+  // last run should disappear, not linger as a stale row. Since
+  // stats_offense_1/_2 (or defense) can be processed as separate files in
+  // this same batch and both legitimately contribute rows, only prune
+  // AFTER the whole batch finishes, keeping every team either screenshot
+  // wrote this run and removing anything else in that category/week.
+  for (const category of touchedStatsCategories) {
+    const { data: existingRows, error: selErr } = await sb
+      .from('team_stats')
+      .select('id, team')
+      .eq('season', ctx.season)
+      .eq('week', ctx.week)
+      .eq('offense_or_defense_stat', category);
+    if (selErr) {
+      summary.push({ file: `team_stats cleanup (${category})`, status: 'failed', error: selErr.message });
+      continue;
+    }
+    const staleIds = (existingRows || []).filter((r: any) => !statsTeamsWritten[category].has(r.team)).map((r: any) => r.id);
+    if (staleIds.length) {
+      const { error: delErr } = await sb.from('team_stats').delete().in('id', staleIds);
+      if (delErr) summary.push({ file: `team_stats cleanup (${category})`, status: 'failed', error: delErr.message });
+    }
   }
 
   let broadcastSummary: any = null;
@@ -455,7 +486,7 @@ async function processOneImage({
   ratingsByName: Record<string, { overall: number; offense: number; defense: number; homeState: string | null }>;
   myTeamName: string | null;
   ctx: { season: number; week: number };
-}): Promise<{ status: string; rowsWritten?: number; rawResponse?: string; error?: string; issues?: string[] }> {
+}): Promise<{ status: string; rowsWritten?: number; rawResponse?: string; error?: string; issues?: string[]; teamsWritten?: string[] }> {
   const { data: blob, error: dlErr } = await sb.storage.from(bucket).download(fileName);
   if (dlErr) return { status: 'skipped_failed', error: `download: ${dlErr.message}` };
 
@@ -474,7 +505,7 @@ async function processOneImage({
 
   const isMyTeamOnlyPart = /_2$/.test(slot) && (guide.screen_type === 'stats_offense' || guide.screen_type === 'stats_defense');
   const partNote = isMyTeamOnlyPart
-    ? '\n\nIMPORTANT — this is the SECOND screenshot for this category, only sent when Chris\u2019s own team wasn\u2019t visible in the first (top-group) screenshot. This screenshot shows ONLY his team, scrolled to find it. Extract exactly ONE row: his team\u2019s row, with whatever national_rank and stats are shown for it. Do not include any other team, even if one is partially visible at the edge of the screen.'
+    ? '\n\nIMPORTANT — this is the SECOND screenshot for this category, only sent when Chris\u2019s own team wasn\u2019t visible in the first (top-group) screenshot. This screenshot shows ONLY his team, scrolled to find it. Extract exactly ONE row: his team\u2019s row, with whatever stats are shown for it. If a rank number is shown specifically for his team in this scrolled context, use it for national_rank; if the only number visible near his name is an AP Top 25 poll ranking badge (unrelated to this offense/defense category) and no separate leaderboard-position number is shown, leave national_rank null rather than using that poll rank. Do not include any other team, even if one is partially visible at the edge of the screen.'
     : '';
 
   const systemPrompt = `You extract structured data from a single College Football 27 screenshot for Dynasty HQ, a personal dynasty tracker.
@@ -526,12 +557,13 @@ Numeric fields must be JSON numbers, not quoted strings. If a value isn't visibl
         if (!finalRows.length) finalRows = rows.slice(0, 1); // fallback rather than silently writing nothing
       }
 
-      const { written, issues } = await writeRows({ sb, guide, rows: finalRows, variantToCanonical, ctx, slot, ratingsByName });
+      const { written, issues, teamsWritten } = await writeRows({ sb, guide, rows: finalRows, variantToCanonical, ctx, slot, ratingsByName });
       return {
         status: attempt === 0 ? 'success' : 'retried_success',
         rowsWritten: written,
         rawResponse: raw.slice(0, 4000),
         issues: issues.length ? issues.slice(0, 10) : undefined,
+        teamsWritten,
       };
     } catch (err: any) {
       lastErr = err?.message || String(err);
@@ -556,12 +588,15 @@ async function writeRows({
   ctx: { season: number; week: number };
   slot: string;
   ratingsByName: Record<string, { overall: number; offense: number; defense: number; homeState: string | null }>;
-}): Promise<{ written: number; issues: string[] }> {
+}): Promise<{ written: number; issues: string[]; teamsWritten: string[] }> {
   const cols = contextColumnsFor(guide.target_table);
   let written = 0;
   const issues: string[] = [];
+  const teamsWritten: string[] = [];
+  const isStatsScreen = guide.screen_type === 'stats_offense' || guide.screen_type === 'stats_defense';
+  const isStatsSecondPart = isStatsScreen && /_2$/.test(slot);
 
-  for (const row of rows) {
+  for (const [rowIndex, row] of rows.entries()) {
     const mapped: Record<string, any> = {};
     for (const [screenField, column] of Object.entries(guide.field_map)) {
       mapped[column] = row[screenField] ?? null;
@@ -571,6 +606,17 @@ async function writeRows({
       if (mapped[field] && variantToCanonical[mapped[field]]) {
         mapped[field] = variantToCanonical[mapped[field]];
       }
+    }
+
+    // The "_1" (top-group) stats screenshot has no real on-screen rank
+    // number — only an unrelated AP Top 25 poll badge, which the model
+    // sometimes grabs by mistake. True rank there is just row position,
+    // always starting at 1, so it's assigned here rather than trusted
+    // from the model. The "_2" (my-team-only, possibly scrolled) shot has
+    // no reliable position-based rank, so whatever the model read for it
+    // is left as-is.
+    if (isStatsScreen && !isStatsSecondPart) {
+      mapped.national_rank = String(rowIndex + 1);
     }
 
     mapped.user_id = USER_ID;
@@ -648,13 +694,15 @@ async function writeRows({
       rowId = inserted?.[0]?.id ?? null;
     }
 
+    if (isStatsScreen && mapped.team) teamsWritten.push(mapped.team);
+
     if (guide.screen_type === 'best_matchup' && rowId) {
       const oddsIssue = await applyOddsEngine({ sb, rowId, mapped, ratingsByName });
       if (oddsIssue) issues.push(oddsIssue);
     }
   }
 
-  return { written, issues };
+  return { written, issues, teamsWritten };
 }
 
 // Runs the deterministic odds engine (src/lib/engines/odds.ts) against a
