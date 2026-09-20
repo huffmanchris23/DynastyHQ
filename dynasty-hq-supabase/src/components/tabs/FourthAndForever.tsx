@@ -56,7 +56,7 @@ function TopTakesList({ d }: { d: DashboardData }) {
               <div
                 key={i}
                 style={{
-                  display: 'flex', gap: 10, alignItems: 'center',
+                  display: 'flex', gap: 10, alignItems: 'flex-start',
                   background: heat.bg, borderRadius: 8, padding: '10px 14px',
                   borderLeft: `5px solid ${heat.border}`,
                   boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
@@ -67,7 +67,7 @@ function TopTakesList({ d }: { d: DashboardData }) {
                   style={{
                     fontFamily: 'inherit', fontSize: 13, lineHeight: 1.3,
                     fontWeight: 500, color: '#2A1A0F',
-                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0,
+                    flex: 1, minWidth: 0,
                   }}
                 >
                   {item.headline}
