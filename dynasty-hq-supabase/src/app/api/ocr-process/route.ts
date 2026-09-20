@@ -60,16 +60,27 @@ export async function POST() {
     );
   if (helperErr) return NextResponse.json({ error: `ocr_helper: ${helperErr.message}` }, { status: 500 });
 
-  // Ratings + home state, keyed by canonical team_name — the odds engine
-  // needs these for whichever two teams a given best_matchups row names.
+  // Ratings + home state, keyed by EVERY name variant ocr_helper knows for
+  // a team (canonical team_name plus every name_in_* column) — not just
+  // team_name. Different tables store team names under different
+  // conventions (game_preview pre-seeds "ULM" while ocr_helper's canonical
+  // team_name is "Louisiana Monroe", for example), so a lookup keyed only
+  // by team_name silently misses real rows. This makes every engine's
+  // ratingsByName[name] lookup robust to whichever convention a given
+  // table happens to use.
   const ratingsByName: Record<string, { overall: number; offense: number; defense: number; homeState: string | null }> = {};
   (helperRows || []).forEach((r: any) => {
-    ratingsByName[r.team_name] = {
+    const rating = {
       overall: Number(r.overall_rating),
       offense: Number(r.offense_rating),
       defense: Number(r.defense_rating),
       homeState: r.home_state || null,
     };
+    [r.team_name, r.name_in_schedule, r.name_in_polls, r.name_in_playoffs, r.name_in_stats, r.name_in_preview, r.name_in_betting]
+      .filter(Boolean)
+      .forEach((name: string) => {
+        ratingsByName[name] = rating;
+      });
   });
 
   const { data: assetRows, error: assetErr } = await sb.from('assets').select('team_name, team_conference');
@@ -133,14 +144,56 @@ export async function POST() {
   let broadcastSummary: any = null;
   if (touchedBestMatchup) {
     broadcastSummary = await runBroadcastEngine({ sb, ctx, ratingsByName, conferenceByName });
+    await sb.from('ocr_audit_log').insert({
+      season: ctx.season,
+      week: ctx.week,
+      screen_type: 'broadcast_engine',
+      file_path: null,
+      status: broadcastSummary?.error ? 'error' : 'success',
+      rows_written: broadcastSummary?.assigned || 0,
+      raw_response: null,
+      error_message: broadcastSummary?.error || (broadcastSummary?.issues?.length ? broadcastSummary.issues.join(' | ').slice(0, 4000) : null),
+    });
+  }
+
+  let gamePreviewOddsSummary: any = null;
+  gamePreviewOddsSummary = await runGamePreviewOdds({ sb, ctx, ratingsByName });
+  if (gamePreviewOddsSummary && (gamePreviewOddsSummary.written || gamePreviewOddsSummary.error)) {
+    await sb.from('ocr_audit_log').insert({
+      season: ctx.season,
+      week: ctx.week,
+      screen_type: 'game_preview_odds',
+      file_path: null,
+      status: gamePreviewOddsSummary?.error ? 'error' : 'success',
+      rows_written: gamePreviewOddsSummary?.written || 0,
+      raw_response: null,
+      error_message: gamePreviewOddsSummary?.error || null,
+    });
   }
 
   let contentSummary: any = null;
   if (touchedResults) {
     contentSummary = await runContentEngine({ sb, anthropic, ctx });
+    await sb.from('ocr_audit_log').insert({
+      season: ctx.season,
+      week: ctx.week,
+      screen_type: 'content_engine',
+      file_path: null,
+      status: contentSummary?.error ? 'error' : contentSummary?.skipped ? 'skipped' : 'success',
+      rows_written: contentSummary?.written || 0,
+      raw_response: contentSummary?.rawResponse || null,
+      error_message: contentSummary?.error || (contentSummary?.skipped ? contentSummary.reason : null),
+    });
   }
 
-  return NextResponse.json({ season: ctx.season, week: ctx.week, results: summary, broadcast: broadcastSummary, content: contentSummary });
+  return NextResponse.json({
+    season: ctx.season,
+    week: ctx.week,
+    results: summary,
+    broadcast: broadcastSummary,
+    gamePreviewOdds: gamePreviewOddsSummary,
+    content: contentSummary,
+  });
 }
 
 // Gathers every relevant data source for the week (not just the new
@@ -161,7 +214,7 @@ async function runContentEngine({
 }) {
   const [lastWeekResults, currentTop25, biggestGamesThisWeek, heismanRace, coachingHotSeats, conferenceStandings] = await Promise.all([
     sb.from('weekly_results').select('home_team, away_team, home_score, away_score, home_rank, away_rank').eq('season', ctx.season).eq('week', ctx.week - 1),
-    sb.from('ap_poll').select('rank, team, wins, losses').eq('season', ctx.season).eq('week', String(ctx.week)),
+    sb.from('top_25').select('top_25, team, wins, losses').eq('season', ctx.season).eq('week', String(ctx.week)),
     sb.from('best_matchups').select('home_team, away_team, home_rank, away_rank, favorite, spread, favorite_moneyline, total_over_under, broadcast, game_date, time').eq('season', ctx.season).eq('week', ctx.week),
     sb.from('heisman_trophy').select('rank, name, team, position, class').eq('season', ctx.season).eq('week', ctx.week),
     sb.from('coaching_hotseats').select('team, coach, job_security').eq('season', ctx.season).eq('week', ctx.week),
@@ -303,6 +356,81 @@ async function runBroadcastEngine({
   }
 
   return { assigned: assignments.length, issues };
+}
+
+// Runs the same computeMatchupOdds() used for best_matchups against Mr.
+// Huffman's own current-week game_preview row, filling in the ratings and
+// odds columns that were previously always null there. His schedule
+// (team/opponent/home_team/game_date/game_time) is pre-seeded for the
+// whole season already — this doesn't need any screenshot to run, just
+// ocr_helper ratings, so it's safe to attempt on every batch. There's no
+// record source for either team here yet (no wins/losses columns on
+// game_preview, and no guide supplies them), so both sides default to a
+// neutral 0-0 record — the record nudge is a minor factor in the formula,
+// so this is a reasonable stopgap rather than blocking on a new screenshot
+// type. home_team is trusted as-is (already resolved upstream, no AT/VS
+// ambiguity to resolve the way best_matchups has to).
+async function runGamePreviewOdds({
+  sb,
+  ctx,
+  ratingsByName,
+}: {
+  sb: ReturnType<typeof getSupabase>;
+  ctx: { season: number; week: number };
+  ratingsByName: Record<string, { overall: number; offense: number; defense: number; homeState: string | null }>;
+}) {
+  const { data: rows, error } = await sb
+    .from('game_preview')
+    .select('id, team, opponent, home_team')
+    .eq('season', ctx.season)
+    .eq('week', String(ctx.week))
+    .eq('current_week', true)
+    .limit(1);
+  if (error) return { error: `game_preview fetch failed: ${error.message}` };
+
+  const preview = rows?.[0];
+  if (!preview || !preview.team || !preview.opponent || !preview.home_team) return { written: 0 };
+
+  const homeName = preview.home_team;
+  const awayName = homeName === preview.team ? preview.opponent : preview.team;
+  const homeRatings = ratingsByName[homeName];
+  const awayRatings = ratingsByName[awayName];
+  if (!homeRatings || !awayRatings) {
+    return { error: `game_preview row ${preview.id} skipped — missing ratings for "${homeName}"/"${awayName}"` };
+  }
+
+  const odds = computeMatchupOdds({
+    homeTeam: { name: homeName, ...homeRatings },
+    awayTeam: { name: awayName, ...awayRatings },
+    connector: 'AT',
+    gameLocation: null,
+    homeWins: 0,
+    homeLosses: 0,
+    awayWins: 0,
+    awayLosses: 0,
+  });
+
+  const teamIsHome = preview.team === homeName;
+  const { error: updErr } = await sb
+    .from('game_preview')
+    .update({
+      team_overall: teamIsHome ? homeRatings.overall : awayRatings.overall,
+      team_offense: teamIsHome ? homeRatings.offense : awayRatings.offense,
+      team_defense: teamIsHome ? homeRatings.defense : awayRatings.defense,
+      opponent_overall: String(teamIsHome ? awayRatings.overall : homeRatings.overall),
+      opponent_offense: String(teamIsHome ? awayRatings.offense : homeRatings.offense),
+      opponent_defense: String(teamIsHome ? awayRatings.defense : homeRatings.defense),
+      favorite: odds.favorite,
+      favorite_spread: String(odds.spread),
+      favorite_moneyline: odds.favoriteMoneyline,
+      total_over_under: odds.totalOverUnder,
+      team_win_probability: odds.favorite === preview.team ? odds.favoriteWinProbability : `${(100 - parseFloat(odds.favoriteWinProbability)).toFixed(1)}%`,
+      opponent_win_probability: odds.favorite === preview.opponent ? odds.favoriteWinProbability : `${(100 - parseFloat(odds.favoriteWinProbability)).toFixed(1)}%`,
+    })
+    .eq('id', preview.id);
+  if (updErr) return { error: `game_preview odds write failed: ${updErr.message}` };
+
+  return { written: 1 };
 }
 
 async function processOneImage({
