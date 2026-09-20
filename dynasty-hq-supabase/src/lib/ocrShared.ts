@@ -15,6 +15,11 @@ export const SCREEN_TYPES = [
   'team_schedule_1',
   'team_schedule_2',
   'best_matchups',
+  // Same Scores/Schedules screen as best_matchups, toggled back to the
+  // PRIOR week so it shows final scores instead of kickoff times. One
+  // screenshot, whatever the full Top 25 grid shows — feeds the content
+  // engine's "what happened last week" input.
+  'last_week_results',
   // The 5 tracked biggest games of the week, one screenshot per game (the
   // Scores/Schedules screen with that game's row selected so its detail
   // panel — records, date/time, location — shows on the right). Each
@@ -98,6 +103,10 @@ const CONTEXT_COLUMNS: Record<string, ContextColumns> = {
   team_stats: { seasonCol: 'season', weekCol: 'week', seasonValue: (s) => s, weekValue: (w) => w },
   coaching_hotseats: { seasonCol: 'season', weekCol: 'week', seasonValue: (s) => s, weekValue: (w) => w },
   heisman_trophy: { seasonCol: 'season', weekCol: 'week', seasonValue: (s) => s, weekValue: (w) => w },
+  // Shows the PRIOR week's final scores (same screen as best_matchups,
+  // toggled back one week), so it's stamped one week behind whatever week
+  // is currently being processed.
+  weekly_results: { seasonCol: 'season', weekCol: 'week', seasonValue: (s) => s, weekValue: (w) => w - 1 },
 };
 
 export function contextColumnsFor(targetTable: string): ContextColumns {
