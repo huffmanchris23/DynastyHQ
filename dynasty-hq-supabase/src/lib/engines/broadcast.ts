@@ -114,10 +114,25 @@ export function assignBroadcasts(games: SlateGame[]): BroadcastAssignment[] {
     assign(takeBest((g) => isConference(g.homeTeam, 'Big Ten') || isConference(g.awayTeam, 'Big Ten')), 'FOX');
     assign(takeBest((g) => isConference(g.homeTeam, 'SEC') || isConference(g.awayTeam, 'SEC')), 'CBS');
 
-    remaining.sort((a, b) => combinedRating(b) - combinedRating(a));
-    remaining.forEach((g, i) => {
+    // ABC/ESPN are "this is a genuinely big remaining game" slots. Mr.
+    // Huffman's own game_preview game is realistically never a
+    // national-broadcast game — not just relative to other games sharing
+    // its time slot, but even when it has NO competition there at all. So
+    // it's assigned separately from the ABC/ESPN/ESPN2/ESPN+ pool: real
+    // best_matchups games fill that pool by rating as before, and the
+    // game_preview game (if present) is pulled out first and only ever
+    // gets ESPN+, falling back to ESPN2 if ESPN+ is already taken by
+    // another game in the same time slot.
+    const previewGame = remaining.find((g) => g.id.startsWith('game_preview:')) || null;
+    const matchupGames = remaining.filter((g) => g !== previewGame);
+    matchupGames.sort((a, b) => combinedRating(b) - combinedRating(a));
+    matchupGames.forEach((g, i) => {
       results[g.id] = FALLBACK_NETWORKS[i] ?? 'TBD';
     });
+    if (previewGame) {
+      const used = new Set(matchupGames.map((g) => results[g.id]));
+      results[previewGame.id] = ['ESPN+', 'ESPN2'].find((n) => !used.has(n)) ?? 'TBD';
+    }
   }
 
   return games.map((g) => ({ id: g.id, broadcast: results[g.id] ?? 'TBD' }));
