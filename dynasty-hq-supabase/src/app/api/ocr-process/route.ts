@@ -13,7 +13,7 @@ import {
 } from '@/lib/ocrShared';
 import { computeMatchupOdds } from '@/lib/engines/odds';
 import { assignBroadcasts, type SlateGame, type SlateTeam } from '@/lib/engines/broadcast';
-import { buildContentSystemPrompt, parseContentResponse, DRIVE_BY_TYPE, TOP_TAKE_TYPE } from '@/lib/engines/content';
+import { buildContentSystemPrompt, parseContentResponse, CONTENT_TOOL, DRIVE_BY_TYPE, TOP_TAKE_TYPE } from '@/lib/engines/content';
 
 const CONTENT_MODEL = 'claude-sonnet-5';
 
@@ -179,7 +179,7 @@ export async function POST() {
       season: ctx.season,
       week: ctx.week,
       screen_type: 'broadcast_engine',
-      file_path: null,
+      file_path: '(engine)',
       status: broadcastSummary?.error ? 'error' : 'success',
       rows_written: broadcastSummary?.assigned || 0,
       raw_response: null,
@@ -194,7 +194,7 @@ export async function POST() {
       season: ctx.season,
       week: ctx.week,
       screen_type: 'game_preview_odds',
-      file_path: null,
+      file_path: '(engine)',
       status: gamePreviewOddsSummary?.error ? 'error' : 'success',
       rows_written: gamePreviewOddsSummary?.written || 0,
       raw_response: null,
@@ -209,7 +209,7 @@ export async function POST() {
       season: ctx.season,
       week: ctx.week,
       screen_type: 'content_engine',
-      file_path: null,
+      file_path: '(engine)',
       status: contentSummary?.error ? 'error' : contentSummary?.skipped ? 'skipped' : 'success',
       rows_written: contentSummary?.written || 0,
       raw_response: contentSummary?.rawResponse || null,
@@ -268,25 +268,30 @@ async function runContentEngine({
     return { skipped: true, reason: 'no usable data found for this week' };
   }
 
-  let raw: string;
+  let toolInput: any;
+  let rawForLogging: string;
   try {
     const msg = await anthropic.messages.create({
       model: CONTENT_MODEL,
       max_tokens: 2048,
       system: buildContentSystemPrompt(context),
       messages: [{ role: 'user', content: "Write this week's Dynasty Drive-By and T.B.'s Top 3 Takes per the rules above." }],
+      tools: [CONTENT_TOOL as any],
+      tool_choice: { type: 'tool', name: CONTENT_TOOL.name },
     });
-    const textBlock = msg.content.find((b: any) => b.type === 'text') as any;
-    raw = (textBlock?.text || '').trim();
+    const toolUse = msg.content.find((b: any) => b.type === 'tool_use') as any;
+    if (!toolUse) throw new Error('model did not call the submit_weekly_content tool');
+    toolInput = toolUse.input;
+    rawForLogging = JSON.stringify(toolInput).slice(0, 4000);
   } catch (err: any) {
     return { error: `content engine API call failed: ${err?.message || err}` };
   }
 
   let parsed;
   try {
-    parsed = parseContentResponse(raw);
+    parsed = parseContentResponse(toolInput);
   } catch (err: any) {
-    return { error: `content engine couldn't parse the model's output: ${err?.message || err}`, rawResponse: raw };
+    return { error: `content engine couldn't parse the model's output: ${err?.message || err}`, rawResponse: rawForLogging };
   }
 
   const { error: delErr } = await sb
