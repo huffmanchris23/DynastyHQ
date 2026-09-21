@@ -493,11 +493,16 @@ export async function getDashboardData(): Promise<DashboardData> {
      team_stats.offense_or_defense_stat) -------- */
 
   const teamStatsRows = teamStatsRes.data || [];
+  // team_stats.team is written canonically (e.g. "Louisiana Monroe"), but
+  // myTeamName is the raw, unresolved game_preview.team value (e.g. "ULM")
+  // — those never match. myAsset.TEAM_NAME is already the canonical form
+  // (resolved via findAsset above), so use that for the comparison instead.
+  const myCanonicalTeamName = (myAsset && myAsset.TEAM_NAME) || myTeamName;
   function statsSplit(kind: 'offense' | 'defense'): TeamStatsSplit {
     const rows = teamStatsRows.filter((r: any) => norm(r.offense_or_defense_stat) === kind);
     return {
       national: rows
-        .filter((r: any) => /^\d+$/.test(String(r.national_rank)))
+        .filter((r: any) => /^\d+$/.test(String(r.national_rank)) && norm(r.team) !== norm(myCanonicalTeamName))
         .sort((a: any, b: any) => safeNum(a.national_rank) - safeNum(b.national_rank))
         .map((r: any) => ({
           rank: safeNum(r.national_rank),
@@ -514,7 +519,7 @@ export async function getDashboardData(): Promise<DashboardData> {
         // whether the team's row came from the top-group screenshot (it's
         // genuinely ranked there) or a second screenshot dedicated to just
         // this team, with no special-casing needed either way.
-        const r = rows.find((r: any) => norm(r.team) === norm(myTeamName));
+        const r = rows.find((r: any) => norm(r.team) === norm(myCanonicalTeamName));
         return r
           ? { team: r.team, ppg: r.points_per_game, ypg: r.yards_per_game, passYpg: r.pass_yards_per_game, rushYpg: r.rush_yards_per_game }
           : null;
