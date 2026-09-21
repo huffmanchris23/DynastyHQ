@@ -60,6 +60,7 @@ export interface MatchupOdds {
   /** Always <= 0 — the favorite's points, e.g. -7.0. */
   spread: number;
   favoriteWinProbability: string;
+  /** Just the favorite's own moneyline (e.g. "-250") — the UI displays this as a single figure next to the favorite's name, not a fav/dog pair. */
   favoriteMoneyline: string;
   totalOverUnder: string;
 }
@@ -189,7 +190,7 @@ export function computeMatchupOdds(m: MatchupInput): MatchupOdds {
     favorite,
     spread,
     favoriteWinProbability: `${(winProb * 100).toFixed(1)}%`,
-    favoriteMoneyline: `${favMl} / +${dogMl}`,
+    favoriteMoneyline: String(favMl),
     totalOverUnder: overUnder.toFixed(1),
   };
 }

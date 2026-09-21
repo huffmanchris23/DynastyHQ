@@ -56,6 +56,45 @@ const TOP_TAKE_EXAMPLES = [
   'Defending champs Indiana will miss Playoffs',
 ];
 
+export const CONTENT_TOOL = {
+  name: 'submit_weekly_content',
+  description: "Submit this week's Dynasty Drive-By and T.B.'s Top 3 Takes.",
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      driveBy: {
+        type: 'array' as const,
+        description: 'Exactly 4 factual, ESPN-ticker-style one-liners.',
+        items: {
+          type: 'object' as const,
+          properties: {
+            team: { type: 'string' as const, description: 'Exact team name from the data.' },
+            headline: { type: 'string' as const, description: 'The blurb text. Avoid double-quote characters inside it — use single quotes for any quoted speech or nicknames instead.' },
+          },
+          required: ['team', 'headline'],
+        },
+        minItems: 4,
+        maxItems: 4,
+      },
+      topTakes: {
+        type: 'array' as const,
+        description: 'Exactly 3 genuinely controversial, opinionated T.B. Walker takes.',
+        items: {
+          type: 'object' as const,
+          properties: {
+            team: { type: 'string' as const, description: 'Exact team name from the data.' },
+            headline: { type: 'string' as const, description: 'The take text. Avoid double-quote characters inside it — use single quotes for any quoted speech or nicknames instead.' },
+          },
+          required: ['team', 'headline'],
+        },
+        minItems: 3,
+        maxItems: 3,
+      },
+    },
+    required: ['driveBy', 'topTakes'],
+  },
+};
+
 export function buildContentSystemPrompt(context: ContentContext): string {
   return `You write two home-page sections for Dynasty HQ, a personal college football dynasty tracker. These are two DIFFERENT voices for two DIFFERENT purposes — do not blur them together.
 
@@ -72,18 +111,16 @@ ${TOP_TAKE_EXAMPLES.map((e) => `- "${e}"`).join('\n')}
 - "team" must be exactly one team name from the data, copied exactly as it appears there (the team the blurb is centered on).
 - Drive-By headlines stay tight and ticker-like — roughly 6-12 words, matching the examples. Top Takes have more room to breathe (the home page card wraps instead of truncating) — let a take run longer than that when the extra length is real swagger/personality, not filler.
 - Across the 7 blurbs combined, draw on every category below at least once where something in it is actually interesting this week — last week's results, the current Top 25, this week's biggest games, the Heisman race, coaching hot seats, and conference standings. Don't force in a category that has nothing worth saying.
-- Output ONLY JSON, no markdown code fences, no prose before or after:
-{"driveBy":[{"team":"...","headline":"..."},{"team":"...","headline":"..."},{"team":"...","headline":"..."},{"team":"...","headline":"..."}],"topTakes":[{"team":"...","headline":"..."},{"team":"...","headline":"..."},{"team":"...","headline":"..."}]}
+- Avoid double-quote characters inside any headline — use single quotes for nicknames or quoted speech instead.
+- Call the submit_weekly_content tool with your 4 driveBy items and 3 topTakes items. Don't write any of this as plain text in your reply.
 
 DATA:
 ${JSON.stringify(context)}`;
 }
 
-export function parseContentResponse(raw: string): ContentResult {
-  const cleaned = raw.replace(/^```json\s*|```\s*$/g, '').trim();
-  const parsed = JSON.parse(cleaned);
-  if (!parsed || !Array.isArray(parsed.driveBy) || !Array.isArray(parsed.topTakes)) {
-    throw new Error('response is missing driveBy/topTakes arrays');
+export function parseContentResponse(toolInput: any): ContentResult {
+  if (!toolInput || !Array.isArray(toolInput.driveBy) || !Array.isArray(toolInput.topTakes)) {
+    throw new Error('tool input is missing driveBy/topTakes arrays');
   }
 
   const clean = (arr: any[]): ContentItemOut[] =>
@@ -91,11 +128,11 @@ export function parseContentResponse(raw: string): ContentResult {
       .filter((x) => x && typeof x.headline === 'string' && x.headline.trim() && typeof x.team === 'string' && x.team.trim())
       .map((x) => ({ team: x.team.trim(), headline: x.headline.trim() }));
 
-  const driveBy = clean(parsed.driveBy).slice(0, 4);
-  const topTakes = clean(parsed.topTakes).slice(0, 3);
+  const driveBy = clean(toolInput.driveBy).slice(0, 4);
+  const topTakes = clean(toolInput.topTakes).slice(0, 3);
 
   if (driveBy.length === 0 && topTakes.length === 0) {
-    throw new Error('response had no usable driveBy or topTakes items');
+    throw new Error('tool input had no usable driveBy or topTakes items');
   }
 
   return { driveBy, topTakes };
