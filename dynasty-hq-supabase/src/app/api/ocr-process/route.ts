@@ -502,10 +502,20 @@ async function processOneImage({
 
   const variantCol = guide.name_variant_column;
   const nameOptions = helperRows.map((r) => (variantCol ? r[variantCol] || r.team_name : r.team_name));
+  // Resolve against EVERY name variant ocr_helper knows for a team, not
+  // just the one column this guide happens to be configured with — a
+  // screen can use a naming convention that isn't the "expected" one for
+  // its guide (e.g. conference standings showing "UL Monroe" when no
+  // guide points at that specific variant), and a narrower map would
+  // leave that string unresolved, creating a duplicate row under a name
+  // no other table uses.
   const variantToCanonical: Record<string, string> = {};
   helperRows.forEach((r) => {
-    const key = variantCol ? r[variantCol] || r.team_name : r.team_name;
-    variantToCanonical[key] = r.team_name;
+    [r.team_name, r.name_in_schedule, r.name_in_polls, r.name_in_playoffs, r.name_in_stats, r.name_in_preview, r.name_in_betting]
+      .filter(Boolean)
+      .forEach((variant: string) => {
+        variantToCanonical[variant] = r.team_name;
+      });
   });
 
   const isMyTeamOnlyPart = /_2$/.test(slot) && (guide.screen_type === 'stats_offense' || guide.screen_type === 'stats_defense');
