@@ -68,7 +68,7 @@ export const CONTENT_TOOL = {
         items: {
           type: 'object' as const,
           properties: {
-            team: { type: 'string' as const, description: 'Exact team name from the data.' },
+            team: { type: 'string' as const, description: 'The exact name of a SCHOOL/team from the data — never a player\u2019s name.' },
             headline: { type: 'string' as const, description: 'The blurb text. Avoid double-quote characters inside it — use single quotes for any quoted speech or nicknames instead.' },
           },
           required: ['team', 'headline'],
@@ -82,7 +82,7 @@ export const CONTENT_TOOL = {
         items: {
           type: 'object' as const,
           properties: {
-            team: { type: 'string' as const, description: 'Exact team name from the data.' },
+            team: { type: 'string' as const, description: 'The exact name of a SCHOOL/team from the data — never a player\u2019s name, even for a Heisman-focused take. If the take is about a player, use that player\u2019s team here.' },
             headline: { type: 'string' as const, description: 'The take text. Avoid double-quote characters inside it — use single quotes for any quoted speech or nicknames instead.' },
           },
           required: ['team', 'headline'],
