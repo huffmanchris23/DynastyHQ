@@ -303,8 +303,8 @@ async function runContentEngine({
   if (delErr) return { error: `content engine failed clearing old rows: ${delErr.message}` };
 
   const rows = [
-    ...parsed.driveBy.map((item) => ({ season: ctx.season, week: String(ctx.week), content_input_type: DRIVE_BY_TYPE, team: item.team, headline: item.headline })),
-    ...parsed.topTakes.map((item) => ({ season: ctx.season, week: String(ctx.week), content_input_type: TOP_TAKE_TYPE, team: item.team, headline: item.headline })),
+    ...parsed.driveBy.map((item) => ({ user_id: USER_ID, dynasty_id: dynastyIdFor('content'), season: ctx.season, week: String(ctx.week), content_input_type: DRIVE_BY_TYPE, team: item.team, headline: item.headline })),
+    ...parsed.topTakes.map((item) => ({ user_id: USER_ID, dynasty_id: dynastyIdFor('content'), season: ctx.season, week: String(ctx.week), content_input_type: TOP_TAKE_TYPE, team: item.team, headline: item.headline })),
   ];
 
   const { error: insErr } = await sb.from('content').insert(rows);
