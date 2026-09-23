@@ -204,7 +204,7 @@ export async function POST() {
 
   let contentSummary: any = null;
   if (touchedResults) {
-    contentSummary = await runContentEngine({ sb, anthropic, ctx });
+    contentSummary = await runContentEngine({ sb, anthropic, ctx, conferenceByName });
     await sb.from('ocr_audit_log').insert({
       season: ctx.season,
       week: ctx.week,
@@ -238,10 +238,12 @@ async function runContentEngine({
   sb,
   anthropic,
   ctx,
+  conferenceByName,
 }: {
   sb: ReturnType<typeof getSupabase>;
   anthropic: Anthropic;
   ctx: { season: number; week: number };
+  conferenceByName: Record<string, string | null>;
 }) {
   const [lastWeekResults, currentTop25, biggestGamesThisWeek, heismanRace, coachingHotSeats, conferenceStandings] = await Promise.all([
     sb.from('weekly_results').select('home_team, away_team, home_score, away_score, home_rank, away_rank').eq('season', ctx.season).eq('week', ctx.week - 1),
@@ -255,6 +257,16 @@ async function runContentEngine({
   const firstError = [lastWeekResults, currentTop25, biggestGamesThisWeek, heismanRace, coachingHotSeats, conferenceStandings].find((r) => r.error)?.error;
   if (firstError) return { error: `content engine data fetch failed: ${firstError.message}` };
 
+  // Real, authoritative conference for every team — previously missing
+  // entirely, which is exactly how the model ended up guessing (wrongly)
+  // that Florida State was basically SEC. Built from the same
+  // conferenceByName the broadcast engine already uses, so it's one
+  // source of truth rather than a second fetch.
+  const teamConferences: Record<string, string> = {};
+  Object.entries(conferenceByName).forEach(([name, conf]) => {
+    if (conf) teamConferences[name] = conf;
+  });
+
   const context = {
     lastWeekResults: lastWeekResults.data || [],
     currentTop25: currentTop25.data || [],
@@ -262,6 +274,7 @@ async function runContentEngine({
     heismanRace: heismanRace.data || [],
     coachingHotSeats: coachingHotSeats.data || [],
     conferenceStandings: conferenceStandings.data || [],
+    teamConferences,
   };
 
   if (context.lastWeekResults.length === 0 && context.currentTop25.length === 0) {
@@ -509,12 +522,16 @@ async function processOneImage({
   // guide points at that specific variant), and a narrower map would
   // leave that string unresolved, creating a duplicate row under a name
   // no other table uses.
+  // Keyed case-insensitively (normalized casing can vary — e.g. this exact
+  // situation: a screen visually rendering the user's own team name in a
+  // bold/all-caps style, which OCR then copies verbatim as literal text
+  // that a case-sensitive map would never match).
   const variantToCanonical: Record<string, string> = {};
   helperRows.forEach((r) => {
     [r.team_name, r.name_in_schedule, r.name_in_polls, r.name_in_playoffs, r.name_in_stats, r.name_in_preview, r.name_in_betting]
       .filter(Boolean)
       .forEach((variant: string) => {
-        variantToCanonical[variant] = r.team_name;
+        variantToCanonical[variant.toLowerCase()] = r.team_name;
       });
   });
 
@@ -618,8 +635,9 @@ async function writeRows({
     }
 
     for (const field of TEAM_NAME_FIELDS) {
-      if (mapped[field] && variantToCanonical[mapped[field]]) {
-        mapped[field] = variantToCanonical[mapped[field]];
+      const canonical = mapped[field] && variantToCanonical[String(mapped[field]).toLowerCase()];
+      if (canonical) {
+        mapped[field] = canonical;
       }
     }
 
