@@ -8,22 +8,37 @@
  * isolation.
  *
  * Rules (confirmed with Chris):
- *   - NBC: any Notre Dame game, home or away.
- *   - FOX: favors Big Ten games.
- *   - CBS: favors SEC games.
- *   - ESPN / ABC: neutral, take anything left over (ABC gets first pick of
- *     the leftovers, matching how ABC usually carries the biggest game of
- *     a window in real broadcast contracts, ESPN the next tier down).
+ *   - NBC: any Notre Dame game, home or away — most exclusive, assigned
+ *     first.
+ *   - Each major conference has a PAIR of preferred networks, not one
+ *     fixed network, so a conference isn't stuck on the same channel
+ *     every week when it has more than one game in a slot:
+ *       Big Ten -> FOX, ABC
+ *       SEC     -> CBS, ESPN
+ *       Big 12  -> FOX, ESPN
+ *       ACC     -> ESPN, ABC
+ *     Conferences are resolved in that order (Big Ten, SEC, Big 12, ACC)
+ *     when a cross-conference game could match more than one. Within one
+ *     conference's games in a bucket, the pair alternates by rating order
+ *     (best game gets the pair's first network, next gets the second,
+ *     cycling from there) — real variety instead of always defaulting to
+ *     the first network. If a preferred network is already claimed in
+ *     that bucket, the other half of the pair is tried before giving up
+ *     on a conference pick for that game.
+ *   - ABC / ESPN also double as the generic "big remaining game" slots
+ *     for anything left after NBC + conference picks (ABC first, matching
+ *     how ABC usually carries the biggest game of a window in real
+ *     broadcast contracts), so they can be used twice in different roles
+ *     across a whole week without ever double-booking the SAME bucket.
  *   - Games are grouped into time-of-day buckets first; only games in the
- *     SAME bucket compete for the same network, since a network can't
- *     air two different games at once.
- *   - Tie-break when two games in the same bucket both qualify for the
- *     same network: the one with the higher combined (home + away)
- *     overall rating wins it.
- *   - Overflow beyond ESPN/ABC/FOX/CBS/NBC in one bucket spills to
- *     ESPN2, then ESPN+, best remaining game first. Beyond that
- *     (shouldn't happen with this league's game count) falls back to
- *     'TBD'. FS1 and ESPNU are deliberately not used.
+ *     SAME bucket compete for a network, since a network can't air two
+ *     different games at once.
+ *   - Tie-break / ordering within any pool: higher combined (home + away)
+ *     overall rating goes first.
+ *   - Overflow beyond ABC/ESPN in the generic pool spills to ESPN2, then
+ *     ESPN+, best remaining game first. Beyond that (shouldn't happen
+ *     with this league's game count) falls back to 'TBD'. FS1 and ESPNU
+ *     are deliberately not used.
  */
 
 export interface SlateTeam {
@@ -46,7 +61,14 @@ export interface BroadcastAssignment {
   broadcast: string;
 }
 
-const FALLBACK_NETWORKS = ['ABC', 'ESPN', 'ESPN2', 'ESPN+'];
+const CONFERENCE_NETWORKS: Record<string, [string, string]> = {
+  'Big Ten': ['FOX', 'ABC'],
+  'SEC': ['CBS', 'ESPN'],
+  'Big 12': ['FOX', 'ESPN'],
+  'ACC': ['ESPN', 'ABC'],
+};
+const CONFERENCE_PRIORITY = ['Big Ten', 'SEC', 'Big 12', 'ACC'];
+const GENERIC_FALLBACK = ['ABC', 'ESPN', 'ESPN2', 'ESPN+'];
 
 function combinedRating(g: SlateGame): number {
   return g.homeTeam.overall + g.awayTeam.overall;
@@ -54,6 +76,10 @@ function combinedRating(g: SlateGame): number {
 
 function isConference(team: SlateTeam, conference: string): boolean {
   return (team.conference || '').toLowerCase() === conference.toLowerCase();
+}
+
+function gameConference(g: SlateGame, conference: string): boolean {
+  return isConference(g.homeTeam, conference) || isConference(g.awayTeam, conference);
 }
 
 function isNotreDame(team: SlateTeam): boolean {
@@ -95,43 +121,50 @@ export function assignBroadcasts(games: SlateGame[]): BroadcastAssignment[] {
   }
 
   for (const bucketGames of buckets.values()) {
-    const remaining = [...bucketGames];
+    let remaining = [...bucketGames];
+    const usedNetworks = new Set<string>();
 
-    const takeBest = (predicate: (g: SlateGame) => boolean): SlateGame | null => {
-      const candidates = remaining.filter(predicate);
-      if (candidates.length === 0) return null;
-      candidates.sort((a, b) => combinedRating(b) - combinedRating(a));
-      return candidates[0];
-    };
-
-    const assign = (game: SlateGame | null, network: string) => {
-      if (!game) return;
+    const assign = (game: SlateGame, network: string) => {
       results[game.id] = network;
-      remaining.splice(remaining.indexOf(game), 1);
+      usedNetworks.add(network);
+      remaining = remaining.filter((g) => g !== game);
     };
 
-    assign(takeBest((g) => isNotreDame(g.homeTeam) || isNotreDame(g.awayTeam)), 'NBC');
-    assign(takeBest((g) => isConference(g.homeTeam, 'Big Ten') || isConference(g.awayTeam, 'Big Ten')), 'FOX');
-    assign(takeBest((g) => isConference(g.homeTeam, 'SEC') || isConference(g.awayTeam, 'SEC')), 'CBS');
+    // NBC — most exclusive, goes first regardless of conference.
+    const ndCandidates = remaining.filter((g) => isNotreDame(g.homeTeam) || isNotreDame(g.awayTeam));
+    ndCandidates.sort((a, b) => combinedRating(b) - combinedRating(a));
+    if (ndCandidates[0]) assign(ndCandidates[0], 'NBC');
 
-    // ABC/ESPN are "this is a genuinely big remaining game" slots. Mr.
-    // Huffman's own game_preview game is realistically never a
-    // national-broadcast game — not just relative to other games sharing
-    // its time slot, but even when it has NO competition there at all. So
-    // it's assigned separately from the ABC/ESPN/ESPN2/ESPN+ pool: real
-    // best_matchups games fill that pool by rating as before, and the
-    // game_preview game (if present) is pulled out first and only ever
-    // gets ESPN+, falling back to ESPN2 if ESPN+ is already taken by
-    // another game in the same time slot.
+    // Conference pairs, in priority order, alternating each conference's
+    // own two games (if more than one) between its two networks.
+    for (const conf of CONFERENCE_PRIORITY) {
+      const [netA, netB] = CONFERENCE_NETWORKS[conf];
+      const confGames = remaining.filter((g) => gameConference(g, conf));
+      confGames.sort((a, b) => combinedRating(b) - combinedRating(a));
+      confGames.forEach((g, i) => {
+        const preferred = i % 2 === 0 ? netA : netB;
+        const alternate = i % 2 === 0 ? netB : netA;
+        const network = !usedNetworks.has(preferred) ? preferred : !usedNetworks.has(alternate) ? alternate : null;
+        if (network) assign(g, network);
+      });
+    }
+
+    // Generic fallback: ABC/ESPN also serve as "this is the biggest
+    // remaining game" slots on top of their conference role, then
+    // ESPN2/ESPN+ for anything past that. Mr. Huffman's own game_preview
+    // game is pulled out first and restricted to ESPN+/ESPN2 only — it's
+    // realistically never a national-broadcast game regardless of rating
+    // or how much competition it has (or doesn't have) in its slot.
     const previewGame = remaining.find((g) => g.id.startsWith('game_preview:')) || null;
     const matchupGames = remaining.filter((g) => g !== previewGame);
     matchupGames.sort((a, b) => combinedRating(b) - combinedRating(a));
-    matchupGames.forEach((g, i) => {
-      results[g.id] = FALLBACK_NETWORKS[i] ?? 'TBD';
+    matchupGames.forEach((g) => {
+      const network = GENERIC_FALLBACK.find((n) => !usedNetworks.has(n));
+      if (network) assign(g, network);
     });
     if (previewGame) {
-      const used = new Set(matchupGames.map((g) => results[g.id]));
-      results[previewGame.id] = ['ESPN+', 'ESPN2'].find((n) => !used.has(n)) ?? 'TBD';
+      const network = ['ESPN+', 'ESPN2'].find((n) => !usedNetworks.has(n));
+      results[previewGame.id] = network ?? 'TBD';
     }
   }
 

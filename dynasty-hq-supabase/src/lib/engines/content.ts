@@ -23,6 +23,8 @@ export interface ContentContext {
   heismanRace: any[];
   coachingHotSeats: any[];
   conferenceStandings: any[];
+  /** Every FBS team's real conference in THIS dynasty, e.g. { "Florida State": "ACC" }. Realignment can differ from real life — this is the only source of truth for it. */
+  teamConferences: Record<string, string>;
 }
 
 export interface ContentItemOut {
@@ -108,10 +110,11 @@ ${TOP_TAKE_EXAMPLES.map((e) => `- "${e}"`).join('\n')}
 
 ## Rules
 - Base every blurb on the DATA below — never invent a score, record, name, or storyline that isn't in it.
+- Never state or imply which conference a team belongs to from your own outside knowledge — conference realignment in this dynasty can differ from real life. teamConferences below is the ONLY source of truth for that; if a team isn't in it, don't make a conference claim about it at all.
 - "team" must be exactly one team name from the data, copied exactly as it appears there (the team the blurb is centered on).
 - When describing lastWeekResults, check home_rank/away_rank before choosing your framing. "Stuns"/"shocks"/"upsets" language is ONLY correct when the LOWER-ranked (or unranked) team beat the HIGHER-ranked one. If the ranked team won and the loser was unranked, that's an expected result, not an upset — say the ranked team "knocks off" or "handles" the unranked one, don't call it a stunner. Get the specific rank numbers right (e.g. "#20 SMU," not "unranked SMU," when away_rank is 20) — don't call a team unranked when it has a real rank in the data, and don't call a team ranked when its rank field is null.
 - Drive-By headlines stay tight and ticker-like — roughly 6-12 words, matching the examples. Top Takes have more room to breathe (the home page card wraps instead of truncating) — let a take run longer than that when the extra length is real swagger/personality, not filler.
-- Across the 7 blurbs combined, draw on every category below at least once where something in it is actually interesting this week — last week's results, the current Top 25, this week's biggest games, the Heisman race, coaching hot seats, and conference standings. Don't force in a category that has nothing worth saying.
+- Every one of these categories must be the basis of at least one blurb across the 7 total, full stop — last week's results, the current Top 25, this week's biggest games, the Heisman race, coaching hot seats, and conference standings. There is always something usable in each (a coach's number moved, a team's record changed, someone's Heisman odds shifted) even in a slow week — find the real angle rather than skipping a category.
 - Avoid double-quote characters inside any headline — use single quotes for nicknames or quoted speech instead.
 - Call the submit_weekly_content tool with your 4 driveBy items and 3 topTakes items. Don't write any of this as plain text in your reply.
 
