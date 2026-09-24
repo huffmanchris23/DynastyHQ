@@ -17,7 +17,7 @@ import Rankings from '@/components/tabs/Rankings';
 import Conference from '@/components/tabs/Conference';
 import { Bracket } from '@/components/tabs/Playoffs';
 import { TeamStats } from '@/components/tabs/Stats';
-import { DepthCharts, Recruiting } from '@/components/tabs/Roster';
+import { DepthCharts } from '@/components/tabs/Roster';
 import Awards from '@/components/tabs/Awards';
 import { MyCoach, HotSeats } from '@/components/tabs/CoachingCorner';
 import FourthAndForever from '@/components/tabs/FourthAndForever';
@@ -60,7 +60,7 @@ function TabBody({ data, tab, subtab }: {
       return <TeamStats d={data} kind={subtab === 'defense' ? 'defense' : 'offense'} />;
     case 'roster':
       if (g.isLocked) return <LockedCard untilWeek={0} />;
-      return subtab === 'recruiting' ? <Recruiting d={data} /> : <DepthCharts d={data} />;
+      return <DepthCharts d={data} />;
     case 'awards':
       if (!g.heismanUnlocked) return <LockedCard label="Not available yet" />;
       return <Awards d={data} />;
