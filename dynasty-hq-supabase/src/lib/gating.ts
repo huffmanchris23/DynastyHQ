@@ -30,7 +30,7 @@ export const TABS: TabDef[] = [
   { id: 'conference', label: 'Conference' },
   { id: 'playoffs', label: 'Playoffs' },
   { id: 'stats', label: 'Stats', subtabs: [{ id: 'offense', label: 'Offense' }, { id: 'defense', label: 'Defense' }] },
-  { id: 'roster', label: 'Roster', subtabs: [{ id: 'depth', label: 'Depth Charts' }, { id: 'recruiting', label: 'Recruiting' }] },
+  { id: 'roster', label: 'Roster', subtabs: [{ id: 'depth', label: 'Depth Charts' }] },
   { id: 'awards', label: 'Heisman' },
   { id: 'coachingcorner', label: 'Coaching Corner', subtabs: [{ id: 'mycoach', label: 'My Coach' }, { id: 'hotseat', label: 'Hot Seats' }] },
   {
@@ -61,11 +61,6 @@ export const TABS: TabDef[] = [
 export const COMING_SOON_TABS: string[] = ['community'];
 
 export const COMING_SOON_SUBTABS: Record<string, string[]> = {
-  // Recruiting (my_recruit_board/national_recruit_ranks) has no data source
-  // in the current schema — parked until a new source is wired up. The old
-  // Schedule > Top 25 subtab is no longer parked: it now shows Best
-  // Matchups, sourced from best_matchups via the OCR pipeline.
-  roster: ['recruiting'],
   // Commissioner tab: only Upload (the OCR pipeline) is built. Settings,
   // Schedule Assistant, and League History stay parked until each gets
   // built out — carved out individually rather than gating the whole

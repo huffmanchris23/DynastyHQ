@@ -145,16 +145,10 @@ export interface PollEntry {
   team: any;
   wins: number;
   losses: number;
-  // Populated only if applyMovement_ is ever wired in (see snapshot.ts) —
-  // unused today, kept for parity with the original dead code path.
-  changeDir?: 'UP' | 'DOWN' | 'SAME' | null;
-  changeNum?: number | null;
-  enteredPoll?: boolean;
 }
 
 export interface Rank {
   ap: PollEntry[];
-  coaches: PollEntry[];
 }
 
 export interface PlayoffSeed {
@@ -196,26 +190,6 @@ export interface TeamStatsSplit {
 export interface TeamStats {
   offense: TeamStatsSplit;
   defense: TeamStatsSplit;
-}
-
-export interface RecruitBoardRow {
-  name: any;
-  position: any;
-  stars: number;
-  status: any;
-}
-
-export interface ClassRankingRow {
-  rank: number;
-  team: any;
-  avgStars: any;
-  commits: any;
-}
-
-export interface Recruit {
-  board: RecruitBoardRow[];
-  classRankings: ClassRankingRow[];
-  myClass: { team: any; avgStars: any; commits: any } | null;
 }
 
 export interface Roster {
@@ -335,7 +309,6 @@ export interface DashboardData {
   playoffBracketUrl: string | null;
   conf: ConfRow[];
   teamStats: TeamStats;
-  recruit: Recruit;
   roster: Roster;
   coach: Coach;
   awards: Awards;

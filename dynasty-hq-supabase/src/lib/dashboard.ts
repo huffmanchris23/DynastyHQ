@@ -24,7 +24,6 @@ import type {
   ConfRow,
   TeamStats,
   TeamStatsSplit,
-  Recruit,
   Roster,
   Coach,
   Awards,
@@ -466,7 +465,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       wins: safeNum(r.wins),
       losses: safeNum(r.losses),
     }));
-  const rank = { ap: toPoll(top25Res.data || [], 'top_25'), coaches: [] as PollEntry[] };
+  const rank = { ap: toPoll(top25Res.data || [], 'top_25') };
 
   /* -------- Playoff --------
    * playoff_rankings (CFP seed list) was dropped — no data source anymore,
@@ -527,13 +526,6 @@ export async function getDashboardData(): Promise<DashboardData> {
     };
   }
   const teamStats: TeamStats = { offense: statsSplit('offense'), defense: statsSplit('defense') };
-
-  /* -------- Recruiting --------
-   * my_recruit_board / national_recruit_ranks were dropped — no data
-   * source, and the Recruiting subtab stays parked in Coming Soon anyway.
-   */
-
-  const recruit: Recruit = { board: [], classRankings: [], myClass: null };
 
   /* -------- Roster (depth charts only) -------- */
 
@@ -693,7 +685,6 @@ export async function getDashboardData(): Promise<DashboardData> {
     playoffBracketUrl,
     conf,
     teamStats,
-    recruit,
     roster,
     coach,
     awards,
@@ -714,24 +705,6 @@ export async function getDashboardData(): Promise<DashboardData> {
 function buildStoryBrief(d: Partial<DashboardData>, myTeamName: any): StoryBriefItem[] {
   const items: StoryBriefItem[] = [];
   const upper = (s: any) => String(s || '').toUpperCase();
-
-  const list = (d.rank && d.rank.ap) || [];
-  const mine = list.find((r) => upper(r.team) === upper(myTeamName));
-  if (mine) {
-    if (mine.enteredPoll) {
-      items.push({ tag: 'Notable', text: `${myTeamName} entered the Top 25 at #${mine.rank}.` });
-    } else if ((mine.changeNum ?? 0) >= 5) {
-      items.push({
-        tag: 'Notable',
-        text: `${myTeamName} ${mine.changeDir === 'UP' ? 'jumped' : 'dropped'} ${mine.changeNum} spots in the Top 25 to #${mine.rank}.`,
-      });
-    } else if (mine.rank <= 10 && mine.changeNum) {
-      items.push({
-        tag: 'Top 10',
-        text: `${myTeamName} moved ${mine.changeDir === 'UP' ? 'up' : 'down'} ${mine.changeNum} within the Top 10, now #${mine.rank}.`,
-      });
-    }
-  }
 
   const my = d.recap && d.recap.myBox;
   if (my && my.FINAL_SCORE !== undefined) {
