@@ -197,36 +197,3 @@ export function HotSeats({ d }: { d: DashboardData }) {
     </div>
   );
 }
-
-/**
- * Port of renderCoachMoves(). Not wired into the tab router in the original
- * either (Coaching Corner only ever showed "My Coach" / "Hot Seats" —
- * Master Spec v3 confirms "Moves" was cut). Kept for parity, unused.
- */
-export function CoachMoves({ d }: { d: DashboardData }) {
-  const list = (d.coach && d.coach.moves) || [];
-  if (!list.length) return <EmptyState>No coaching moves yet.</EmptyState>;
-  const cols = '1fr 1fr 1fr';
-  return (
-    <div className="table primary">
-      <Thead cols={cols}>
-        <div style={{ textAlign: 'left' }}>Coach</div>
-        <div>Old School</div>
-        <div>New School</div>
-      </Thead>
-      {list.map((m, i) => (
-        <Row key={i} cols={cols} first={i === 0}>
-          <div className="truncate" style={{ fontWeight: 500, fontSize: 14 }}>
-            {m.coach}
-          </div>
-          <div className="center truncate" style={{ fontSize: 12, color: 'rgba(0,0,0,0.55)' }}>
-            {m.oldTeam}
-          </div>
-          <div className="center truncate" style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)' }}>
-            {m.newTeam}
-          </div>
-        </Row>
-      ))}
-    </div>
-  );
-}
