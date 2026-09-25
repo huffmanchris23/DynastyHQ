@@ -14,7 +14,12 @@ export const DYNASTY_ID = '00001';
 export const SCREEN_TYPES = [
   'team_schedule_1',
   'team_schedule_2',
-  'best_matchups',
+  // 'best_matchups' (the old grid-only screenshot) retired 2026-09-22 —
+  // superseded by the 5 best_matchup_N detail screenshots below, which are
+  // now the sole source for best_matchups. The grid version was a genuine
+  // source of confusion (stray leftover rows with no odds/broadcast ever
+  // computed for them, since only the detail screenshots trigger those
+  // engines) and is no longer an active ocr_screen_guides entry.
   // Same Scores/Schedules screen as best_matchups, toggled back to the
   // PRIOR week so it shows final scores instead of kickoff times. One
   // screenshot, whatever the full Top 25 grid shows — feeds the content

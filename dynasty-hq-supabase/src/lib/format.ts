@@ -154,28 +154,39 @@ export function rankedName(d: Parameters<typeof rankFor>[0], teamName: any): str
 }
 
 /**
- * Broadcast network logos live in a public Supabase storage bucket named
- * "network_logos", one file per network named exactly after the network
- * string the broadcast engine writes (e.g. "FOX.png", "ESPN2.png") — same
- * naming convention as the existing "team_logos" bucket behind
- * assets.logo_url. Unlike team logos there's no DB table backing this one;
- * the public storage URL is fully predictable, so it's just built directly.
- * Chris needs to upload one PNG per network the broadcast engine can output:
- * ABC, ESPN, ESPN2, ESPN+, FOX, CBS, NBC. FS1 and ESPNU are not used. "TBD"
- * intentionally has no logo — callers should fall back to plain text for it.
+ * Broadcast network logos. The real, admin-managed source is `settings`
+ * (abc_logo/nbc_logo/cbs_logo/espn_logo/espn2_logo/espn+_logo, uploaded to
+ * the "administrative_images" bucket) — the same pattern already used for
+ * the Taco Bell/T.B./conference/Heisman logos elsewhere in this file.
+ * There's no fox_logo column yet, so FOX (and anything else not in
+ * settings) falls back to a guessed "network_logos" bucket URL
+ * (`{Network}.png`) as a stopgap until one's added there too.
  */
 const NETWORK_LOGO_BASE = 'https://ytukpycyzldgahvimyoh.supabase.co/storage/v1/object/public/network_logos';
 
-export function logoForNetwork(network: any): string | undefined {
+type NetworkSettings = {
+  abcLogo?: string | null;
+  nbcLogo?: string | null;
+  cbsLogo?: string | null;
+  espnLogo?: string | null;
+  espn2Logo?: string | null;
+  espnPlusLogo?: string | null;
+};
+
+export function logoForNetwork(network: any, settings?: NetworkSettings | null): string | undefined {
   const name = String(network || '').trim();
   if (!name || name.toUpperCase() === 'TBD') return undefined;
-  return `${NETWORK_LOGO_BASE}/${encodeURIComponent(name)}.png`;
-}
 
-/** Same idea as logoFor, but against the graphics (conference logo) table. */
-export function logoForConference(graphics: { conference?: any; abbreviation?: any; logoUrl?: any }[] | undefined, name: any): string | undefined {
-  if (!graphics || !name) return undefined;
-  const k = String(name).trim().toLowerCase();
-  const match = graphics.find((g) => String(g.conference || '').toLowerCase() === k || String(g.abbreviation || '').toLowerCase() === k);
-  return match?.logoUrl || undefined;
+  const fromSettings: Record<string, string | null | undefined> = {
+    ABC: settings?.abcLogo,
+    NBC: settings?.nbcLogo,
+    CBS: settings?.cbsLogo,
+    ESPN: settings?.espnLogo,
+    ESPN2: settings?.espn2Logo,
+    'ESPN+': settings?.espnPlusLogo,
+  };
+  const settingsUrl = fromSettings[name.toUpperCase()];
+  if (settingsUrl) return settingsUrl;
+
+  return `${NETWORK_LOGO_BASE}/${encodeURIComponent(name)}.png`;
 }
