@@ -200,7 +200,7 @@ export default function Home({ d }: { d: DashboardData }) {
             {preview.broadcast ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                 <span>·</span>
-                <NetworkLogo network={preview.broadcast} height={12} />
+                <NetworkLogo network={preview.broadcast} settings={d.settings} height={12} />
               </span>
             ) : null}
           </div>

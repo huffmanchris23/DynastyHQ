@@ -96,7 +96,7 @@ export function ScheduleTop25({ d }: { d: DashboardData }) {
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 11, fontWeight: 500 }}>{g.time}</div>
                 <div style={{ marginTop: 2, display: 'flex', justifyContent: 'center' }}>
-                  <NetworkLogo network={g.broadcast} />
+                  <NetworkLogo network={g.broadcast} settings={d.settings} />
                 </div>
               </div>
               <div style={{ textAlign: 'right', fontSize: 11, color: 'rgba(0,0,0,0.5)' }}>
