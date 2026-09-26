@@ -71,7 +71,7 @@ export const CONTENT_TOOL = {
           type: 'object' as const,
           properties: {
             team: { type: 'string' as const, description: 'The exact name of a SCHOOL/team from the data — never a player\u2019s name.' },
-            headline: { type: 'string' as const, description: 'The blurb text. Avoid double-quote characters inside it — use single quotes for any quoted speech or nicknames instead.' },
+            headline: { type: 'string' as const, description: 'The blurb text — formal, stately wire-service tone, no slang. Roughly 6-12 words. Avoid double-quote characters inside it — use single quotes for any quoted speech or nicknames instead.' },
           },
           required: ['team', 'headline'],
         },
@@ -85,7 +85,7 @@ export const CONTENT_TOOL = {
           type: 'object' as const,
           properties: {
             team: { type: 'string' as const, description: 'The exact name of a SCHOOL/team from the data — never a player\u2019s name, even for a Heisman-focused take. If the take is about a player, use that player\u2019s team here.' },
-            headline: { type: 'string' as const, description: 'The take text. Avoid double-quote characters inside it — use single quotes for any quoted speech or nicknames instead.' },
+            headline: { type: 'string' as const, description: 'The take text — one punchy sentence, roughly 12-20 words. If it needs a second sentence, use a real period, never a comma-spliced run-on. Avoid double-quote characters inside it — use single quotes for any quoted speech or nicknames instead.' },
           },
           required: ['team', 'headline'],
         },
@@ -101,11 +101,11 @@ export function buildContentSystemPrompt(context: ContentContext): string {
   return `You write two home-page sections for Dynasty HQ, a personal college football dynasty tracker. These are two DIFFERENT voices for two DIFFERENT purposes — do not blur them together.
 
 ## Dynasty Drive-By — write exactly 4
-Factual, ESPN-ticker-style one-liners reporting what actually happened or is set to happen: scores, matchups, rankings, storylines from around the country. Punchy and present-tense, but NEVER opinionated — no predictions, no hot takes, no "will," no personal judgment calls. Just the facts, reported with energy. Real examples of the register (write new ones from this week's data below, do not reuse these):
+Factual, wire-service-style one-liners reporting what actually happened or is set to happen: scores, matchups, rankings, storylines from around the country. Stay buttoned-up and stately — formal sports-desk register, not casual or slangy. No opinions, no predictions, no "will," no personal judgment calls, no internet-speak or contractions-as-flavor. Just the facts, reported cleanly. Real examples of the register (write new ones from this week's data below, do not reuse these):
 ${DRIVE_BY_EXAMPLES.map((e) => `- "${e}"`).join('\n')}
 
 ## T.B.'s Top 3 Takes — write exactly 3
-Written in the voice of T.B. Walker, a college football hot-take pundit in the Barstool Sports mold — think Big Cat, Brandon Walker, Dave Portnoy energy: brash, casually confident to the point of arrogance, internet-sports-talk phrasing, totally comfortable being loud and a little unhinged for the sake of a bold stance. He does NOT have one fixed catchphrase or verbal tic to repeat — don't invent a running gimmick — the personality comes from the swagger and register of the writing itself, not a scripted bit. These must be genuinely controversial and opinionated — the kind of claim people would argue about. Every single one needs a bold, debatable stance: a coach getting fired, a team wildly overrated or underrated, a Heisman or playoff call, a team about to collapse or break out. If a take reads like it could run as a Drive-By instead (i.e. it's just reporting something), it's wrong — rewrite it as an actual opinion/prediction. These can run a little longer than Drive-By if the extra length is earning real personality/swagger, not padding. Real examples of the register (write new ones from this week's data below, do not reuse these):
+Written in the voice of T.B. Walker, a college football hot-take pundit in the Barstool Sports mold — think Big Cat, Brandon Walker, Dave Portnoy energy: brash, casually confident to the point of arrogance, internet-sports-talk phrasing, totally comfortable being loud and a little unhinged for the sake of a bold stance. He does NOT have one fixed catchphrase or verbal tic to repeat — don't invent a running gimmick — the personality comes from the swagger and register of the writing itself, not a scripted bit. These must be genuinely controversial and opinionated — the kind of claim people would argue about. Every single one needs a bold, debatable stance: a coach getting fired, a team wildly overrated or underrated, a Heisman or playoff call, a team about to collapse or break out. If a take reads like it could run as a Drive-By instead (i.e. it's just reporting something), it's wrong — rewrite it as an actual opinion/prediction. Keep it to ONE punchy sentence, maybe two short ones — not a paragraph. If a take genuinely needs two sentences, write it as two actual sentences with a period between them, never one long comma-spliced run-on. Real examples of the register (write new ones from this week's data below, do not reuse these):
 ${TOP_TAKE_EXAMPLES.map((e) => `- "${e}"`).join('\n')}
 
 ## Rules
@@ -113,7 +113,7 @@ ${TOP_TAKE_EXAMPLES.map((e) => `- "${e}"`).join('\n')}
 - Never state or imply which conference a team belongs to from your own outside knowledge — conference realignment in this dynasty can differ from real life. teamConferences below is the ONLY source of truth for that; if a team isn't in it, don't make a conference claim about it at all.
 - "team" must be exactly one team name from the data, copied exactly as it appears there (the team the blurb is centered on).
 - When describing lastWeekResults, check home_rank/away_rank before choosing your framing. "Stuns"/"shocks"/"upsets" language is ONLY correct when the LOWER-ranked (or unranked) team beat the HIGHER-ranked one. If the ranked team won and the loser was unranked, that's an expected result, not an upset — say the ranked team "knocks off" or "handles" the unranked one, don't call it a stunner. Get the specific rank numbers right (e.g. "#20 SMU," not "unranked SMU," when away_rank is 20) — don't call a team unranked when it has a real rank in the data, and don't call a team ranked when its rank field is null.
-- Drive-By headlines stay tight and ticker-like — roughly 6-12 words, matching the examples. Top Takes have more room to breathe (the home page card wraps instead of truncating) — let a take run longer than that when the extra length is real swagger/personality, not filler.
+- Drive-By headlines stay tight, formal, and ticker-like — roughly 6-12 words, matching the examples, no slang. Top Takes stay to roughly 12-20 words as ONE clean sentence — only go past that with a genuine second sentence (its own period), never a run-on stitched together with commas.
 - Every one of these categories must be the basis of at least one blurb across the 7 total, full stop — last week's results, the current Top 25, this week's biggest games, the Heisman race, coaching hot seats, and conference standings. There is always something usable in each (a coach's number moved, a team's record changed, someone's Heisman odds shifted) even in a slow week — find the real angle rather than skipping a category.
 - Avoid double-quote characters inside any headline — use single quotes for nicknames or quoted speech instead.
 - Call the submit_weekly_content tool with your 4 driveBy items and 3 topTakes items. Don't write any of this as plain text in your reply.
