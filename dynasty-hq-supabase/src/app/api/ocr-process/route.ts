@@ -99,9 +99,20 @@ export async function POST() {
   const myTeamName = previewRows?.[0]?.team || null;
 
   const prefix = `w${ctx.week}_`;
-  const { data: files, error: listErr } = await sb.storage.from(ctx.bucket).list('', { limit: 100 });
-  if (listErr) return NextResponse.json({ error: `Couldn't list bucket "${ctx.bucket}": ${listErr.message}` }, { status: 500 });
-  const weekFiles = (files || []).filter((f) => f.name.startsWith(prefix) && f.name.endsWith('.png'));
+  // The bucket accumulates every week's screenshots, so a single list()
+  // capped at 100 silently drops whatever sorts last once total files pass
+  // 100 — that's exactly how w7_team_schedule_2 and w7_top25 went
+  // unprocessed. Page through everything instead.
+  const files: { name: string }[] = [];
+  const pageSize = 100;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data: page, error: listErr } = await sb.storage.from(ctx.bucket).list('', { limit: pageSize, offset });
+    if (listErr) return NextResponse.json({ error: `Couldn't list bucket "${ctx.bucket}": ${listErr.message}` }, { status: 500 });
+    if (!page || page.length === 0) break;
+    files.push(...page);
+    if (page.length < pageSize) break;
+  }
+  const weekFiles = files.filter((f) => f.name.startsWith(prefix) && f.name.endsWith('.png'));
 
   if (weekFiles.length === 0) {
     return NextResponse.json({ season: ctx.season, week: ctx.week, results: [], message: 'No screenshots uploaded for this week yet.' });
@@ -638,6 +649,22 @@ async function writeRows({
       const canonical = mapped[field] && variantToCanonical[String(mapped[field]).toLowerCase()];
       if (canonical) {
         mapped[field] = canonical;
+      }
+    }
+
+    // team_schedule: the game screen lists results winner-score-first, so
+    // on a loss the model sometimes stores the winning (opponent's) score
+    // as team_score. The Last Game card decides W/L from the scores, so a
+    // swapped pair shows a loss as a win. Trust the W/L flag and order the
+    // scores to match it.
+    if (guide.screen_type === 'team_schedule' && (mapped.w_or_l === 'W' || mapped.w_or_l === 'L')) {
+      const ts = Number(mapped.team_score);
+      const os = Number(mapped.opponent_score);
+      if (Number.isFinite(ts) && Number.isFinite(os)) {
+        const hi = Math.max(ts, os);
+        const lo = Math.min(ts, os);
+        mapped.team_score = mapped.w_or_l === 'W' ? hi : lo;
+        mapped.opponent_score = mapped.w_or_l === 'W' ? lo : hi;
       }
     }
 

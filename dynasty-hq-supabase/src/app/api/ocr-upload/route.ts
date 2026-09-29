@@ -15,11 +15,18 @@ export async function GET() {
   }
 
   const sb = getSupabase();
-  const { data: files, error } = await sb.storage.from(ctx.bucket).list('', { limit: 100 });
-  if (error) return NextResponse.json({ error: `Couldn't list bucket: ${error.message}` }, { status: 500 });
+  const files: { name: string }[] = [];
+  const pageSize = 100;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data: page, error } = await sb.storage.from(ctx.bucket).list('', { limit: pageSize, offset });
+    if (error) return NextResponse.json({ error: `Couldn't list bucket: ${error.message}` }, { status: 500 });
+    if (!page || page.length === 0) break;
+    files.push(...page);
+    if (page.length < pageSize) break;
+  }
 
   const prefix = `w${ctx.week}_`;
-  const uploadedSlots = (files || [])
+  const uploadedSlots = files
     .filter((f) => f.name.startsWith(prefix) && f.name.endsWith('.png'))
     .map((f) => f.name.slice(prefix.length, -'.png'.length));
 
