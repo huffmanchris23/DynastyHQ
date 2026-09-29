@@ -66,20 +66,21 @@ function LastGameCard({ d }: { d: DashboardData }) {
   const won = numOr(box.FINAL_SCORE, 0) > numOr(opp?.FINAL_SCORE, 0);
   const myLogo = d.team?.LOGO_URL || logoFor(d.assets, box.TEAM);
   const oppLogo = logoFor(d.assets, box.OPPONENT);
-  // Result badge sits right on top of whichever team's logo actually won —
-  // it used to be a separate chip in a fixed top-right spot regardless of
-  // outcome, which read as attached to the opponent even on games we won.
+  // Result badge sits right on top of whichever team's logo actually won.
+  // Since it only ever renders on the winner, it's always "W" in green —
+  // there's no "loser" state to render, the badge just doesn't appear on
+  // the losing side's logo at all.
   const resultBadge = (isWinner: boolean) =>
     isWinner ? (
       <span
         style={{
           position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%',
-          background: won ? '#1E9E4A' : '#C0392B', color: '#FFFFFF',
+          background: '#1E9E4A', color: '#FFFFFF',
           fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
           border: '2px solid var(--bg)',
         }}
       >
-        {won ? 'W' : 'L'}
+        W
       </span>
     ) : null;
   return (
