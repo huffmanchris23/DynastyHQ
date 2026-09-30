@@ -11,6 +11,7 @@ import {
   SCREEN_TYPES,
   type ScreenType,
 } from '@/lib/ocrShared';
+import { cropForOcr } from '@/lib/ocrCrop';
 import { computeMatchupOdds } from '@/lib/engines/odds';
 import { assignBroadcasts, type SlateGame, type SlateTeam } from '@/lib/engines/broadcast';
 import { buildContentSystemPrompt, parseContentResponse, CONTENT_TOOL, DRIVE_BY_TYPE, TOP_TAKE_TYPE } from '@/lib/engines/content';
@@ -22,6 +23,10 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 const MODEL = 'claude-haiku-4-5-20251001';
+// Haiku 4.5 list pricing (USD per million tokens) — used ONLY for the rough
+// per-run cost estimate in the response's usageTotals. Update if pricing changes.
+const HAIKU_INPUT_USD_PER_MTOK = 1;
+const HAIKU_OUTPUT_USD_PER_MTOK = 5;
 const TEAM_NAME_FIELDS = ['team', 'opponent', 'home_team', 'away_team', 'favorite'];
 
 interface GuideRow {
@@ -228,6 +233,22 @@ export async function POST() {
     });
   }
 
+  // Rolled-up token usage for this run (OCR calls only carry a cost estimate;
+  // the content engine's tokens are reported raw since it uses a different model).
+  const ocrUsages: OcrUsage[] = summary.map((r: any) => r.usage).filter(Boolean);
+  const ocrIn = ocrUsages.reduce((a, u) => a + u.inputTokens, 0);
+  const ocrOut = ocrUsages.reduce((a, u) => a + u.outputTokens, 0);
+  const usageTotals = {
+    ocrCalls: ocrUsages.length,
+    croppedCalls: ocrUsages.filter((u) => u.cropped).length,
+    retries: ocrUsages.reduce((a, u) => a + Math.max(0, u.attempts - 1), 0),
+    ocrInputTokens: ocrIn,
+    ocrOutputTokens: ocrOut,
+    ocrEstCostUsd: Number(((ocrIn * HAIKU_INPUT_USD_PER_MTOK + ocrOut * HAIKU_OUTPUT_USD_PER_MTOK) / 1_000_000).toFixed(4)),
+    contentEngine: contentSummary?.usage ?? null,
+  };
+  console.log(`[ocr-usage] TOTAL ${JSON.stringify(usageTotals)}`);
+
   return NextResponse.json({
     season: ctx.season,
     week: ctx.week,
@@ -235,6 +256,7 @@ export async function POST() {
     broadcast: broadcastSummary,
     gamePreviewOdds: gamePreviewOddsSummary,
     content: contentSummary,
+    usageTotals,
   });
 }
 
@@ -294,6 +316,7 @@ async function runContentEngine({
 
   let toolInput: any;
   let rawForLogging: string;
+  let contentUsage: { inputTokens: number; outputTokens: number } | undefined;
   try {
     const msg = await anthropic.messages.create({
       model: CONTENT_MODEL,
@@ -303,6 +326,8 @@ async function runContentEngine({
       tools: [CONTENT_TOOL as any],
       tool_choice: { type: 'tool', name: CONTENT_TOOL.name },
     });
+    contentUsage = { inputTokens: msg.usage?.input_tokens ?? 0, outputTokens: msg.usage?.output_tokens ?? 0 };
+    console.log(`[ocr-usage] content_engine in=${contentUsage.inputTokens} out=${contentUsage.outputTokens}`);
     const toolUse = msg.content.find((b: any) => b.type === 'tool_use') as any;
     if (!toolUse) throw new Error('model did not call the submit_weekly_content tool');
     toolInput = toolUse.input;
@@ -315,7 +340,7 @@ async function runContentEngine({
   try {
     parsed = parseContentResponse(toolInput);
   } catch (err: any) {
-    return { error: `content engine couldn't parse the model's output: ${err?.message || err}`, rawResponse: rawForLogging };
+    return { error: `content engine couldn't parse the model's output: ${err?.message || err}`, rawResponse: rawForLogging, usage: contentUsage };
   }
 
   const { error: delErr } = await sb
@@ -324,7 +349,7 @@ async function runContentEngine({
     .eq('season', ctx.season)
     .eq('week', String(ctx.week))
     .in('content_input_type', [DRIVE_BY_TYPE, TOP_TAKE_TYPE]);
-  if (delErr) return { error: `content engine failed clearing old rows: ${delErr.message}` };
+  if (delErr) return { error: `content engine failed clearing old rows: ${delErr.message}`, usage: contentUsage };
 
   const rows = [
     ...parsed.driveBy.map((item) => ({ user_id: USER_ID, dynasty_id: dynastyIdFor('content'), season: ctx.season, week: String(ctx.week), content_input_type: DRIVE_BY_TYPE, team: item.team, headline: item.headline })),
@@ -332,9 +357,9 @@ async function runContentEngine({
   ];
 
   const { error: insErr } = await sb.from('content').insert(rows);
-  if (insErr) return { error: `content engine write failed: ${insErr.message}` };
+  if (insErr) return { error: `content engine write failed: ${insErr.message}`, usage: contentUsage };
 
-  return { written: rows.length, driveBy: parsed.driveBy.length, topTakes: parsed.topTakes.length };
+  return { written: rows.length, driveBy: parsed.driveBy.length, topTakes: parsed.topTakes.length, usage: contentUsage };
 }
 
 // Re-scores broadcast assignments across the WHOLE week's slate at once
@@ -493,6 +518,15 @@ async function runGamePreviewOdds({
   return { written: 1 };
 }
 
+// Token usage for one screenshot, summed across attempts (a retry costs
+// tokens too). Lets us see the real input/output split instead of guessing.
+interface OcrUsage {
+  cropped: boolean;
+  attempts: number;
+  inputTokens: number;
+  outputTokens: number;
+}
+
 async function processOneImage({
   sb,
   anthropic,
@@ -515,14 +549,23 @@ async function processOneImage({
   ratingsByName: Record<string, { overall: number; offense: number; defense: number; homeState: string | null }>;
   myTeamName: string | null;
   ctx: { season: number; week: number };
-}): Promise<{ status: string; rowsWritten?: number; rawResponse?: string; error?: string; issues?: string[]; teamsWritten?: string[] }> {
+}): Promise<{ status: string; rowsWritten?: number; rawResponse?: string; error?: string; issues?: string[]; teamsWritten?: string[]; usage?: OcrUsage }> {
   const { data: blob, error: dlErr } = await sb.storage.from(bucket).download(fileName);
   if (dlErr) return { status: 'skipped_failed', error: `download: ${dlErr.message}` };
 
   const arrayBuffer = await blob.arrayBuffer();
   const imageBuffer = Buffer.from(arrayBuffer);
-  const imageBase64 = imageBuffer.toString('base64');
-  const mediaType = sniffImageMediaType(imageBuffer);
+  const originalMediaType = sniffImageMediaType(imageBuffer);
+
+  // Auto-crop to just the region this slot needs (see lib/ocrCrop.ts) to cut
+  // image tokens. Falls back to the untouched original on any problem, and the
+  // retry below also drops back to the full frame if a cropped attempt fails.
+  const crop = await cropForOcr(imageBuffer, originalMediaType, slot);
+  if (!crop.cropped && crop.reason) console.warn(`[ocr-crop] ${slot}: sending full frame — ${crop.reason}`);
+  const fullImage = { data: imageBuffer.toString('base64'), mediaType: originalMediaType };
+  const attemptImages = crop.cropped
+    ? [{ data: crop.buffer.toString('base64'), mediaType: crop.mediaType }, fullImage]
+    : [fullImage, fullImage];
 
   const variantCol = guide.name_variant_column;
   const nameOptions = helperRows.map((r) => (variantCol ? r[variantCol] || r.team_name : r.team_name));
@@ -565,6 +608,7 @@ Output ONLY a JSON array (no markdown fences, no prose before or after) of objec
 Numeric fields must be JSON numbers, not quoted strings. If a value isn't visible or legible in the screenshot, use null for that field rather than guessing or fabricating a number.`;
 
   let lastErr = '';
+  const usage: OcrUsage = { cropped: crop.cropped, attempts: 0, inputTokens: 0, outputTokens: 0 };
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const msg = await anthropic.messages.create({
@@ -575,12 +619,16 @@ Numeric fields must be JSON numbers, not quoted strings. If a value isn't visibl
           {
             role: 'user',
             content: [
-              { type: 'image', source: { type: 'base64', media_type: mediaType, data: imageBase64 } },
+              { type: 'image', source: { type: 'base64', media_type: attemptImages[attempt].mediaType, data: attemptImages[attempt].data } },
               { type: 'text', text: 'Extract the data per the rules above.' },
             ],
           },
         ],
       });
+
+      usage.attempts += 1;
+      usage.inputTokens += msg.usage?.input_tokens ?? 0;
+      usage.outputTokens += msg.usage?.output_tokens ?? 0;
 
       const textBlock = msg.content.find((b: any) => b.type === 'text') as any;
       const raw = (textBlock?.text || '').trim();
@@ -601,18 +649,21 @@ Numeric fields must be JSON numbers, not quoted strings. If a value isn't visibl
       }
 
       const { written, issues, teamsWritten } = await writeRows({ sb, guide, rows: finalRows, variantToCanonical, ctx, slot, ratingsByName });
+      console.log(`[ocr-usage] ${slot} cropped=${usage.cropped} attempts=${usage.attempts} in=${usage.inputTokens} out=${usage.outputTokens}`);
       return {
         status: attempt === 0 ? 'success' : 'retried_success',
         rowsWritten: written,
         rawResponse: raw.slice(0, 4000),
         issues: issues.length ? issues.slice(0, 10) : undefined,
         teamsWritten,
+        usage,
       };
     } catch (err: any) {
       lastErr = err?.message || String(err);
     }
   }
-  return { status: 'skipped_failed', error: lastErr };
+  console.log(`[ocr-usage] ${slot} FAILED cropped=${usage.cropped} attempts=${usage.attempts} in=${usage.inputTokens} out=${usage.outputTokens}`);
+  return { status: 'skipped_failed', error: lastErr, usage };
 }
 
 async function writeRows({
