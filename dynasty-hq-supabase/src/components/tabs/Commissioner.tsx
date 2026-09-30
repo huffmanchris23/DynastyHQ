@@ -235,6 +235,17 @@ export default function Upload() {
               </div>
             ) : null
           )}
+          {result.usageTotals ? (
+            <div style={{ fontSize: 12, padding: '6px 0 0', marginTop: 4, borderTop: '1px solid rgba(0,0,0,0.06)', opacity: 0.75 }}>
+              <strong>Token usage</strong>: {result.usageTotals.ocrCalls} OCR call(s) ({result.usageTotals.croppedCalls} cropped
+              {result.usageTotals.retries ? `, ${result.usageTotals.retries} retr${result.usageTotals.retries === 1 ? 'y' : 'ies'}` : ''}) ·{' '}
+              {result.usageTotals.ocrInputTokens.toLocaleString()} in / {result.usageTotals.ocrOutputTokens.toLocaleString()} out · est. $
+              {result.usageTotals.ocrEstCostUsd.toFixed(3)} (OCR only)
+              {result.usageTotals.contentEngine
+                ? ` · content engine ${result.usageTotals.contentEngine.inputTokens.toLocaleString()} in / ${result.usageTotals.contentEngine.outputTokens.toLocaleString()} out`
+                : ''}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
