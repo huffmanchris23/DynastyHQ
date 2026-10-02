@@ -12,6 +12,7 @@
  */
 
 import { getSupabase } from './supabaseClient';
+import type { DynastyCtx } from './dynastyContext';
 import type {
   DashboardData,
   TeamAsset,
@@ -196,19 +197,16 @@ function canon(map: Map<string, string>, name: any): string {
 
 /* ============================== MAIN AGGREGATOR ============================== */
 
-export async function getDashboardData(): Promise<DashboardData> {
+export async function getDashboardData(ctx: DynastyCtx): Promise<DashboardData> {
   const sb = getSupabase();
 
-  // ---- 1. Settings: one permanent row per dynasty — just identity
-  // (user/dynasty/season) plus theme colors now. Team/week context lives
-  // on the data tables themselves (see step 2b), not duplicated here. ----
-  const { data: settingsRows, error: settingsErr } = await sb.from('settings').select('*').limit(1);
+  // ---- 1. Settings: one row per dynasty (theme colors/logos). A brand-new
+  // dynasty may not have one yet — that's fine, everything falls back to null. ----
+  const { data: settingsRows, error: settingsErr } = await sb.from('settings').select('*').eq('dynasty_id', ctx.dynastyId).limit(1);
   if (settingsErr) throw new Error(`settings: ${settingsErr.message}`);
-  const settingsRow = (settingsRows && settingsRows[0]) || null;
-  if (!settingsRow) {
-    throw new Error('No `settings` row found.');
-  }
-  const { user_id: userId, dynasty_id: dynastyId, current_season: season } = settingsRow;
+  const settingsRow: any = (settingsRows && settingsRows[0]) || {};
+  const dynastyId = ctx.dynastyId;
+  const season = ctx.season;
 
   // Scoped query builder — every weekly table is filtered to this dynasty + season.
   const t = (table: string) => sb.from(table).select('*').eq('dynasty_id', dynastyId).eq('season', season);
@@ -225,30 +223,14 @@ export async function getDashboardData(): Promise<DashboardData> {
   if (ocrHelperErr) throw new Error(`ocr_helper: ${ocrHelperErr.message}`);
   const nameCanon = buildNameCanon(ocrHelperRows || []);
 
-  // ---- 2b. "My team" comes from the game_preview row flagged current_week —
-  // this used to be duplicated on settings.current_team, now it's a single
-  // source of truth that already gets updated whenever the week advances. ----
-  const { data: gpAnchorRows, error: gpAnchorErr } = await t('game_preview').eq('current_week', true).limit(1);
-  if (gpAnchorErr) throw new Error(`game_preview: ${gpAnchorErr.message}`);
-  const myTeamName = (gpAnchorRows && gpAnchorRows[0] && gpAnchorRows[0].team) || null;
+  // ---- 2b. "My team" is the signed-in member's team; the week is the highest
+  // week they are allowed to see (live week for members, staged week for the
+  // commish preview). Nothing published yet = preseason (-1), which renders
+  // as an empty-but-working dashboard. ----
+  const myTeamName: string | null = ctx.team;
   const myAsset = findAsset(assetIdx, myTeamName);
   const allAssets: TeamAsset[] = (assetRows || []).map(toTeamAsset);
-
-  // ---- 3. Figure out "current week" from the game_preview row flagged
-  // current_week=true (same anchor row used for myTeamName above) — that
-  // flag is the single source of truth for what week the dynasty is on,
-  // regular season or postseason. Only falls back to the old
-  // MAX(top_25.week)/MAX(game_preview.week) heuristic if nothing is
-  // flagged yet, so a fresh dynasty with no current_week set doesn't break.
-  const currentWeekLabel = gpAnchorRows && gpAnchorRows[0] ? gpAnchorRows[0].week : null;
-  let statsWeek: number;
-  if (currentWeekLabel !== null && currentWeekLabel !== undefined) {
-    statsWeek = resolveStatsWeek(currentWeekLabel);
-  } else {
-    const { data: pollMaxRows } = await t('top_25').order('week', { ascending: false }).limit(1);
-    const { data: previewMaxRows } = pollMaxRows?.length ? { data: null } : await t('game_preview').order('week', { ascending: false }).limit(1);
-    statsWeek = safeNum((pollMaxRows && pollMaxRows[0]?.week) ?? (previewMaxRows && previewMaxRows[0]?.week) ?? 0, 0);
-  }
+  const statsWeek: number = ctx.week ?? -1;
   const recapWeek = Math.max(statsWeek - 1, 0);
 
   // ---- 4. Fetch everything in parallel ----
@@ -275,33 +257,33 @@ export async function getDashboardData(): Promise<DashboardData> {
     contentRes,
     bestMatchupsRes,
   ] = await Promise.all([
-    t('game_preview').eq('week', statsWeek).limit(1),
-    t('team_schedule'),
+    t('game_preview').eq('team', myTeamName || '').eq('week', statsWeek).limit(1),
+    t('team_schedule').eq('team', myTeamName || ''),
     t('top_25').eq('week', statsWeek).order('top_25', { ascending: true }),
     t('playoff_bracket').eq('week', statsWeek).limit(1),
     t('conference_standings').eq('week', statsWeek).order('conference', { ascending: true }).order('rank', { ascending: true }),
     t('team_stats').eq('week', statsWeek),
-    t('depth_charts').limit(1),
+    t('depth_charts').eq('team', myTeamName || '').limit(1),
     t('coaching_hotseats').eq('week', statsWeek),
     t('heisman_trophy').eq('week', statsWeek).order('rank', { ascending: true }),
-    t('my_coach'),
+    t('my_coach').eq('user_id', ctx.userId),
     // Coaching history spans every season the dynasty has played, not just
     // the current one — t() would scope this to the current season only,
     // so this is a separate, deliberately season-unscoped query.
-    sb.from('my_coach').select('*').eq('dynasty_id', dynastyId).order('season', { ascending: true }),
+    sb.from('my_coach').select('*').eq('dynasty_id', dynastyId).eq('user_id', ctx.userId).order('season', { ascending: true }),
     // Same reasoning — need every season's schedule to know which past
     // seasons won the conference championship / made the playoff (and, now,
     // to compute the live career record for the Record Book below), not
     // just the current (possibly still-empty, preseason) one.
-    sb.from('team_schedule').select('*').eq('dynasty_id', dynastyId),
+    sb.from('team_schedule').select('*').eq('dynasty_id', dynastyId).eq('user_id', ctx.userId),
     // content had no week filter at all, so it pulled the whole season's
     // history unordered — old weeks could (and did) crowd out this week's
     // fresh content depending on row order. Scoped to the current week.
-    t('content').eq('week', String(statsWeek)),
+    t('content').eq('week', statsWeek),
     // best_matchups uses a bigint dynasty_id (see ocrShared.ts's note on
     // mixed column types), unlike every other table t() is scoped for —
     // querying it directly rather than through t() to send the right type.
-    sb.from('best_matchups').select('*').eq('dynasty_id', Number(dynastyId)).eq('season', season).eq('week', statsWeek),
+    sb.from('best_matchups').select('*').eq('dynasty_id', dynastyId).eq('season', season).eq('week', statsWeek),
   ]);
 
   for (const [name, res] of Object.entries({
@@ -665,7 +647,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   const result: DashboardData = {
     settings: {
       currentDataSheet: displayWeekLabel(statsWeek, scheduleRes.data || []),
-      currentTeam: myTeamName,
+      currentTeam: myTeamName || undefined,
       currentWeek: statsWeek,
       primaryColor: settingsRow.primary_color || null,
       secondaryColor: settingsRow.secondary_color || null,
@@ -766,11 +748,4 @@ function buildStoryBrief(d: Partial<DashboardData>, myTeamName: any): StoryBrief
   }
 
   return items;
-}
-
-export async function getMyTeamName(): Promise<any> {
-  const sb = getSupabase();
-  const { data, error } = await sb.from('game_preview').select('team').eq('current_week', true).limit(1);
-  if (error) throw new Error(error.message);
-  return data?.[0]?.team;
 }
