@@ -1,16 +1,20 @@
 import { NextResponse } from 'next/server';
+import { getUser, unauthorized } from '@/lib/auth';
 import Anthropic from '@anthropic-ai/sdk';
 import { getSupabase } from '@/lib/supabaseClient';
 import {
-  getCurrentContext,
   guideScreenType,
-  dynastyIdFor,
   contextColumnsFor,
   sniffImageMediaType,
-  USER_ID,
+  openWeekOf,
+  toOcrCtx,
+  MEMBER_SLOTS,
   SCREEN_TYPES,
+  type OcrCtx,
   type ScreenType,
 } from '@/lib/ocrShared';
+import { getDynastyCtx } from '@/lib/dynastyContext';
+import { syncGamePreviewFromSchedule } from '@/lib/gamePreview';
 import { cropForOcr } from '@/lib/ocrCrop';
 import { computeMatchupOdds } from '@/lib/engines/odds';
 import { assignBroadcasts, type SlateGame, type SlateTeam } from '@/lib/engines/broadcast';
@@ -47,12 +51,13 @@ export async function POST() {
   const sb = getSupabase();
   const anthropic = new Anthropic({ apiKey });
 
-  let ctx;
-  try {
-    ctx = await getCurrentContext();
-  } catch (err: any) {
-    return NextResponse.json({ error: `Couldn't resolve current week: ${err?.message || err}` }, { status: 500 });
-  }
+  const user = await getUser();
+  if (!user) return unauthorized();
+  const dctx = await getDynastyCtx(user.id);
+  if (!dctx || !dctx.team) return NextResponse.json({ error: 'Join a dynasty and pick a team first.' }, { status: 409 });
+  const openWeek = openWeekOf(dctx);
+  if (openWeek === null) return NextResponse.json({ error: 'No week is open. Your commissioner opens the next week first.' }, { status: 409 });
+  const ctx: OcrCtx = toOcrCtx(dctx, openWeek);
 
   const { data: guides, error: guidesErr } = await sb.from('ocr_screen_guides').select('*').eq('active', true);
   if (guidesErr) return NextResponse.json({ error: `ocr_screen_guides: ${guidesErr.message}` }, { status: 500 });
@@ -95,13 +100,7 @@ export async function POST() {
     conferenceByName[r.team_name] = r.team_conference || null;
   });
 
-  const { data: previewRows, error: previewErr } = await sb
-    .from('game_preview')
-    .select('team')
-    .eq('current_week', true)
-    .limit(1);
-  if (previewErr) return NextResponse.json({ error: `game_preview: ${previewErr.message}` }, { status: 500 });
-  const myTeamName = previewRows?.[0]?.team || null;
+  const myTeamName = ctx.team;
 
   const prefix = `w${ctx.week}_`;
   // The bucket accumulates every week's screenshots, so a single list()
@@ -111,7 +110,7 @@ export async function POST() {
   const files: { name: string }[] = [];
   const pageSize = 100;
   for (let offset = 0; ; offset += pageSize) {
-    const { data: page, error: listErr } = await sb.storage.from(ctx.bucket).list('', { limit: pageSize, offset });
+    const { data: page, error: listErr } = await sb.storage.from(ctx.bucket).list(ctx.folder, { limit: pageSize, offset });
     if (listErr) return NextResponse.json({ error: `Couldn't list bucket "${ctx.bucket}": ${listErr.message}` }, { status: 500 });
     if (!page || page.length === 0) break;
     files.push(...page);
@@ -124,6 +123,7 @@ export async function POST() {
   }
 
   const summary: any[] = [];
+  let touchedSchedule = false;
   let touchedBestMatchup = false;
   let touchedResults = false;
   const touchedStatsCategories = new Set<'offense' | 'defense'>();
@@ -131,6 +131,10 @@ export async function POST() {
 
   for (const file of weekFiles) {
     const slot = file.name.slice(prefix.length, -'.png'.length) as ScreenType;
+    if (!ctx.isCommish && !MEMBER_SLOTS.includes(slot)) {
+      summary.push({ file: file.name, status: 'skipped', reason: 'members only upload their own five screens' });
+      continue;
+    }
     if (!SCREEN_TYPES.includes(slot)) {
       summary.push({ file: file.name, status: 'skipped', reason: 'unrecognized slot in filename' });
       continue;
@@ -141,17 +145,21 @@ export async function POST() {
       summary.push({ file: file.name, status: 'skipped', reason: `no active ocr_screen_guides row for "${guideType}"` });
       continue;
     }
+    if (guide.screen_type === 'team_schedule') touchedSchedule = true;
     if (guide.screen_type === 'best_matchup') touchedBestMatchup = true;
     if (guide.screen_type === 'last_week_results') touchedResults = true;
     if (guide.screen_type === 'stats_offense') touchedStatsCategories.add('offense');
     if (guide.screen_type === 'stats_defense') touchedStatsCategories.add('defense');
 
-    const result = await processOneImage({ sb, anthropic, bucket: ctx.bucket, fileName: file.name, slot, guide, helperRows: helperRows || [], ratingsByName, myTeamName, ctx });
+    const result = await processOneImage({ sb, anthropic, bucket: ctx.bucket, fileName: `${ctx.folder}/${file.name}`, slot, guide, helperRows: helperRows || [], ratingsByName, myTeamName, ctx });
     summary.push({ file: file.name, screen_type: guide.screen_type, ...result });
     if (guide.screen_type === 'stats_offense') (result.teamsWritten || []).forEach((t) => statsTeamsWritten.offense.add(t));
     if (guide.screen_type === 'stats_defense') (result.teamsWritten || []).forEach((t) => statsTeamsWritten.defense.add(t));
 
     await sb.from('ocr_audit_log').insert({
+      dynasty_id: ctx.dynastyId,
+      uploaded_by: ctx.userId,
+      team: ctx.team,
       season: ctx.season,
       week: ctx.week,
       screen_type: guide.screen_type,
@@ -174,6 +182,8 @@ export async function POST() {
     const { data: existingRows, error: selErr } = await sb
       .from('team_stats')
       .select('id, team')
+      .eq('dynasty_id', ctx.dynastyId)
+      .eq('user_id', ctx.userId)
       .eq('season', ctx.season)
       .eq('week', ctx.week)
       .eq('offense_or_defense_stat', category);
@@ -188,49 +198,35 @@ export async function POST() {
     }
   }
 
-  let broadcastSummary: any = null;
-  if (touchedBestMatchup) {
-    broadcastSummary = await runBroadcastEngine({ sb, ctx, ratingsByName, conferenceByName });
-    await sb.from('ocr_audit_log').insert({
-      season: ctx.season,
-      week: ctx.week,
-      screen_type: 'broadcast_engine',
-      file_path: '(engine)',
-      status: broadcastSummary?.error ? 'error' : 'success',
-      rows_written: broadcastSummary?.assigned || 0,
-      raw_response: null,
-      error_message: broadcastSummary?.error || (broadcastSummary?.issues?.length ? broadcastSummary.issues.join(' | ').slice(0, 4000) : null),
-    });
+  // A processed schedule builds this team's game_preview rows (opponent, home
+  // team, kickoff date/time) — nobody seeds them by hand.
+  let gamePreviewSync: any = null;
+  if (touchedSchedule && ctx.team) {
+    try {
+      gamePreviewSync = await syncGamePreviewFromSchedule(sb, { dynastyId: ctx.dynastyId, userId: ctx.userId, team: ctx.team, season: ctx.season });
+    } catch (err: any) {
+      gamePreviewSync = { error: err?.message || String(err) };
+    }
+    await logEngine(sb, ctx, 'game_preview_sync', gamePreviewSync?.error ? 'error' : 'success', (gamePreviewSync?.inserted || 0) + (gamePreviewSync?.updated || 0), gamePreviewSync?.error || null);
   }
 
-  let gamePreviewOddsSummary: any = null;
-  gamePreviewOddsSummary = await runGamePreviewOdds({ sb, ctx, ratingsByName });
+  // Odds for this member's game (commish run recomputes every game in the week).
+  const gamePreviewOddsSummary: any = await runGamePreviewOdds({ sb, ctx, ratingsByName, onlyTeam: ctx.isCommish ? null : ctx.team });
   if (gamePreviewOddsSummary && (gamePreviewOddsSummary.written || gamePreviewOddsSummary.error)) {
-    await sb.from('ocr_audit_log').insert({
-      season: ctx.season,
-      week: ctx.week,
-      screen_type: 'game_preview_odds',
-      file_path: '(engine)',
-      status: gamePreviewOddsSummary?.error ? 'error' : 'success',
-      rows_written: gamePreviewOddsSummary?.written || 0,
-      raw_response: null,
-      error_message: gamePreviewOddsSummary?.error || null,
-    });
+    await logEngine(sb, ctx, 'game_preview_odds', gamePreviewOddsSummary?.error ? 'error' : 'success', gamePreviewOddsSummary?.written || 0, gamePreviewOddsSummary?.error || null);
+  }
+
+  // League-wide engines run only off the COMMISH's uploads.
+  let broadcastSummary: any = null;
+  if (ctx.isCommish && (touchedBestMatchup || touchedSchedule)) {
+    broadcastSummary = await runBroadcastEngine({ sb, ctx, ratingsByName, conferenceByName });
+    await logEngine(sb, ctx, 'broadcast_engine', broadcastSummary?.error ? 'error' : 'success', broadcastSummary?.assigned || 0, broadcastSummary?.error || (broadcastSummary?.issues?.length ? broadcastSummary.issues.join(' | ').slice(0, 4000) : null));
   }
 
   let contentSummary: any = null;
-  if (touchedResults) {
+  if (ctx.isCommish && touchedResults) {
     contentSummary = await runContentEngine({ sb, anthropic, ctx, conferenceByName });
-    await sb.from('ocr_audit_log').insert({
-      season: ctx.season,
-      week: ctx.week,
-      screen_type: 'content_engine',
-      file_path: '(engine)',
-      status: contentSummary?.error ? 'error' : contentSummary?.skipped ? 'skipped' : 'success',
-      rows_written: contentSummary?.written || 0,
-      raw_response: contentSummary?.rawResponse || null,
-      error_message: contentSummary?.error || (contentSummary?.skipped ? contentSummary.reason : null),
-    });
+    await logEngine(sb, ctx, 'content_engine', contentSummary?.error ? 'error' : contentSummary?.skipped ? 'skipped' : 'success', contentSummary?.written || 0, contentSummary?.error || (contentSummary?.skipped ? contentSummary.reason : null), contentSummary?.rawResponse || null);
   }
 
   // Rolled-up token usage for this run (OCR calls only carry a cost estimate;
@@ -254,6 +250,7 @@ export async function POST() {
     week: ctx.week,
     results: summary,
     broadcast: broadcastSummary,
+    gamePreviewSync,
     gamePreviewOdds: gamePreviewOddsSummary,
     content: contentSummary,
     usageTotals,
@@ -275,16 +272,17 @@ async function runContentEngine({
 }: {
   sb: ReturnType<typeof getSupabase>;
   anthropic: Anthropic;
-  ctx: { season: number; week: number };
+  ctx: OcrCtx;
   conferenceByName: Record<string, string | null>;
 }) {
+  const D = ctx.dynastyId;
   const [lastWeekResults, currentTop25, biggestGamesThisWeek, heismanRace, coachingHotSeats, conferenceStandings] = await Promise.all([
-    sb.from('weekly_results').select('home_team, away_team, home_score, away_score, home_rank, away_rank').eq('season', ctx.season).eq('week', ctx.week - 1),
-    sb.from('top_25').select('top_25, team, wins, losses').eq('season', ctx.season).eq('week', String(ctx.week)),
-    sb.from('best_matchups').select('home_team, away_team, home_rank, away_rank, favorite, spread, favorite_moneyline, total_over_under, broadcast, game_date, time').eq('season', ctx.season).eq('week', ctx.week),
-    sb.from('heisman_trophy').select('rank, name, team, position, class').eq('season', ctx.season).eq('week', ctx.week),
-    sb.from('coaching_hotseats').select('team, coach, job_security').eq('season', ctx.season).eq('week', ctx.week),
-    sb.from('conference_standings').select('team, overall_wins, overall_losses, conference_wins, conference_losses').eq('season', String(ctx.season)),
+    sb.from('weekly_results').select('home_team, away_team, home_score, away_score, home_rank, away_rank').eq('dynasty_id', D).eq('season', ctx.season).eq('week', ctx.week - 1),
+    sb.from('top_25').select('top_25, team, wins, losses').eq('dynasty_id', D).eq('season', ctx.season).eq('week', ctx.week),
+    sb.from('best_matchups').select('home_team, away_team, home_rank, away_rank, favorite, spread, favorite_moneyline, total_over_under, broadcast, game_date, time').eq('dynasty_id', D).eq('season', ctx.season).eq('week', ctx.week),
+    sb.from('heisman_trophy').select('rank, name, team, position, class').eq('dynasty_id', D).eq('season', ctx.season).eq('week', ctx.week),
+    sb.from('coaching_hotseats').select('team, coach, job_security').eq('dynasty_id', D).eq('season', ctx.season).eq('week', ctx.week),
+    sb.from('conference_standings').select('team, overall_wins, overall_losses, conference_wins, conference_losses').eq('dynasty_id', D).eq('season', ctx.season),
   ]);
 
   const firstError = [lastWeekResults, currentTop25, biggestGamesThisWeek, heismanRace, coachingHotSeats, conferenceStandings].find((r) => r.error)?.error;
@@ -346,14 +344,15 @@ async function runContentEngine({
   const { error: delErr } = await sb
     .from('content')
     .delete()
+    .eq('dynasty_id', ctx.dynastyId)
     .eq('season', ctx.season)
-    .eq('week', String(ctx.week))
+    .eq('week', ctx.week)
     .in('content_input_type', [DRIVE_BY_TYPE, TOP_TAKE_TYPE]);
   if (delErr) return { error: `content engine failed clearing old rows: ${delErr.message}`, usage: contentUsage };
 
   const rows = [
-    ...parsed.driveBy.map((item) => ({ user_id: USER_ID, dynasty_id: dynastyIdFor('content'), season: ctx.season, week: String(ctx.week), content_input_type: DRIVE_BY_TYPE, team: item.team, headline: item.headline })),
-    ...parsed.topTakes.map((item) => ({ user_id: USER_ID, dynasty_id: dynastyIdFor('content'), season: ctx.season, week: String(ctx.week), content_input_type: TOP_TAKE_TYPE, team: item.team, headline: item.headline })),
+    ...parsed.driveBy.map((item) => ({ user_id: ctx.userId, dynasty_id: ctx.dynastyId, season: ctx.season, week: ctx.week, content_input_type: DRIVE_BY_TYPE, team: item.team, headline: item.headline })),
+    ...parsed.topTakes.map((item) => ({ user_id: ctx.userId, dynasty_id: ctx.dynastyId, season: ctx.season, week: ctx.week, content_input_type: TOP_TAKE_TYPE, team: item.team, headline: item.headline })),
   ];
 
   const { error: insErr } = await sb.from('content').insert(rows);
@@ -376,7 +375,7 @@ async function runBroadcastEngine({
   conferenceByName,
 }: {
   sb: ReturnType<typeof getSupabase>;
-  ctx: { season: number; week: number };
+  ctx: OcrCtx;
   ratingsByName: Record<string, { overall: number; offense: number; defense: number; homeState: string | null }>;
   conferenceByName: Record<string, string | null>;
 }) {
@@ -393,6 +392,7 @@ async function runBroadcastEngine({
   const { data: matchupRows, error: matchupErr } = await sb
     .from('best_matchups')
     .select('id, home_team, away_team, time')
+    .eq('dynasty_id', ctx.dynastyId)
     .eq('season', ctx.season)
     .eq('week', ctx.week);
   if (matchupErr) return { error: `best_matchups: ${matchupErr.message}` };
@@ -407,16 +407,25 @@ async function runBroadcastEngine({
     games.push({ id: `best_matchups:${row.id}`, homeTeam: home, awayTeam: away, time: row.time });
   });
 
+  // EVERY member's game for the week competes in the same slate, so time-slot
+  // conflicts resolve across the whole league. Both sides of a user-vs-user
+  // matchup would each have a row; only the first is slated.
   const { data: previewRows, error: previewErr } = await sb
     .from('game_preview')
     .select('id, team, opponent, home_team, game_time')
+    .eq('dynasty_id', ctx.dynastyId)
     .eq('season', ctx.season)
-    .eq('current_week', true)
-    .limit(1);
+    .eq('week', ctx.week);
   if (previewErr) return { error: `game_preview: ${previewErr.message}` };
 
-  const preview = previewRows?.[0];
-  if (preview && preview.team && preview.opponent && preview.game_time) {
+  const seenPairs = new Set<string>();
+  const previewIdsByPair = new Map<string, number[]>();
+  for (const preview of previewRows || []) {
+    if (!preview.team || !preview.opponent || !preview.game_time) continue;
+    const pair = [preview.team, preview.opponent].sort().join('|');
+    previewIdsByPair.set(pair, (previewIdsByPair.get(pair) || []).concat(preview.id));
+    if (seenPairs.has(pair)) continue;
+    seenPairs.add(pair);
     const homeName = preview.home_team || preview.team;
     const awayName = homeName === preview.team ? preview.opponent : preview.team;
     const home = toSlateTeam(homeName);
@@ -436,7 +445,12 @@ async function runBroadcastEngine({
     const [table, idStr] = a.id.split(':');
     const id = Number(idStr);
     const column = table === 'game_preview' ? 'game_broadcast' : 'broadcast';
-    const { error } = await sb.from(table).update({ [column]: a.broadcast }).eq('id', id);
+    // A user-vs-user game has a row on each side; both get the same network.
+    let ids = [id];
+    if (table === 'game_preview') {
+      for (const group of previewIdsByPair.values()) if (group.indexOf(id) > -1) ids = group;
+    }
+    const { error } = await sb.from(table).update({ [column]: a.broadcast }).in('id', ids);
     if (error) issues.push(`broadcast write failed for ${a.id}: ${error.message}`);
   }
 
@@ -459,63 +473,98 @@ async function runGamePreviewOdds({
   sb,
   ctx,
   ratingsByName,
+  onlyTeam,
 }: {
   sb: ReturnType<typeof getSupabase>;
-  ctx: { season: number; week: number };
+  ctx: OcrCtx;
   ratingsByName: Record<string, { overall: number; offense: number; defense: number; homeState: string | null }>;
+  onlyTeam: string | null;
 }) {
-  const { data: rows, error } = await sb
+  let q = sb
     .from('game_preview')
     .select('id, team, opponent, home_team')
+    .eq('dynasty_id', ctx.dynastyId)
     .eq('season', ctx.season)
-    .eq('week', String(ctx.week))
-    .eq('current_week', true)
-    .limit(1);
+    .eq('week', ctx.week);
+  if (onlyTeam) q = q.eq('team', onlyTeam);
+  const { data: rows, error } = await q;
   if (error) return { error: `game_preview fetch failed: ${error.message}` };
 
-  const preview = rows?.[0];
-  if (!preview || !preview.team || !preview.opponent || !preview.home_team) return { written: 0 };
+  // Records come from each team's processed schedule: this team's W-L from its
+  // own decided games before this week, the opponent's from the OPP W-L column.
+  const { data: schedRows } = await sb
+    .from('team_schedule')
+    .select('team, week, w_or_l, opponent_wins, opponent_losses')
+    .eq('dynasty_id', ctx.dynastyId)
+    .eq('season', ctx.season);
+  const recordOf = (team: string) => {
+    let w = 0, l = 0;
+    (schedRows || []).forEach((r: any) => {
+      if (r.team !== team || r.week >= ctx.week) return;
+      if (r.w_or_l === 'W') w++;
+      else if (r.w_or_l === 'L') l++;
+    });
+    return { w, l };
+  };
+  const oppRecordFor = (team: string) => {
+    const r = (schedRows || []).find((x: any) => x.team === team && x.week === ctx.week);
+    return { w: Number(r?.opponent_wins ?? 0) || 0, l: Number(r?.opponent_losses ?? 0) || 0 };
+  };
 
-  const homeName = preview.home_team;
-  const awayName = homeName === preview.team ? preview.opponent : preview.team;
-  const homeRatings = ratingsByName[homeName];
-  const awayRatings = ratingsByName[awayName];
-  if (!homeRatings || !awayRatings) {
-    return { error: `game_preview row ${preview.id} skipped — missing ratings for "${homeName}"/"${awayName}"` };
+  const issues: string[] = [];
+  let written = 0;
+  for (const preview of rows || []) {
+    if (!preview.team || !preview.opponent || !preview.home_team) continue;
+    const homeName = preview.home_team;
+    const awayName = homeName === preview.team ? preview.opponent : preview.team;
+    const homeRatings = ratingsByName[homeName];
+    const awayRatings = ratingsByName[awayName];
+    if (!homeRatings || !awayRatings) {
+      issues.push(`game_preview row ${preview.id} skipped — missing ratings for "${homeName}"/"${awayName}"`);
+      continue;
+    }
+    const mine = recordOf(preview.team);
+    const theirs = oppRecordFor(preview.team);
+    const teamIsHome = preview.team === homeName;
+    const odds = computeMatchupOdds({
+      homeTeam: { name: homeName, ...homeRatings },
+      awayTeam: { name: awayName, ...awayRatings },
+      connector: 'AT',
+      gameLocation: null,
+      homeWins: teamIsHome ? mine.w : theirs.w,
+      homeLosses: teamIsHome ? mine.l : theirs.l,
+      awayWins: teamIsHome ? theirs.w : mine.w,
+      awayLosses: teamIsHome ? theirs.l : mine.l,
+    });
+    const { error: updErr } = await sb
+      .from('game_preview')
+      .update({
+        team_overall: teamIsHome ? homeRatings.overall : awayRatings.overall,
+        team_offense: teamIsHome ? homeRatings.offense : awayRatings.offense,
+        team_defense: teamIsHome ? homeRatings.defense : awayRatings.defense,
+        opponent_overall: String(teamIsHome ? awayRatings.overall : homeRatings.overall),
+        opponent_offense: String(teamIsHome ? awayRatings.offense : homeRatings.offense),
+        opponent_defense: String(teamIsHome ? awayRatings.defense : homeRatings.defense),
+        favorite: odds.favorite,
+        favorite_spread: String(odds.spread),
+        favorite_moneyline: odds.favoriteMoneyline,
+        total_over_under: odds.totalOverUnder,
+        team_win_probability: odds.favorite === preview.team ? odds.favoriteWinProbability : `${(100 - parseFloat(odds.favoriteWinProbability)).toFixed(1)}%`,
+        opponent_win_probability: odds.favorite === preview.opponent ? odds.favoriteWinProbability : `${(100 - parseFloat(odds.favoriteWinProbability)).toFixed(1)}%`,
+      })
+      .eq('id', preview.id);
+    if (updErr) issues.push(`game_preview odds write failed (row ${preview.id}): ${updErr.message}`);
+    else written++;
   }
+  return issues.length && !written ? { error: issues.join(' | ').slice(0, 2000) } : { written };
+}
 
-  const odds = computeMatchupOdds({
-    homeTeam: { name: homeName, ...homeRatings },
-    awayTeam: { name: awayName, ...awayRatings },
-    connector: 'AT',
-    gameLocation: null,
-    homeWins: 0,
-    homeLosses: 0,
-    awayWins: 0,
-    awayLosses: 0,
+async function logEngine(sb: ReturnType<typeof getSupabase>, ctx: OcrCtx, screenType: string, status: string, rows: number, error: string | null, raw: string | null = null) {
+  await sb.from('ocr_audit_log').insert({
+    dynasty_id: ctx.dynastyId, uploaded_by: ctx.userId, team: ctx.team,
+    season: ctx.season, week: ctx.week, screen_type: screenType, file_path: '(engine)',
+    status, rows_written: rows, raw_response: raw, error_message: error,
   });
-
-  const teamIsHome = preview.team === homeName;
-  const { error: updErr } = await sb
-    .from('game_preview')
-    .update({
-      team_overall: teamIsHome ? homeRatings.overall : awayRatings.overall,
-      team_offense: teamIsHome ? homeRatings.offense : awayRatings.offense,
-      team_defense: teamIsHome ? homeRatings.defense : awayRatings.defense,
-      opponent_overall: String(teamIsHome ? awayRatings.overall : homeRatings.overall),
-      opponent_offense: String(teamIsHome ? awayRatings.offense : homeRatings.offense),
-      opponent_defense: String(teamIsHome ? awayRatings.defense : homeRatings.defense),
-      favorite: odds.favorite,
-      favorite_spread: String(odds.spread),
-      favorite_moneyline: odds.favoriteMoneyline,
-      total_over_under: odds.totalOverUnder,
-      team_win_probability: odds.favorite === preview.team ? odds.favoriteWinProbability : `${(100 - parseFloat(odds.favoriteWinProbability)).toFixed(1)}%`,
-      opponent_win_probability: odds.favorite === preview.opponent ? odds.favoriteWinProbability : `${(100 - parseFloat(odds.favoriteWinProbability)).toFixed(1)}%`,
-    })
-    .eq('id', preview.id);
-  if (updErr) return { error: `game_preview odds write failed: ${updErr.message}` };
-
-  return { written: 1 };
 }
 
 // Token usage for one screenshot, summed across attempts (a retry costs
@@ -548,7 +597,7 @@ async function processOneImage({
   helperRows: any[];
   ratingsByName: Record<string, { overall: number; offense: number; defense: number; homeState: string | null }>;
   myTeamName: string | null;
-  ctx: { season: number; week: number };
+  ctx: OcrCtx;
 }): Promise<{ status: string; rowsWritten?: number; rawResponse?: string; error?: string; issues?: string[]; teamsWritten?: string[]; usage?: OcrUsage }> {
   const { data: blob, error: dlErr } = await sb.storage.from(bucket).download(fileName);
   if (dlErr) return { status: 'skipped_failed', error: `download: ${dlErr.message}` };
@@ -679,7 +728,7 @@ async function writeRows({
   guide: GuideRow;
   rows: any[];
   variantToCanonical: Record<string, string>;
-  ctx: { season: number; week: number };
+  ctx: OcrCtx;
   slot: string;
   ratingsByName: Record<string, { overall: number; offense: number; defense: number; homeState: string | null }>;
 }): Promise<{ written: number; issues: string[]; teamsWritten: string[] }> {
@@ -730,8 +779,8 @@ async function writeRows({
       mapped.national_rank = String(rowIndex + 1);
     }
 
-    mapped.user_id = USER_ID;
-    mapped.dynasty_id = dynastyIdFor(guide.target_table);
+    mapped.user_id = ctx.userId;
+    mapped.dynasty_id = ctx.dynastyId;
 
     // Season is constant for the whole screenshot — always stamp it from
     // the run's context. Week is NOT constant for every guide: team_schedule
@@ -745,8 +794,15 @@ async function writeRows({
         issues.push(`row skipped — no usable "week" number in the model's output: ${JSON.stringify(row)}`);
         continue;
       }
-      mapped[cols.weekCol] = cols.weekValue(Number(mapped.week));
-      delete mapped.week; // not a real column — week_name is
+      const wk = Number(mapped.week);
+      mapped.week = cols.weekValue(wk);
+      mapped.week_name = `week_${wk}`;
+      mapped.team = ctx.team; // whose schedule this is
+      // The screen swaps a game's kickoff time for its result once played, so a
+      // missing date/time must never erase one that is already stored.
+      ['game_day', 'game_date', 'game_time'].forEach((k) => {
+        if (mapped[k] === null || mapped[k] === undefined || mapped[k] === '') delete mapped[k];
+      });
     } else {
       mapped[cols.weekCol] = cols.weekValue(ctx.week);
     }
@@ -769,7 +825,8 @@ async function writeRows({
       mapped.matchup_number = Number(slotMatch[1]);
     }
 
-    let query = sb.from(guide.target_table).select('id');
+    // Always scope the match to THIS dynasty so one league can never overwrite another's rows.
+    let query = sb.from(guide.target_table).select('id').eq('dynasty_id', ctx.dynastyId);
     for (const key of guide.match_keys) {
       if (mapped[key] === undefined || mapped[key] === null) {
         issues.push(`row skipped — match key "${key}" is missing: ${JSON.stringify(row)}`);

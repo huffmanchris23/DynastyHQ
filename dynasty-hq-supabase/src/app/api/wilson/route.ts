@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { getUser, unauthorized } from '@/lib/auth';
+import { getDynastyCtx } from '@/lib/dynastyContext';
 import { getDashboardData } from '@/lib/dashboard';
 
 // Always builds fresh dynasty context on every question — no caching, same
@@ -25,6 +27,8 @@ function buildWilsonContext(data: Awaited<ReturnType<typeof getDashboardData>>) 
 }
 
 export async function POST(req: Request) {
+  const user = await getUser();
+  if (!user) return unauthorized();
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
@@ -48,7 +52,9 @@ export async function POST(req: Request) {
 
   let context: any;
   try {
-    const data = await getDashboardData();
+    const ctx = await getDynastyCtx(user.id);
+    if (!ctx || !ctx.team) return NextResponse.json({ error: 'No active dynasty team.' }, { status: 409 });
+    const data = await getDashboardData(ctx);
     context = buildWilsonContext(data);
   } catch (err: any) {
     return NextResponse.json({ message: `Wilson couldn't load the dynasty data: ${err?.message || err}` }, { status: 500 });
