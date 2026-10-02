@@ -10,6 +10,7 @@ import HistoryPlaceholder from '@/components/shared/HistoryPlaceholder';
 import { type ColorState } from '@/components/shared/ColorPicker';
 import { loadNameAliases } from '@/lib/format';
 import Wilson from '@/components/Wilson';
+import DynastySwitcher from '@/components/gate/DynastySwitcher';
 
 import Home from '@/components/tabs/Home';
 import { ScheduleTeam, ScheduleTop25 } from '@/components/tabs/Schedule';
@@ -161,6 +162,7 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
                 <img src="/icon-192.png" alt="Dynasty HQ" style={{ width: 18, height: 18, borderRadius: 4 }} />
                 <span>Dynasty HQ — {data.settings.currentDataSheet || ''}</span>
               </div>
+              <DynastySwitcher />
             </div>
             <div className="header-row">
               <div className="header-team">
