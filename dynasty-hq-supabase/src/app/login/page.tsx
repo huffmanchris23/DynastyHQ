@@ -17,7 +17,7 @@ function LoginInner() {
   const [code, setCode] = useState('');
   const [step, setStep] = useState<'email' | 'code'>('email');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(params.get('error') ? 'Sign-in did not finish. Try again.' : null);
+  const [error, setError] = useState<string | null>(params.get('error') ? `Sign-in did not finish${params.get('reason') ? ` (${params.get('reason')})` : ''}. Try again.` : null);
 
   // Already signed in (e.g. a session was created but the app bounced back here)? Go on in.
   useEffect(() => {

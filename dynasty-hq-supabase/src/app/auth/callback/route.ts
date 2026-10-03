@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
   const rawNext = cookies().get('dhq_next')?.value ? decodeURIComponent(cookies().get('dhq_next')!.value) : url.searchParams.get('next') || '/';
   const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/';
 
+  let reason = 'no_code';
   if (code) {
     const { error } = await createAuthClient().auth.exchangeCodeForSession(code);
     if (!error) {
@@ -19,6 +20,10 @@ export async function GET(req: NextRequest) {
       res.cookies.set('dhq_next', '', { path: '/', maxAge: 0 });
       return res;
     }
+    reason = error.message || 'exchange_failed';
+    console.error('[auth/callback] exchangeCodeForSession failed:', reason);
+  } else {
+    console.error('[auth/callback] reached without a code. Params:', Array.from(url.searchParams.keys()).join(','));
   }
-  return NextResponse.redirect(new URL('/login?error=signin', url.origin));
+  return NextResponse.redirect(new URL(`/login?error=signin&reason=${encodeURIComponent(reason.slice(0, 160))}`, url.origin));
 }
