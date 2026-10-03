@@ -70,6 +70,9 @@ function LoginInner() {
         )}
         {error ? <div className="gate-error">{error}</div> : null}
       </div>
+      <p className="gate-hint" style={{ textAlign: 'center' }}>
+        <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a>
+      </p>
     </div>
   );
 }

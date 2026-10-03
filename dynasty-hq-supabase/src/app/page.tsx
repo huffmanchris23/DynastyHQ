@@ -1,88 +1,86 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import type { DashboardData } from '@/lib/types';
-import DashboardApp from '@/components/DashboardApp';
-import Onboarding from '@/components/gate/Onboarding';
-import ClaimTeam from '@/components/gate/ClaimTeam';
-import DynastySwitcher from '@/components/gate/DynastySwitcher';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { getBrowserSupabase } from '@/lib/supabase/client';
 
-interface Me {
-  user: { id: string; email: string };
-  memberships: any[];
-  active: { dynastyId: string; role: string; team: string | null; dynasty: { name: string; mode: string } } | null;
+const EMAIL_LOGIN = process.env.NEXT_PUBLIC_EMAIL_LOGIN === 'on';
+
+function safeNext(raw: string | null) {
+  return raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
 }
 
-export default function Page() {
-  const [me, setMe] = useState<Me | null>(null);
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [dashError, setDashError] = useState<string | null>(null);
+function LoginInner() {
+  const params = useSearchParams();
+  const next = safeNext(params.get('next'));
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [step, setStep] = useState<'email' | 'code'>('email');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(params.get('error') ? 'Sign-in did not finish. Try again.' : null);
 
-  const loadMe = useCallback(async () => {
-    const res = await fetch('/api/me');
-    if (res.status === 401) { window.location.replace('/login'); return; }
-    setMe(await res.json());
-  }, []);
-
-  useEffect(() => { loadMe(); }, [loadMe]);
-
-  const ready = !!(me && me.active && me.active.team);
-  const activeId = me?.active?.dynastyId;
-
-  useEffect(() => {
-    if (!ready) return;
-    let cancelled = false;
-    setData(null); setDashError(null);
-    fetch('/api/dashboard')
-      .then(async (res) => {
-        const body = await res.json();
-        if (!res.ok) throw new Error(body.message || 'Request failed');
-        return body as DashboardData;
-      })
-      .then((body) => { if (!cancelled) setData(body); })
-      .catch((err) => { if (!cancelled) setDashError(err.message || String(err)); });
-    return () => { cancelled = true; };
-  }, [ready, activeId]);
-
-  if (!me) {
-    return (
-      <div id="app"><div className="loading-screen"><div className="spinner" /><div className="loading-text">Loading Dynasty HQ…</div></div></div>
-    );
+  async function google() {
+    setError(null);
+    const { error } = await getBrowserSupabase().auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
+    });
+    if (error) setError(error.message);
   }
 
-  if (!me.active) return <Onboarding onDone={loadMe} />;
-
-  if (!me.active.team) {
-    return <ClaimTeam dynastyId={me.active.dynastyId} dynastyName={me.active.dynasty.name} onDone={loadMe} />;
+  async function sendCode() {
+    setBusy(true); setError(null);
+    const { error } = await getBrowserSupabase().auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true } });
+    setBusy(false);
+    if (error) return setError(error.message);
+    setStep('code');
   }
 
-  if (dashError) {
-    // Until the dashboard is re-scoped to dynasties (build step 3), signed-in
-    // members land here with a working account, dynasty, and team.
-    return (
-      <div id="app">
-        <div className="gate-wrap">
-          <div className="gate-card center">
-            <h2>{me.active.dynasty.name}</h2>
-            <p className="gate-hint">You are coaching {me.active.team}.</p>
-            <DynastySwitcher />
-            <p className="gate-hint" style={{ marginTop: 16 }}>Dashboard data is not connected to this dynasty yet.</p>
-            <p className="gate-hint">{dashError}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!data) {
-    return (
-      <div id="app"><div className="loading-screen"><div className="spinner" /><div className="loading-text">Loading Dynasty HQ…</div></div></div>
-    );
+  async function verify() {
+    setBusy(true); setError(null);
+    const { error } = await getBrowserSupabase().auth.verifyOtp({ email: email.trim(), token: code.trim(), type: 'email' });
+    if (error) { setBusy(false); return setError('That code did not work. Check it and try again, or send a new one.'); }
+    window.location.replace(next);
   }
 
   return (
-    <div id="app">
-      <DashboardApp data={data} />
+    <div className="gate-wrap">
+      <div className="gate-masthead">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/icon-192.png" alt="" width={56} height={56} />
+        <h1>Dynasty HQ</h1>
+      </div>
+      <div className="gate-card">
+        <h2>Sign in</h2>
+        <button className="gate-btn" onClick={google}>Continue with Google</button>
+        {EMAIL_LOGIN ? <div className="gate-or"><span>or use your email</span></div> : null}
+
+        {!EMAIL_LOGIN ? null : step === 'email' ? (
+          <>
+            <input className="gate-input" type="email" inputMode="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <button className="gate-btn secondary" disabled={busy || !email.includes('@')} onClick={sendCode}>Email me a code</button>
+          </>
+        ) : (
+          <>
+            <p className="gate-hint">We sent a code to {email}. Enter it here.</p>
+            <input className="gate-input code" inputMode="numeric" autoComplete="one-time-code" placeholder="Code" value={code} onChange={(e) => setCode(e.target.value.replace(/\s/g, ''))} />
+            <button className="gate-btn secondary" disabled={busy || code.length < 6} onClick={verify}>Sign in</button>
+            <button className="gate-link" onClick={() => { setStep('email'); setCode(''); }}>Use a different email</button>
+          </>
+        )}
+        {error ? <div className="gate-error">{error}</div> : null}
+      </div>
+      <p className="gate-hint" style={{ textAlign: 'center' }}>
+        <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a>
+      </p>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginInner />
+    </Suspense>
   );
 }
