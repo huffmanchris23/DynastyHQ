@@ -7,6 +7,14 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 export async function middleware(request: NextRequest) {
+  // If Supabase falls back to the Site URL, the sign-in code arrives on "/".
+  // Forward it to the handler that turns it into a session.
+  if (request.nextUrl.pathname === '/' && request.nextUrl.searchParams.get('code')) {
+    const to = request.nextUrl.clone();
+    to.pathname = '/auth/callback';
+    return NextResponse.redirect(to);
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anon) return NextResponse.next();
