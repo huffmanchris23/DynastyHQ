@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 
@@ -19,11 +19,19 @@ function LoginInner() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(params.get('error') ? 'Sign-in did not finish. Try again.' : null);
 
+  // Already signed in (e.g. a session was created but the app bounced back here)? Go on in.
+  useEffect(() => {
+    getBrowserSupabase().auth.getUser().then(({ data }) => { if (data.user) window.location.replace(next); });
+  }, [next]);
+
   async function google() {
     setError(null);
+    // Remember where to go after sign-in. Kept out of the redirect URL on purpose:
+    // Supabase only honors redirect URLs that match its allow-list exactly.
+    document.cookie = `dhq_next=${encodeURIComponent(next)}; path=/; max-age=600; samesite=lax`;
     const { error } = await getBrowserSupabase().auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
     if (error) setError(error.message);
   }
