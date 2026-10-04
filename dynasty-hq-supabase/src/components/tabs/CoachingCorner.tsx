@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import type { DashboardData } from '@/lib/types';
+import CoachSetup from '@/components/gate/CoachSetup';
 import { numOr, isMine as isMineFn, logoFor } from '@/lib/format';
 import { Row, Thead } from '@/components/shared/Row';
 import Badge from '@/components/shared/Badge';
@@ -9,6 +11,8 @@ import { initials } from '@/lib/format';
 // Coaching background bio — hidden for now (bulky, and wasn't rendering
 // meaningfully before anyway). Flip to true to bring it back.
 const SHOW_COACHING_BACKGROUND = false;
+
+const POSITION_LABEL: Record<string, string> = { HC: 'Head Coach', OC: 'Offensive Coordinator', DC: 'Defensive Coordinator' };
 
 function BioRow({ label, value }: { label: string; value: any }) {
   return (
@@ -24,6 +28,15 @@ export function MyCoach({ d }: { d: DashboardData }) {
   const history = c.history || [];
   const myTeamName = d.team && d.team.TEAM_NAME;
   const cols = '52px 1fr 56px 70px';
+  const [editing, setEditing] = useState(false);
+
+  if (editing) {
+    return (
+      <div className="gate-overlay">
+        <CoachSetup onCancel={() => setEditing(false)} onDone={() => window.location.reload()} />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -60,13 +73,15 @@ export function MyCoach({ d }: { d: DashboardData }) {
             )}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>{c.name || 'Coach'}</div>
+            <div style={{ fontSize: 17, fontWeight: 700 }}>{c.name || 'Coach'}</div>
+            <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.55)', marginBottom: 4 }}>{POSITION_LABEL[String(c.position)] || ''}</div>
             <BioRow label="Alma Mater" value={c.almaMater} />
             <BioRow label="Pipeline" value={c.pipeline} />
             <BioRow label="Offense Playbook" value={c.offensePlaybook} />
             <BioRow label="Defense Playbook" value={c.defensePlaybook} />
           </div>
         </div>
+        <button type="button" className="gate-btn secondary" style={{ marginTop: 10 }} onClick={() => setEditing(true)}>Edit coach (photo, position, playbooks)</button>
         <div style={{ marginTop: 10 }}>
           <div className="card">
             <div className="stat-label">Coaching Philosophy</div>
