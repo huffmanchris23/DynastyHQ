@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getBrowserSupabase } from '@/lib/supabase/client';
 import Onboarding from './Onboarding';
+import CoachSetup from './CoachSetup';
 
 interface Membership { dynastyId: string; role: string; team: string | null; dynasty: { name: string; mode: string } }
 
@@ -11,6 +12,7 @@ export default function DynastySwitcher() {
   const [open, setOpen] = useState(false);
   const [me, setMe] = useState<{ memberships: Membership[]; active: (Membership & { dynastyId: string }) | null } | null>(null);
   const [adding, setAdding] = useState(false);
+  const [editingCoach, setEditingCoach] = useState(false);
   const [invite, setInvite] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -35,6 +37,8 @@ export default function DynastySwitcher() {
     window.location.replace('/login');
   }
 
+  if (editingCoach) return <div className="gate-overlay"><CoachSetup onCancel={() => setEditingCoach(false)} onDone={() => window.location.reload()} /></div>;
+
   if (adding) return <div className="gate-overlay"><Onboarding canCancel onCancel={() => setAdding(false)} onDone={() => window.location.reload()} /></div>;
 
   return (
@@ -50,6 +54,7 @@ export default function DynastySwitcher() {
                 <span className="meta">{m.team || 'No team yet'}{m.dynasty.mode === 'multi' ? ' · League' : ' · Solo'}</span>
               </button>
             ))}
+            <button className="gate-btn secondary" onClick={() => setEditingCoach(true)}>Edit my coach</button>
             <button className="gate-btn secondary" onClick={() => setAdding(true)}>Start or join another</button>
             {isCommish && a.dynasty.mode === 'multi' && (
               invite ? (
