@@ -290,3 +290,9 @@ select.season-select { background: transparent; border: none; color: var(--prima
 .gate-invite { display: flex; flex-direction: column; gap: 8px; }
 .switcher-btn { font-family: var(--font-label); font-size: 12px; letter-spacing: 0.03em; color: var(--bg); background: rgba(0,0,0,0.22); border: 1px solid color-mix(in srgb, var(--bg) 35%, transparent); border-radius: 999px; padding: 4px 10px; cursor: pointer; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
+
+/* coach avatar picker */
+.gate-avatars { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.gate-avatar { padding: 2px; border-radius: 50%; border: 3px solid transparent; background: none; cursor: pointer; line-height: 0; }
+.gate-avatar.on { border-color: var(--dhq-navy); }
+.gate-avatar:focus-visible { outline: 2px solid var(--dhq-red); outline-offset: 2px; }

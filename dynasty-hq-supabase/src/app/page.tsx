@@ -5,12 +5,14 @@ import type { DashboardData } from '@/lib/types';
 import DashboardApp from '@/components/DashboardApp';
 import Onboarding from '@/components/gate/Onboarding';
 import ClaimTeam from '@/components/gate/ClaimTeam';
+import CoachSetup from '@/components/gate/CoachSetup';
 import DynastySwitcher from '@/components/gate/DynastySwitcher';
 
 interface Me {
   user: { id: string; email: string };
   memberships: any[];
-  active: { dynastyId: string; role: string; team: string | null; dynasty: { name: string; mode: string } } | null;
+  displayName?: string;
+  active: { dynastyId: string; role: string; team: string | null; coachReady?: boolean; teamInfo?: { primary_color?: string } | null; dynasty: { name: string; mode: string } } | null;
 }
 
 export default function Page() {
@@ -26,7 +28,7 @@ export default function Page() {
 
   useEffect(() => { loadMe(); }, [loadMe]);
 
-  const ready = !!(me && me.active && me.active.team);
+  const ready = !!(me && me.active && me.active.team && me.active.coachReady);
   const activeId = me?.active?.dynastyId;
 
   useEffect(() => {
@@ -54,6 +56,10 @@ export default function Page() {
 
   if (!me.active.team) {
     return <ClaimTeam dynastyId={me.active.dynastyId} dynastyName={me.active.dynasty.name} onDone={loadMe} />;
+  }
+
+  if (!me.active.coachReady) {
+    return <CoachSetup defaultName={me.displayName} color={me.active.teamInfo?.primary_color || undefined} onDone={loadMe} />;
   }
 
   if (dashError) {
