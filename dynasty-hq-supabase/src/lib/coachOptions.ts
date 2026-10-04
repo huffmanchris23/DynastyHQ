@@ -18,3 +18,12 @@ export const PIPELINES: string[] = ["East Texas", "Southern California", "North 
 
 export const PHILOSOPHY_PICKS = 3;
 export const PHILOSOPHIES: string[] = ["Speed", "Violence", "Discipline", "Toughness", "Aggression", "Precision", "Power", "Tempo", "Pressure", "Balance", "Creativity", "Physicality", "Culture", "Grit", "Chaos", "Control", "Innovation", "Intensity", "Fundamentals", "Swagger", "Resilience", "Adaptability", "Efficiency", "Explosiveness", "Ground and Pound", "Air It Out", "Defense First", "Player Development", "Recruiting Edge", "Underdog"];
+
+/** Coaching role. Stored in my_coach.title as the short code (the career history table shows it as "Pos"). */
+export const POSITIONS = [
+  { id: 'HC', label: 'Head Coach' },
+  { id: 'OC', label: 'Offensive Coordinator' },
+  { id: 'DC', label: 'Defensive Coordinator' },
+] as const;
+export type PositionId = (typeof POSITIONS)[number]['id'];
+export const POSITION_IDS: string[] = POSITIONS.map((p) => p.id);

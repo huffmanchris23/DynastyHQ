@@ -582,6 +582,7 @@ export async function getDashboardData(ctx: DynastyCtx): Promise<DashboardData> 
     coachingPhilosophy: myCoachRow?.coaching_philosophy,
     background: myCoachRow?.coaching_background,
     photoLink: myCoachRow?.image_url,
+    position: myCoachRow?.title,
     // One row per season now exists in my_coach (season/team/title/
     // season_wins/season_losses each carried on that season's own row), so
     // history spans every season fetched via the season-unscoped query

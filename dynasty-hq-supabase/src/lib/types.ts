@@ -288,6 +288,8 @@ export interface MyCoach {
   coachingPhilosophy: any;
   background: any;
   photoLink: any;
+  /** 'HC' | 'OC' | 'DC' */
+  position?: any;
   history: MyCoachHistory[];
 }
 
