@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 
 interface Group { label: string; items: string[] }
-interface Options { offenseGroups: Group[]; defense: string[]; pipelines: string[]; philosophies: string[]; philosophyPicks: number }
+interface Position { id: string; label: string }
+interface Options { positions: Position[]; offenseGroups: Group[]; defense: string[]; pipelines: string[]; philosophies: string[]; philosophyPicks: number }
 
 function initialsOf(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -29,6 +30,8 @@ function buildPrompt(color?: string) {
 
 export default function CoachSetup({ defaultName, color, onDone, onCancel }: { defaultName?: string; color?: string; onDone: () => void; onCancel?: () => void }) {
   const [name, setName] = useState(defaultName || '');
+  const [position, setPosition] = useState('');
+  const [teamColor, setTeamColor] = useState<string | undefined>(color);
   const [image, setImage] = useState<string | null>(null);
   const [almaMater, setAlmaMater] = useState('');
   const [pipeline, setPipeline] = useState('');
@@ -36,21 +39,22 @@ export default function CoachSetup({ defaultName, color, onDone, onCancel }: { d
   const [defense, setDefense] = useState('');
   const [philosophy, setPhilosophy] = useState<string[]>([]);
   const [schools, setSchools] = useState<string[]>([]);
-  const [opts, setOpts] = useState<Options>({ offenseGroups: [], defense: [], pipelines: [], philosophies: [], philosophyPicks: 3 });
+  const [opts, setOpts] = useState<Options>({ positions: [], offenseGroups: [], defense: [], pipelines: [], philosophies: [], philosophyPicks: 3 });
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
-  const prompt = buildPrompt(color);
+  const prompt = buildPrompt(teamColor);
 
   useEffect(() => {
+    if (!color) fetch('/api/me').then((r) => r.json()).then((b) => { const pc = b?.active?.teamInfo?.primary_color; if (pc) setTeamColor(pc); }).catch(() => {});
     fetch('/api/teams/meta').then((r) => r.json()).then((b) => setSchools(b.schools || [])).catch(() => {});
     fetch('/api/coach').then((r) => r.json()).then((b) => {
       if (b.options) setOpts(b.options);
       if (b.coach) {
-        setName(b.coach.name || ''); setImage(b.coach.image || null); setAlmaMater(b.coach.almaMater || '');
+        setName(b.coach.name || ''); setPosition(b.coach.position || ''); setImage(b.coach.image || null); setAlmaMater(b.coach.almaMater || '');
         setPipeline(b.coach.pipeline || ''); setOffense(b.coach.offense || ''); setDefense(b.coach.defense || '');
         setPhilosophy(b.coach.philosophy || []);
       }
@@ -83,14 +87,16 @@ export default function CoachSetup({ defaultName, color, onDone, onCancel }: { d
 
   async function save() {
     setBusy(true); setError(null);
-    const res = await fetch('/api/coach', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, image, almaMater, pipeline, offense, defense, philosophy }) });
+    const res = await fetch('/api/coach', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, position, image, almaMater, pipeline, offense, defense, philosophy }) });
     const out = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) return setError(out.error || 'Could not save.');
     onDone();
   }
 
-  const complete = name.trim().length >= 2 && almaMater && pipeline && offense && defense && philosophy.length === opts.philosophyPicks;
+  const needOffense = position === 'HC' || position === 'OC';
+  const needDefense = position === 'HC' || position === 'DC';
+  const complete = name.trim().length >= 2 && !!position && almaMater && pipeline && (!needOffense || offense) && (!needDefense || defense) && philosophy.length === opts.philosophyPicks;
   const field = (label: string, node: React.ReactNode) => <label className="gate-field">{label}{node}</label>;
   const plainSelect = (value: string, set: (v: string) => void, list: string[]) => (
     <select className="gate-input" value={value} onChange={(e) => set(e.target.value)}>
@@ -105,7 +111,7 @@ export default function CoachSetup({ defaultName, color, onDone, onCancel }: { d
         <h2>Create your coach</h2>
 
         <div className="gate-portrait-row">
-          <div className="gate-portrait" style={{ background: color || 'var(--dhq-navy)' }}>
+          <div className="gate-portrait" style={{ background: teamColor || 'var(--dhq-navy)' }}>
             {image ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={image} alt="Your coach" /> : <span>{initialsOf(name)}</span>}
           </div>
           <div className="gate-portrait-actions">
@@ -135,10 +141,19 @@ export default function CoachSetup({ defaultName, color, onDone, onCancel }: { d
           </div>
         ) : null}
 
+        <div className="gate-field">Your coaching position
+          <div className="gate-seg3" role="radiogroup" aria-label="Coaching position">
+            {opts.positions.map((p) => (
+              <button key={p.id} type="button" role="radio" aria-checked={position === p.id} className={position === p.id ? 'on' : ''} onClick={() => setPosition(p.id)}>
+                <strong>{p.id}</strong><span>{p.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
         {field('Coach name', <input className="gate-input" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />)}
         {field('Alma mater', plainSelect(almaMater, setAlmaMater, schools))}
         {field('Recruiting pipeline', plainSelect(pipeline, setPipeline, opts.pipelines))}
-        {field('Offensive playbook', (
+        {field(`Offensive playbook${position === 'DC' ? ' (optional)' : ''}`, (
           <select className="gate-input" value={offense} onChange={(e) => setOffense(e.target.value)}>
             <option value="">Choose…</option>
             {opts.offenseGroups.map((g) => (
@@ -146,7 +161,7 @@ export default function CoachSetup({ defaultName, color, onDone, onCancel }: { d
             ))}
           </select>
         ))}
-        {field('Defensive playbook', plainSelect(defense, setDefense, opts.defense))}
+        {field(`Defensive playbook${position === 'OC' ? ' (optional)' : ''}`, plainSelect(defense, setDefense, opts.defense))}
 
         <div className="gate-field">
           Coaching philosophy: pick {opts.philosophyPicks} ({philosophy.length} of {opts.philosophyPicks})
