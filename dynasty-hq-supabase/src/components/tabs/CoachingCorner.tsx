@@ -43,34 +43,56 @@ export function MyCoach({ d }: { d: DashboardData }) {
       <div>
         <SectionLabel>Bio</SectionLabel>
         <div className="card" style={{ display: 'flex', gap: 12 }}>
-          <div
-            style={{
-              width: 84,
-              height: 84,
-              borderRadius: 8,
-              flexShrink: 0,
-              background: 'color-mix(in srgb, var(--primary) 30%, transparent)',
-              border: '1px solid color-mix(in srgb, var(--primary) 60%, transparent)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 24,
-              fontWeight: 700,
-              color: 'var(--accent)',
-              overflow: 'hidden',
-            }}
-          >
-            {c.photoLink ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={c.photoLink}
-                alt={c.name || 'Coach photo'}
-                referrerPolicy="no-referrer"
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            ) : (
-              initials(c.name, 2)
-            )}
+          <div style={{ width: 84, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div
+              style={{
+                width: 84,
+                height: 108,
+                borderRadius: 8,
+                flexShrink: 0,
+                background: 'color-mix(in srgb, var(--primary) 30%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--primary) 60%, transparent)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 24,
+                fontWeight: 700,
+                color: 'var(--accent)',
+                overflow: 'hidden',
+              }}
+            >
+              {c.photoLink ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={c.photoLink}
+                  alt={c.name || 'Coach photo'}
+                  referrerPolicy="no-referrer"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                initials(c.name, 2)
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              style={{
+                width: '100%',
+                padding: '6px 0',
+                borderRadius: 6,
+                border: '1px solid var(--dhq-navy)',
+                background: 'transparent',
+                color: 'var(--dhq-navy)',
+                fontFamily: 'var(--font-label)',
+                fontSize: 12,
+                fontWeight: 600,
+                letterSpacing: '0.03em',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+              }}
+            >
+              Edit coach
+            </button>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 17, fontWeight: 700 }}>{c.name || 'Coach'}</div>
@@ -81,7 +103,6 @@ export function MyCoach({ d }: { d: DashboardData }) {
             <BioRow label="Defense Playbook" value={c.defensePlaybook} />
           </div>
         </div>
-        <button type="button" className="gate-btn secondary" style={{ marginTop: 10 }} onClick={() => setEditing(true)}>Edit coach (photo, position, playbooks)</button>
         <div style={{ marginTop: 10 }}>
           <div className="card">
             <div className="stat-label">Coaching Philosophy</div>
