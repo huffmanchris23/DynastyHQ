@@ -29,8 +29,8 @@ export async function GET() {
 
   let coachReady = false;
   if (active?.team) {
-    const { data: coachRow } = await sb.from('my_coach').select('id, name, image_url').eq('dynasty_id', active.dynastyId).eq('user_id', user.id).eq('season', active.dynasty.current_season).maybeSingle();
-    coachReady = !!(coachRow && coachRow.name && coachRow.image_url);
+    const { data: coachRow } = await sb.from('my_coach').select('id, name, coaching_philosophy').eq('dynasty_id', active.dynastyId).eq('user_id', user.id).eq('season', active.dynasty.current_season).maybeSingle();
+    coachReady = !!(coachRow && coachRow.name && coachRow.coaching_philosophy);
   }
 
   let teamInfo: any = null;
