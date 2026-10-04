@@ -300,3 +300,10 @@ select.season-select { background: transparent; border: none; color: var(--prima
 .gate-guide ol { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
 .gate-prompt { font-size: 12px; line-height: 1.45; padding: 10px; background: #fff; border: 1px solid rgba(0,0,0,0.15); border-radius: 4px; user-select: all; }
 .gate-chip:disabled { opacity: 0.4; cursor: default; }
+
+.gate-seg3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.gate-seg3 button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; border: 2px solid var(--dhq-navy); border-radius: 4px; background: transparent; color: var(--dhq-navy); cursor: pointer; font: inherit; }
+.gate-seg3 button strong { font-family: var(--font-label); font-size: 18px; }
+.gate-seg3 button span { font-size: 10px; line-height: 1.2; text-align: center; }
+.gate-seg3 button.on { background: var(--dhq-navy); color: var(--dhq-tan); }
+.gate-seg3 button:focus-visible { outline: 2px solid var(--dhq-red); outline-offset: 2px; }
