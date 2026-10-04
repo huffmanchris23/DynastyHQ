@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabaseClient';
 import { fail, getUser, unauthorized } from '@/lib/auth';
 import { getDynastyCtx } from '@/lib/dynastyContext';
-import { DEFENSE_PLAYBOOKS, OFFENSE_GROUPS, OFFENSE_PLAYBOOKS, PHILOSOPHIES, PHILOSOPHY_PICKS, PIPELINES } from '@/lib/coachOptions';
+import { DEFENSE_PLAYBOOKS, OFFENSE_GROUPS, OFFENSE_PLAYBOOKS, PHILOSOPHIES, PHILOSOPHY_PICKS, PIPELINES, POSITIONS, POSITION_IDS } from '@/lib/coachOptions';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -19,12 +19,12 @@ export async function GET() {
   return NextResponse.json({
     coach: data
       ? {
-          name: data.name, image: data.image_url || null, almaMater: data.alma_mater, pipeline: data.recruiting_pipeline,
+          name: data.name, image: data.image_url || null, position: POSITION_IDS.indexOf(data.title) > -1 ? data.title : null, almaMater: data.alma_mater, pipeline: data.recruiting_pipeline,
           offense: data.offense, defense: data.defense,
           philosophy: data.coaching_philosophy ? String(data.coaching_philosophy).split(SEP) : [],
         }
       : null,
-    options: { offenseGroups: OFFENSE_GROUPS, defense: DEFENSE_PLAYBOOKS, pipelines: PIPELINES, philosophies: PHILOSOPHIES, philosophyPicks: PHILOSOPHY_PICKS },
+    options: { positions: POSITIONS, offenseGroups: OFFENSE_GROUPS, defense: DEFENSE_PLAYBOOKS, pipelines: PIPELINES, philosophies: PHILOSOPHIES, philosophyPicks: PHILOSOPHY_PICKS },
   });
 }
 
@@ -44,9 +44,15 @@ export async function POST(req: NextRequest) {
   const schoolSet = new Set((schools || []).map((s: any) => s.team_name));
 
   if (!schoolSet.has(b.almaMater)) return fail(400, 'Choose your alma mater.');
+  if (POSITION_IDS.indexOf(b.position) === -1) return fail(400, 'Choose your coaching position.');
   if (PIPELINES.indexOf(b.pipeline) === -1) return fail(400, 'Choose your recruiting pipeline.');
-  if (OFFENSE_PLAYBOOKS.indexOf(b.offense) === -1) return fail(400, 'Choose your offensive playbook.');
-  if (DEFENSE_PLAYBOOKS.indexOf(b.defense) === -1) return fail(400, 'Choose your defensive playbook.');
+  // Head coaches choose both playbooks; a coordinator must choose their own side (the other is optional).
+  const needOffense = b.position === 'HC' || b.position === 'OC';
+  const needDefense = b.position === 'HC' || b.position === 'DC';
+  const offenseOk = OFFENSE_PLAYBOOKS.indexOf(b.offense) > -1;
+  const defenseOk = DEFENSE_PLAYBOOKS.indexOf(b.defense) > -1;
+  if (needOffense && !offenseOk) return fail(400, 'Choose your offensive playbook.');
+  if (needDefense && !defenseOk) return fail(400, 'Choose your defensive playbook.');
   const picks: string[] = Array.isArray(b.philosophy) ? b.philosophy.map(String) : [];
   const uniquePicks = Array.from(new Set(picks));
   if (uniquePicks.length !== PHILOSOPHY_PICKS || uniquePicks.some((p) => PHILOSOPHIES.indexOf(p) === -1)) {
@@ -66,11 +72,11 @@ export async function POST(req: NextRequest) {
     image_url: image,
     alma_mater: b.almaMater,
     recruiting_pipeline: b.pipeline,
-    offense: b.offense,
-    defense: b.defense,
+    offense: offenseOk ? b.offense : null,
+    defense: defenseOk ? b.defense : null,
     coaching_philosophy: uniquePicks.join(SEP),
     team: c.team,
-    title: 'Head Coach',
+    title: b.position,
   };
 
   const { data: existing } = await sb.from('my_coach').select('id').eq('dynasty_id', c.dynastyId).eq('user_id', user.id).eq('season', c.season).maybeSingle();
