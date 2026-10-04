@@ -11,6 +11,7 @@ import { getUser, unauthorized } from '@/lib/auth';
 import { getSupabase } from '@/lib/supabaseClient';
 import { getDynastyCtx } from '@/lib/dynastyContext';
 import { openWeekOf } from '@/lib/ocrShared';
+import { MIN_WEEK, MAX_WEEK } from '@/lib/weeks';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -84,7 +85,7 @@ export async function POST(req: NextRequest) {
   if (body.action === 'open') {
     if (open !== null) return NextResponse.json({ error: `Week ${open} is already open.` }, { status: 409 });
     const target = body.week !== undefined && body.week !== null && body.week !== '' ? Number(body.week) : c.liveWeek !== null ? c.liveWeek + 1 : NaN;
-    if (!Number.isInteger(target) || target < -1 || target > 19) return NextResponse.json({ error: 'Pick the week to open (-1 for preseason, 0-19).' }, { status: 400 });
+    if (!Number.isInteger(target) || target < MIN_WEEK || target > MAX_WEEK) return NextResponse.json({ error: 'Pick a week from 0 to 19.' }, { status: 400 });
     if (c.liveWeek !== null && target <= c.liveWeek) return NextResponse.json({ error: `Week ${target} is already live.` }, { status: 409 });
     const { error } = await sb.from('dynasties').update({ staged_week: target, countdown_ends_at: null }).eq('id', c.dynastyId);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });

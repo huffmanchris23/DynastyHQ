@@ -27,15 +27,22 @@ export async function GET() {
   const wanted = cookies().get(ACTIVE_COOKIE)?.value;
   const active = memberships.find((m: any) => m.dynastyId === wanted) || memberships[0] || null;
 
+  let coachReady = false;
+  if (active?.team) {
+    const { data: coachRow } = await sb.from('my_coach').select('id, name, image_url').eq('dynasty_id', active.dynastyId).eq('user_id', user.id).eq('season', active.dynasty.current_season).maybeSingle();
+    coachReady = !!(coachRow && coachRow.name && coachRow.image_url);
+  }
+
   let teamInfo: any = null;
   if (active?.team) {
-    const { data } = await sb.from('assets').select('team_name, team_conference, logo_url').eq('team_name', active.team).maybeSingle();
+    const { data } = await sb.from('assets').select('team_name, team_conference, logo_url, primary_color').eq('team_name', active.team).maybeSingle();
     teamInfo = data;
   }
 
   return NextResponse.json({
     user: { id: user.id, email: user.email },
     memberships,
-    active: active ? { ...active, teamInfo } : null,
+    displayName: String(user.user_metadata?.full_name || user.user_metadata?.name || '').slice(0, 40),
+    active: active ? { ...active, teamInfo, coachReady } : null,
   });
 }
