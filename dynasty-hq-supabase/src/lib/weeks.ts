@@ -48,3 +48,16 @@ export function weekFromScheduleName(name: any): number | null {
   if (m) return Number(m[1]);
   return LABEL_TO_WEEK[raw] ?? null;
 }
+
+/** Weeks a dynasty can be on: 0-19. Nothing below 0 exists. */
+export const MIN_WEEK = 0;
+export const MAX_WEEK = 19;
+
+export function weekLabel(n: number): string {
+  if (n === 15) return 'Conference Championship';
+  if (n === 16) return 'Bowls / Playoff Round 1';
+  if (n === 17) return 'Playoff Quarterfinals';
+  if (n === 18) return 'Playoff Semifinals';
+  if (n === 19) return 'National Championship';
+  return `Week ${n}`;
+}
