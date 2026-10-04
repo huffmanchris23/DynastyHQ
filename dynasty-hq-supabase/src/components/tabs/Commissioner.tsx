@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { weekLabel } from '@/lib/weeks';
 
 type SlotStatus = 'idle' | 'uploading' | 'done' | 'error';
 
@@ -64,7 +65,7 @@ export default function Upload() {
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [openWeekInput, setOpenWeekInput] = useState('');
+  const [pickedWeek, setPickedWeek] = useState<number | null>(null);
   const [notReady, setNotReady] = useState<MemberReady[] | null>(null);
   const [busy, setBusy] = useState(false);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -143,7 +144,7 @@ export default function Upload() {
     <div className="stack-sm">
       <div className="card">
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
-          Weekly Uploads{open !== null ? ` — Week ${open}` : ''}
+          Weekly Uploads{open !== null ? ` — ${weekLabel(open)}` : ''}
         </div>
         <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.55)' }}>
           {open !== null
@@ -158,11 +159,29 @@ export default function Upload() {
 
       {open === null && state.isCommish ? (
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>{state.liveWeek === null ? 'Open the first week' : `Open week ${state.liveWeek + 1}`}</div>
+          <div style={{ fontSize: 13, fontWeight: 600 }}>
+            {state.liveWeek === null ? 'Which week are you on?' : `Open ${weekLabel(state.liveWeek + 1)}`}
+          </div>
           {state.liveWeek === null ? (
-            <input className="gate-input" inputMode="numeric" placeholder="Week number (-1 = preseason, 0, 1, ...)" value={openWeekInput} onChange={(e) => setOpenWeekInput(e.target.value.replace(/[^\d-]/g, ''))} />
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+                {Array.from({ length: 20 }, (_, n) => (
+                  <button key={n} type="button" onClick={() => setPickedWeek(n)}
+                    style={{ padding: '12px 0', borderRadius: 8, fontWeight: 700, fontSize: 15,
+                      border: pickedWeek === n ? '2px solid var(--primary)' : '1px solid rgba(0,0,0,0.18)',
+                      background: pickedWeek === n ? 'var(--primary)' : 'transparent',
+                      color: pickedWeek === n ? '#fff' : 'inherit' }}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+              <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.55)', minHeight: 16 }}>
+                {pickedWeek === null ? 'Tap the current week.' : weekLabel(pickedWeek)}
+              </div>
+            </>
           ) : null}
-          <button type="button" style={btn(true, busy)} disabled={busy || (state.liveWeek === null && openWeekInput === '')} onClick={() => week('open', state.liveWeek === null ? { week: Number(openWeekInput) } : {})}>
+          <button type="button" style={btn(true, busy)} disabled={busy || (state.liveWeek === null && pickedWeek === null)}
+            onClick={() => week('open', state.liveWeek === null ? { week: pickedWeek } : {})}>
             {busy ? 'Opening…' : 'Open week for uploads'}
           </button>
         </div>

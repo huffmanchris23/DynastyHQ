@@ -1,4 +1,5 @@
 import type { DashboardData } from '@/lib/types';
+import CoachAvatar, { avatarIdFrom } from '@/components/CoachAvatar';
 import { numOr, isMine as isMineFn, logoFor } from '@/lib/format';
 import { Row, Thead } from '@/components/shared/Row';
 import Badge from '@/components/shared/Badge';
@@ -47,7 +48,9 @@ export function MyCoach({ d }: { d: DashboardData }) {
               overflow: 'hidden',
             }}
           >
-            {c.photoLink ? (
+            {avatarIdFrom(c.photoLink) ? (
+              <CoachAvatar id={avatarIdFrom(c.photoLink)!} size={84} />
+            ) : c.photoLink ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={c.photoLink}
