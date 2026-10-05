@@ -24,6 +24,7 @@ import Awards from '@/components/tabs/Awards';
 import { MyCoach, HotSeats } from '@/components/tabs/CoachingCorner';
 import FourthAndForever from '@/components/tabs/FourthAndForever';
 import Upload from '@/components/tabs/Commissioner';
+import Community from '@/components/tabs/Community';
 
 // Season/History switcher — built but hidden for now (Cincinnati transition
 // just happened; no history to show yet). Flip back to true to restore the
@@ -75,7 +76,7 @@ function TabBody({ data, tab, subtab }: {
       // case with any other subtab shouldn't happen, but fall back safely.
       return subtab === 'upload' ? <Upload /> : <ComingSoon />;
     case 'community':
-      return <ComingSoon />;
+      return <Community d={data} subtab={subtab} />;
     case 'takes':
       return <FourthAndForever d={data} />;
     default:
@@ -152,6 +153,8 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
   const headerLogoSize = (team.TEAM_NAME || '').length > 13 ? 56 : 44;
   const currentTabDef = TABS.find((t) => t.id === tab) as TabDef | undefined;
   const g = gateInfo(data);
+  // The commissioner's tab is commish-only; Community only exists in multi-user dynasties.
+  const visibleTabs = TABS.filter((t) => !isComingSoonTab(t.id) && (t.id !== 'commissioner' || data.viewer.isCommish) && (t.id !== 'community' || data.viewer.mode === 'multi'));
 
   return (
     <>
@@ -187,7 +190,7 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
           </div>
           <div className="tabstrip-outer">
             <div className="tabstrip">
-              {TABS.filter((t) => !isComingSoonTab(t.id)).map((t) => (
+              {visibleTabs.map((t) => (
                 <button
                   key={t.id}
                   className={`tab-btn ${tab === t.id ? 'active' : ''} ${isComingSoonTab(t.id) ? 'is-coming-soon' : ''}`}
