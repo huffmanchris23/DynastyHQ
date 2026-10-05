@@ -646,6 +646,7 @@ export async function getDashboardData(ctx: DynastyCtx): Promise<DashboardData> 
   const oppAsset = preview?.oppTeam ? findAsset(assetIdx, preview.oppTeam) : null;
 
   const result: DashboardData = {
+    viewer: { userId: ctx.userId, dynastyId: ctx.dynastyId, dynastyName: ctx.dynastyName, mode: ctx.mode, isCommish: ctx.isCommish, team: ctx.team },
     settings: {
       currentDataSheet: displayWeekLabel(statsWeek, scheduleRes.data || []),
       currentTeam: myTeamName || undefined,

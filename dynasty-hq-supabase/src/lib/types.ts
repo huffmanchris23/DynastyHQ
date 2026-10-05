@@ -323,7 +323,17 @@ export interface StoryBriefItem {
   text: string;
 }
 
+export interface Viewer {
+  userId: string;
+  dynastyId: string;
+  dynastyName: string;
+  mode: 'solo' | 'multi';
+  isCommish: boolean;
+  team: string | null;
+}
+
 export interface DashboardData {
+  viewer: Viewer;
   settings: Settings;
   team: TeamAsset | null;
   opponent: TeamAsset | null;

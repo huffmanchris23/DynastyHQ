@@ -37,16 +37,16 @@ export const TABS: TabDef[] = [
     id: 'commissioner', label: 'Commissioner', subtabs: [
       { id: 'upload', label: 'Upload' },
       { id: 'settings', label: 'Settings' },
-      { id: 'scheduleassistant', label: 'Schedule Assistant' },
       { id: 'leaguehistory', label: 'League History' },
     ],
   },
   {
     id: 'community', label: 'Community', subtabs: [
-      { id: 'guides', label: 'Dynasty Guides' },
-      { id: 'messageboard', label: 'Message Board' },
-      { id: 'announcements', label: 'Announcements' },
-      { id: 'contact', label: 'Contact' },
+      { id: 'users', label: 'Users' },
+      { id: 'rules', label: 'Rules' },
+      { id: 'schedule', label: 'Scheduling Assistant' },
+      { id: 'board', label: 'Message Board' },
+      { id: 'uploads', label: 'Weekly Uploads' },
     ],
   },
   { id: 'takes', label: '4th & Forever' },
@@ -58,14 +58,14 @@ export const TABS: TabDef[] = [
  * ~30 screenshots/week down to 9-11 — not tied to week number or data
  * presence, just a flat on/off per tab or subtab until built out.
  */
-export const COMING_SOON_TABS: string[] = ['community'];
+export const COMING_SOON_TABS: string[] = [];
 
 export const COMING_SOON_SUBTABS: Record<string, string[]> = {
   // Commissioner tab: only Upload (the OCR pipeline) is built. Settings,
   // Schedule Assistant, and League History stay parked until each gets
   // built out — carved out individually rather than gating the whole
   // Commissioner tab, since Upload needed to ship on its own.
-  commissioner: ['settings', 'scheduleassistant', 'leaguehistory'],
+  commissioner: ['settings', 'leaguehistory'],
 };
 
 export function isComingSoonTab(tabId: string): boolean {
