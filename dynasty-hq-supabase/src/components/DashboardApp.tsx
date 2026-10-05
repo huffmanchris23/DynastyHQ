@@ -9,6 +9,7 @@ import ComingSoon from '@/components/shared/ComingSoon';
 import HistoryPlaceholder from '@/components/shared/HistoryPlaceholder';
 import { type ColorState } from '@/components/shared/ColorPicker';
 import { loadNameAliases } from '@/lib/format';
+import { pickOnPrimary } from '@/lib/colors';
 import Wilson from '@/components/Wilson';
 import DynastySwitcher from '@/components/gate/DynastySwitcher';
 
@@ -130,6 +131,7 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
   useEffect(() => {
     document.documentElement.style.setProperty('--primary', colors.primary);
     document.documentElement.style.setProperty('--accent', colors.secondary);
+    document.documentElement.style.setProperty('--on-primary', pickOnPrimary(colors.primary, colors.secondary));
   }, [colors]);
 
   function selectTab(id: string) {
@@ -169,7 +171,9 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
                 {/* Long team names (e.g. "Louisiana-Monroe") wrap the header
                     to two lines — bump the logo up to match instead of
                     letting it look small next to a taller name block. */}
-                <Badge text={team.TEAM_NAME || '??'} size={headerLogoSize} mine logoUrl={team.LOGO_URL} />
+                <div className="header-logo" style={{ width: headerLogoSize + 12, height: headerLogoSize + 12 }}>
+                  <Badge text={team.TEAM_NAME || '??'} size={headerLogoSize} mine logoUrl={team.LOGO_URL} />
+                </div>
                 <div className="header-team-text">
                   <h1>{team.TEAM_NAME || 'Loading'}</h1>
                   {team.TEAM_MASCOT ? <div className="philosophy">{team.TEAM_MASCOT}</div> : null}
