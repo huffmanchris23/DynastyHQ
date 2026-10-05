@@ -14,7 +14,7 @@ export default function HistoryPlaceholder() {
           margin: '0 auto 12px',
         }}
       >
-        <span style={{ fontWeight: 700, color: 'var(--accent)' }}>H</span>
+        <span style={{ fontWeight: 700, color: 'var(--primary)' }}>H</span>
       </div>
       <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>History Page — Coming Soon</div>
       <div style={{ fontSize: 13, color: 'rgba(0,0,0,0.5)', maxWidth: 280, margin: '0 auto' }}>
