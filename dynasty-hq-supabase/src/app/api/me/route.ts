@@ -35,7 +35,7 @@ export async function GET() {
 
   let teamInfo: any = null;
   if (active?.team) {
-    const { data } = await sb.from('assets').select('team_name, team_conference, logo_url, primary_color').eq('team_name', active.team).maybeSingle();
+    const { data } = await sb.from('assets').select('team_name, team_conference, logo_url, primary_color, secondary_color').eq('team_name', active.team).maybeSingle();
     teamInfo = data;
   }
 
