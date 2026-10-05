@@ -12,6 +12,7 @@
 :root {
   --primary: #7A2426;
   --accent: #C9962E;
+  --on-primary: #E4D2BA; /* text color on the primary surface; recomputed per team in DashboardApp */
   --bg: #E4D2BA;
   --text: rgba(0,0,0,0.87);
   /* DHQ brand tokens, pulled from the crest — used for static brand chrome
@@ -57,8 +58,8 @@ a { color: inherit; }
 .wrap { max-width: 720px; margin: 0 auto; min-height: 100vh; }
 
 /* ---- Header band ---- */
-/* Intentionally kept on --primary (red) per design decision — the one
-   dark-background region left in an otherwise white/light app. */
+/* The header surface is the team's PRIMARY color; text on it is --on-primary
+   (see src/lib/colors.ts). */
 .header-band { background: var(--primary); position: relative; }
 .header-band::after {
   content: ''; display: block; height: 3px;
@@ -68,23 +69,26 @@ a { color: inherit; }
    device status bar on installed/PWA views — previously a flat 20px, which
    was only just enough for a single-line team name and let a two-line name
    (e.g. "Louisiana-Monroe") push up underneath the status bar icons. */
-.header-inner { padding: max(20px, env(safe-area-inset-top)) 16px 12px; background: var(--accent); }
+.header-inner { padding: max(20px, env(safe-area-inset-top)) 16px 12px; background: var(--primary); }
 .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.header-tag { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: color-mix(in srgb, var(--bg) 70%, transparent); }
+.header-tag { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: color-mix(in srgb, var(--on-primary) 80%, transparent); }
 .palette-btn {
-  background: none; border: none; color: color-mix(in srgb, var(--bg) 60%, transparent); cursor: pointer; padding: 4px; border-radius: 2px;
+  background: none; border: none; color: color-mix(in srgb, var(--on-primary) 75%, transparent); cursor: pointer; padding: 4px; border-radius: 2px;
 }
-.palette-btn:hover { background: rgba(255,255,255,0.12); color: var(--bg); }
+.palette-btn:hover { background: color-mix(in srgb, var(--on-primary) 14%, transparent); color: var(--on-primary); }
 
 .header-row { display: flex; align-items: flex-end; justify-content: space-between; padding-bottom: 8px; }
 .header-team { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; }
 .header-team-text { display: flex; flex-direction: column; min-width: 0; }
-.header-team h1 { font-family: var(--font-team); color: var(--bg); font-size: 28px; font-weight: 400; margin: 0; letter-spacing: -0.01em; line-height: 1.05; text-transform: uppercase; transform: skewX(-8deg); transform-origin: left bottom; display: inline-block; -webkit-text-stroke: 1px currentColor; text-shadow: 0.5px 0 currentColor, -0.5px 0 currentColor, 0 0.5px currentColor, 0 -0.5px currentColor; overflow-wrap: break-word; word-break: break-word; }
-.header-team .philosophy { font-family: var(--font-team); font-style: italic; font-size: 11px; color: color-mix(in srgb, var(--bg) 65%, transparent); margin-top: 3px; letter-spacing: 0.01em; }
+.header-team h1 { font-family: var(--font-team); color: var(--on-primary); font-size: 28px; font-weight: 400; margin: 0; letter-spacing: -0.01em; line-height: 1.05; text-transform: uppercase; transform: skewX(-8deg); transform-origin: left bottom; display: inline-block; -webkit-text-stroke: 1px currentColor; text-shadow: 0.5px 0 currentColor, -0.5px 0 currentColor, 0 0.5px currentColor, 0 -0.5px currentColor; overflow-wrap: break-word; word-break: break-word; }
+.header-team .philosophy { font-family: var(--font-team); font-style: italic; font-size: 11px; color: color-mix(in srgb, var(--on-primary) 80%, transparent); margin-top: 3px; letter-spacing: 0.01em; }
 .header-record { text-align: right; flex-shrink: 0; white-space: nowrap; margin-left: 10px; }
 .header-record .rec { white-space: nowrap; }
-.header-record .rec { font-family: var(--font-team); font-weight: 400; font-size: 28px; line-height: 1; color: var(--bg); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; transform: skewX(-8deg); transform-origin: right bottom; display: inline-block; -webkit-text-stroke: 1px currentColor; text-shadow: 0.5px 0 currentColor, -0.5px 0 currentColor, 0 0.5px currentColor, 0 -0.5px currentColor; }
-.header-record .rk { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: color-mix(in srgb, var(--bg) 55%, transparent); margin-top: 2px; }
+.header-record .rec { font-family: var(--font-team); font-weight: 400; font-size: 28px; line-height: 1; color: var(--on-primary); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; transform: skewX(-8deg); transform-origin: right bottom; display: inline-block; -webkit-text-stroke: 1px currentColor; text-shadow: 0.5px 0 currentColor, -0.5px 0 currentColor, 0 0.5px currentColor, 0 -0.5px currentColor; }
+.header-record .rk { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: color-mix(in srgb, var(--on-primary) 75%, transparent); margin-top: 2px; }
+
+.header-logo { display: flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 50%; background: #F7F1E6; }
+.header-logo .badge { background: transparent; border-color: transparent; color: var(--primary); }
 
 .badge {
   flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; font-weight: 700;
@@ -95,16 +99,16 @@ a { color: inherit; }
 /* Sits on the red header band (--primary); tan text/underline to match the header above. */
 .tabstrip-outer { padding: 0 16px; overflow-x: auto; scrollbar-width: none; }
 .tabstrip-outer::-webkit-scrollbar { display: none; }
-.tabstrip { display: flex; gap: 2px; width: max-content; border-bottom: 1px solid rgba(255,255,255,0.25); }
+.tabstrip { display: flex; gap: 2px; width: max-content; border-bottom: 1px solid color-mix(in srgb, var(--on-primary) 30%, transparent); }
 .tab-btn {
   font-family: var(--font-label);
   padding: 8px 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
-  white-space: nowrap; border: none; border-bottom: 2px solid transparent; background: transparent; color: color-mix(in srgb, var(--bg) 55%, transparent);
+  white-space: nowrap; border: none; border-bottom: 2px solid transparent; background: transparent; color: color-mix(in srgb, var(--on-primary) 70%, transparent);
   cursor: pointer;
 }
-.tab-btn.active { color: var(--bg); background: rgba(0,0,0,0.22); border-bottom-color: var(--bg); }
-.tab-btn.is-coming-soon { color: color-mix(in srgb, var(--bg) 28%, transparent); }
-.tab-btn.is-coming-soon.active { color: color-mix(in srgb, var(--bg) 55%, transparent); background: rgba(0,0,0,0.22); border-bottom-color: color-mix(in srgb, var(--bg) 28%, transparent); }
+.tab-btn.active { color: var(--on-primary); background: color-mix(in srgb, var(--on-primary) 14%, transparent); border-bottom-color: var(--on-primary); }
+.tab-btn.is-coming-soon { color: color-mix(in srgb, var(--on-primary) 40%, transparent); }
+.tab-btn.is-coming-soon.active { color: color-mix(in srgb, var(--on-primary) 70%, transparent); background: color-mix(in srgb, var(--on-primary) 14%, transparent); border-bottom-color: color-mix(in srgb, var(--on-primary) 40%, transparent); }
 
 /* ---- Subtab bar ---- */
 /* Renders inside the white main content area (not the red band), so this
