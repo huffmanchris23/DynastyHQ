@@ -27,7 +27,7 @@ function TopTakesList({ d }: { d: DashboardData }) {
           <div
             style={{
               flexShrink: 0, width: 44, height: 44, borderRadius: 8,
-              background: 'var(--primary)', color: '#FFFFFF',
+              background: 'var(--primary)', color: 'var(--on-primary)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontFamily: 'var(--font-fun)', fontSize: 18,
             }}

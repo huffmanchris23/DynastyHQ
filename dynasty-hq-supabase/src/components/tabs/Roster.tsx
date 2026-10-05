@@ -24,7 +24,7 @@ function LinkBlock({ label, link }: { label: string; link: string | null }) {
       ) : link && broken ? (
         // The URL exists but the image failed to load (private/broken link) — fall back to a link-out instead of a dead image box.
         <div className="card">
-          <a href={link} target="_blank" rel="noreferrer" style={{ display: 'block', textAlign: 'center', padding: '24px 0', color: 'var(--accent)', fontWeight: 600 }}>
+          <a href={link} target="_blank" rel="noreferrer" style={{ display: 'block', textAlign: 'center', padding: '24px 0', color: 'var(--primary)', fontWeight: 600 }}>
             📎 Open Screenshot
           </a>
         </div>

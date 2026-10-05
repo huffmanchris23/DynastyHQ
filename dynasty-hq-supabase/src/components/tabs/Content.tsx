@@ -45,7 +45,7 @@ export default function Content({ d, subtab }: { d: DashboardData; subtab: strin
                   <>
                     <br />
                     <br />
-                    <a href={c.link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--accent)' }}>
+                    <a href={c.link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--primary)', textDecoration: 'underline' }}>
                       Open full content →
                     </a>
                   </>

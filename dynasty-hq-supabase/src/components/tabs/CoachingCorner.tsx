@@ -50,14 +50,14 @@ export function MyCoach({ d }: { d: DashboardData }) {
                 height: 108,
                 borderRadius: 8,
                 flexShrink: 0,
-                background: 'color-mix(in srgb, var(--primary) 30%, transparent)',
+                background: 'var(--primary)',
                 border: '1px solid color-mix(in srgb, var(--primary) 60%, transparent)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: 24,
                 fontWeight: 700,
-                color: 'var(--accent)',
+                color: 'var(--on-primary)',
                 overflow: 'hidden',
               }}
             >

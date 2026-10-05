@@ -54,7 +54,7 @@ const btn = (primary: boolean, disabled?: boolean): React.CSSProperties => ({
   width: '100%', padding: '14px', borderRadius: 10, fontWeight: 700, fontSize: 15,
   border: primary ? 'none' : '1px solid rgba(0,0,0,0.15)',
   background: primary ? (disabled ? 'rgba(0,0,0,0.15)' : 'var(--primary)') : 'transparent',
-  color: primary ? '#fff' : 'var(--primary)',
+  color: primary ? 'var(--on-primary)' : 'var(--primary)',
 });
 
 export default function Upload() {
@@ -170,7 +170,7 @@ export default function Upload() {
                     style={{ padding: '12px 0', borderRadius: 8, fontWeight: 700, fontSize: 15,
                       border: pickedWeek === n ? '2px solid var(--primary)' : '1px solid rgba(0,0,0,0.18)',
                       background: pickedWeek === n ? 'var(--primary)' : 'transparent',
-                      color: pickedWeek === n ? '#fff' : 'inherit' }}>
+                      color: pickedWeek === n ? 'var(--on-primary)' : 'inherit' }}>
                     {n}
                   </button>
                 ))}
@@ -197,7 +197,7 @@ export default function Upload() {
                 <div style={{ fontSize: 18, width: 24, textAlign: 'center' }}>{s === 'done' ? '✅' : s === 'uploading' ? '⏳' : s === 'error' ? '⚠️' : ''}</div>
                 <input ref={(el) => { inputRefs.current[id] = el; }} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handlePick(id, e.target.files?.[0] || null)} />
                 <button type="button" onClick={() => inputRefs.current[id]?.click()} disabled={s === 'uploading'}
-                  style={{ fontSize: 13, padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.15)', background: 'var(--accent)', color: '#fff', fontWeight: 600 }}>
+                  style={{ fontSize: 13, padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.15)', background: 'var(--primary)', color: 'var(--on-primary)', fontWeight: 600 }}>
                   {s === 'done' ? 'Replace' : 'Add Photo'}
                 </button>
               </div>
