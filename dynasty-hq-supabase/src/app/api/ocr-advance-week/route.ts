@@ -12,6 +12,7 @@ import { getSupabase } from '@/lib/supabaseClient';
 import { getDynastyCtx } from '@/lib/dynastyContext';
 import { openWeekOf } from '@/lib/ocrShared';
 import { MIN_WEEK, MAX_WEEK } from '@/lib/weeks';
+import { syncUserGames } from '@/lib/community';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -103,6 +104,8 @@ export async function POST(req: NextRequest) {
     const ends = d?.week_length_hours ? new Date(Date.now() + d.week_length_hours * 3600_000).toISOString() : null;
     const { error } = await sb.from('dynasties').update({ live_week: open, staged_week: open, countdown_ends_at: ends }).eq('id', c.dynastyId);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    // Coach-vs-coach games get their message-board thread as soon as the week goes live.
+    try { await syncUserGames({ ...c, liveWeek: open, stagedWeek: open }, open); } catch { /* the Scheduling Assistant retries on first view */ }
     return NextResponse.json({ liveWeek: open, countdownEndsAt: ends });
   }
 
