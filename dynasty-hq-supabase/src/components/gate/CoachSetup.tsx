@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { pickOnPrimary } from '@/lib/colors';
 
 interface Group { label: string; items: string[] }
 interface Position { id: string; label: string }
@@ -32,6 +33,7 @@ export default function CoachSetup({ defaultName, color, onDone, onCancel }: { d
   const [name, setName] = useState(defaultName || '');
   const [position, setPosition] = useState('');
   const [teamColor, setTeamColor] = useState<string | undefined>(color);
+  const [teamSecondary, setTeamSecondary] = useState<string | undefined>(undefined);
   const [image, setImage] = useState<string | null>(null);
   const [almaMater, setAlmaMater] = useState('');
   const [pipeline, setPipeline] = useState('');
@@ -49,7 +51,7 @@ export default function CoachSetup({ defaultName, color, onDone, onCancel }: { d
   const prompt = buildPrompt(teamColor);
 
   useEffect(() => {
-    if (!color) fetch('/api/me').then((r) => r.json()).then((b) => { const pc = b?.active?.teamInfo?.primary_color; if (pc) setTeamColor(pc); }).catch(() => {});
+    fetch('/api/me').then((r) => r.json()).then((b) => { const t = b?.active?.teamInfo; if (t?.primary_color && !color) setTeamColor(t.primary_color); if (t?.secondary_color) setTeamSecondary(t.secondary_color); }).catch(() => {});
     fetch('/api/teams/meta').then((r) => r.json()).then((b) => setSchools(b.schools || [])).catch(() => {});
     fetch('/api/coach').then((r) => r.json()).then((b) => {
       if (b.options) setOpts(b.options);
@@ -111,7 +113,7 @@ export default function CoachSetup({ defaultName, color, onDone, onCancel }: { d
         <h2>Create your coach</h2>
 
         <div className="gate-portrait-row">
-          <div className="gate-portrait" style={{ background: teamColor || 'var(--dhq-navy)' }}>
+          <div className="gate-portrait" style={{ background: teamColor || 'var(--dhq-navy)', color: teamColor ? pickOnPrimary(teamColor, teamSecondary) : undefined }}>
             {image ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={image} alt="Your coach" /> : <span>{initialsOf(name)}</span>}
           </div>
           <div className="gate-portrait-actions">
