@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireMemberCtx, peopleOf } from '@/lib/community';
 import { getSupabase } from '@/lib/supabaseClient';
+import { memberIds, notify } from '@/lib/notify';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -47,5 +48,9 @@ export async function POST(req: NextRequest) {
   const { data: t, error } = await sb.from('threads').insert({ dynasty_id: ctx.dynastyId, kind, title, created_by: ctx.userId, pinned: kind === 'announcement' }).select('id').single();
   if (error || !t) return NextResponse.json({ error: error?.message || 'Could not create the thread.' }, { status: 500 });
   await sb.from('posts').insert({ dynasty_id: ctx.dynastyId, thread_id: t.id, author_id: ctx.userId, body });
+  if (kind === 'announcement') {
+    const everyone = (await memberIds(ctx.dynastyId)).filter((u) => u !== ctx.userId);
+    await notify(everyone, { dynastyId: ctx.dynastyId, type: 'announcement', title: `Announcement: ${title}`, nav: { tab: 'community', subtab: 'board' } });
+  }
   return NextResponse.json({ id: t.id });
 }

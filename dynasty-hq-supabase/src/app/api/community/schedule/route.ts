@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireMemberCtx, peopleOf, syncUserGames } from '@/lib/community';
 import { getSupabase } from '@/lib/supabaseClient';
+import { notify } from '@/lib/notify';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -63,5 +64,7 @@ export async function POST(req: NextRequest) {
   const { error } = await sb.from('user_games').update({ status: b.action, winner, decided_by: ctx.userId, updated_at: new Date().toISOString() }).eq('id', g.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   await say(b.action === 'forfeit' ? `Commissioner ruling: forfeit. ${winner} gets the win.` : `Commissioner marked this game ${b.action}.`);
+  const { data: mem } = await sb.from('dynasty_members').select('user_id').eq('dynasty_id', ctx.dynastyId).in('team', [g.team_a, g.team_b]).eq('status', 'active');
+  await notify((mem || []).map((x: any) => x.user_id), { dynastyId: ctx.dynastyId, type: 'game_status', title: `${g.team_a} vs ${g.team_b}: ${b.action === 'forfeit' ? `${winner} wins by forfeit` : b.action}`, nav: { tab: 'community', subtab: 'schedule' } });
   return NextResponse.json({ ok: true });
 }

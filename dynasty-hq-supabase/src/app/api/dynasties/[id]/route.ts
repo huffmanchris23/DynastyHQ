@@ -20,7 +20,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (typeof b.allow_random === 'boolean') patch.allow_random = b.allow_random;
   if (b.reroll_limit != null) patch.reroll_limit = Math.max(0, Math.min(10, Number(b.reroll_limit) || 0));
   if (b.week_length_hours != null) patch.week_length_hours = Math.max(1, Math.min(24 * 14, Number(b.week_length_hours) || 72));
-  if (b.team_pool && typeof b.team_pool === 'object') patch.team_pool = b.team_pool;
+  if (b.team_pool && typeof b.team_pool === 'object') {
+    const p = b.team_pool;
+    const n = (v: any) => (v === null || v === undefined || v === '' || isNaN(Number(v)) ? null : Number(v));
+    patch.team_pool = {
+      conferences: Array.isArray(p.conferences) ? p.conferences.map(String) : [],
+      min_overall: n(p.min_overall),
+      max_overall: n(p.max_overall),
+      teams: Array.isArray(p.teams) ? p.teams.map(String) : [],
+    };
+  }
   if (!Object.keys(patch).length) return fail(400, 'Nothing to update.');
 
   const { error } = await getSupabase().from('dynasties').update(patch).eq('id', params.id);

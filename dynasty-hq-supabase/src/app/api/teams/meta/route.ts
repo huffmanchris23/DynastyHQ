@@ -1,15 +1,18 @@
 import { NextResponse } from 'next/server';
-import { getSupabase } from '@/lib/supabaseClient';
 import { getUser, unauthorized } from '@/lib/auth';
+import { allTeams } from '@/lib/teamPool';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// Conference list for the commish's claim-rules picker.
+// Reference data for pickers: conferences, school names, and every team's conference + starting rating.
 export async function GET() {
   if (!(await getUser())) return unauthorized();
-  const { data } = await getSupabase().from('assets').select('team_conference, team_name');
-  const conferences = Array.from(new Set((data || []).map((r: any) => r.team_conference).filter(Boolean))).sort();
-  const schools = Array.from(new Set((data || []).map((r: any) => r.team_name).filter(Boolean))).sort();
-  return NextResponse.json({ conferences, schools });
+  const teams = await allTeams();
+  const conferences = Array.from(new Set(teams.map((t) => t.team_conference).filter(Boolean) as string[])).sort();
+  return NextResponse.json({
+    conferences,
+    schools: teams.map((t) => t.team_name).sort(),
+    teams: teams.map((t) => ({ name: t.team_name, conference: t.team_conference, overall: t.team_overall })),
+  });
 }

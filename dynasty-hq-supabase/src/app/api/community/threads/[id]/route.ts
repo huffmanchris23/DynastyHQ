@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireMemberCtx, peopleOf } from '@/lib/community';
 import { getSupabase } from '@/lib/supabaseClient';
+import { notify } from '@/lib/notify';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -49,6 +50,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (!body) return NextResponse.json({ error: 'Write something first.' }, { status: 400 });
     const { error } = await sb.from('posts').insert({ dynasty_id: ctx.dynastyId, thread_id: t.id, author_id: ctx.userId, body });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (t.kind === 'user_game') {
+      const { data: g } = await sb.from('user_games').select('team_a, team_b').eq('thread_id', t.id).maybeSingle();
+      if (g) {
+        const { data: mem } = await sb.from('dynasty_members').select('user_id, team').eq('dynasty_id', ctx.dynastyId).in('team', [g.team_a, g.team_b]).eq('status', 'active');
+        const others = (mem || []).map((x: any) => x.user_id).filter((u: string) => u !== ctx.userId);
+        await notify(others, { dynastyId: ctx.dynastyId, type: 'game_reply', title: `${ctx.team || 'Your opponent'} replied about your game`, body: body.slice(0, 120), nav: { tab: 'community', subtab: 'schedule' } });
+      }
+    }
     return NextResponse.json({ ok: true });
   }
   if (b.action === 'delete_post') {
