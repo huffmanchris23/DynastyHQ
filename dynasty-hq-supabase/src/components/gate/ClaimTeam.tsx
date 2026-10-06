@@ -16,12 +16,13 @@ export default function ClaimTeam({ dynastyId, dynastyName, onDone }: { dynastyI
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   async function load() {
     const res = await fetch(`/api/dynasties/${dynastyId}/teams`);
     const b = await res.json();
     if (!res.ok) return setError(b.error || 'Could not load teams.');
-    setTeams(b.available); setRules(b.rules); setCommish(b.commish); setRerollsLeft(b.rules.rerollsLeft);
+    setTeams(b.available); setRules(b.rules); setCommish(b.commish); setRerollsLeft(b.rules.rerollsLeft); setLoaded(true);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [dynastyId]);
 
@@ -60,8 +61,12 @@ export default function ClaimTeam({ dynastyId, dynastyName, onDone }: { dynastyI
         <h2>Choose your team</h2>
         <p className="gate-hint">{dynastyName}</p>
         {rules && !rules.claimsOpen && !commish ? <div className="gate-error">Team claiming is closed. Ask your commissioner.</div> : null}
+        {loaded && !teams.length && rules && (rules.claimsOpen || commish) ? (
+          <div className="gate-error">No teams are available in this dynasty&apos;s pool right now. Ask your commissioner to widen the team selection rules (Community, then Rules).</div>
+        ) : null}
+        {loaded && rules && !rules.allowPick && !rules.allowRandom && !commish ? <div className="gate-error">This dynasty has turned off both picking and random draws. Ask your commissioner.</div> : null}
         {rules?.allowRandom && (rules.claimsOpen || commish) ? (
-          <button className="gate-btn" disabled={busy || !teams.length} onClick={() => claim({ action: 'random' })}>
+          <button className="gate-btn" disabled={busy || !loaded || !teams.length} onClick={() => claim({ action: 'random' })}>
             Draw a random team{rules.rerollLimit ? ` (${rules.rerollLimit} reroll${rules.rerollLimit === 1 ? '' : 's'})` : ''}
           </button>
         ) : null}

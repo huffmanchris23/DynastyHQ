@@ -1,26 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import ClaimRulesForm, { matchCount, type ClaimRules, type MetaTeam } from './ClaimRulesForm';
 
 // First screen for someone with no dynasty yet: start one, or join with a code.
 export default function Onboarding({ onDone, canCancel, onCancel }: { onDone: () => void; canCancel?: boolean; onCancel?: () => void }) {
   const [view, setView] = useState<'choose' | 'create' | 'join'>('choose');
   const [name, setName] = useState('');
   const [mode, setMode] = useState<'solo' | 'multi'>('solo');
-  const [allowPick, setAllowPick] = useState(true);
-  const [allowRandom, setAllowRandom] = useState(true);
-  const [rerolls, setRerolls] = useState(0);
-  const [minOvr, setMinOvr] = useState('');
-  const [maxOvr, setMaxOvr] = useState('');
+  const [rules, setRules] = useState<ClaimRules>({ allowPick: true, allowRandom: true, rerollLimit: 0, minOverall: null, maxOverall: null, conferences: [] });
+  const [metaTeams, setMetaTeams] = useState<MetaTeam[]>([]);
   const [allConfs, setAllConfs] = useState<string[]>([]);
-  const [confs, setConfs] = useState<string[]>([]);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (view === 'create' && mode === 'multi' && !allConfs.length) {
-      fetch('/api/teams/meta').then((r) => r.json()).then((b) => setAllConfs(b.conferences || [])).catch(() => {});
+      fetch('/api/teams/meta').then((r) => r.json()).then((b) => { setAllConfs(b.conferences || []); setMetaTeams(b.teams || []); }).catch(() => {});
     }
   }, [view, mode, allConfs.length]);
 
@@ -34,9 +31,11 @@ export default function Onboarding({ onDone, canCancel, onCancel }: { onDone: ()
   }
 
   async function create() {
+    if (mode === 'multi' && metaTeams.length && matchCount(rules, metaTeams) === 0) { setError('No teams match your team selection settings. Widen them first.'); return; }
+    if (mode === 'multi' && !rules.allowPick && !rules.allowRandom) { setError('Turn on picking or random draw so coaches can get a team.'); return; }
     const ok = await post('/api/dynasties', {
-      name, mode, allow_pick: allowPick, allow_random: allowRandom, reroll_limit: rerolls,
-      team_pool: { conferences: confs, min_overall: minOvr, max_overall: maxOvr, teams: [] },
+      name, mode, allow_pick: rules.allowPick, allow_random: rules.allowRandom, reroll_limit: rules.rerollLimit,
+      team_pool: { conferences: rules.conferences, min_overall: rules.minOverall, max_overall: rules.maxOverall, teams: [] },
     });
     if (ok) onDone();
   }
@@ -45,8 +44,6 @@ export default function Onboarding({ onDone, canCancel, onCancel }: { onDone: ()
     const ok = await post('/api/join', { code });
     if (ok) onDone();
   }
-
-  const toggleConf = (c: string) => setConfs((cur) => (cur.indexOf(c) > -1 ? cur.filter((x) => x !== c) : cur.concat(c)));
 
   return (
     <div className="gate-wrap">
@@ -74,31 +71,10 @@ export default function Onboarding({ onDone, canCancel, onCancel }: { onDone: ()
               <button className={mode === 'multi' ? 'on' : ''} onClick={() => setMode('multi')}>With friends</button>
             </div>
             {mode === 'multi' && (
-              <div className="gate-rules">
-                <p className="gate-hint">How members get a team. You can change this later.</p>
-                <label className="gate-check"><input type="checkbox" checked={allowPick} onChange={(e) => setAllowPick(e.target.checked)} /> Members can pick their team</label>
-                <label className="gate-check"><input type="checkbox" checked={allowRandom} onChange={(e) => setAllowRandom(e.target.checked)} /> Members can draw a random team</label>
-                {allowRandom && (
-                  <label className="gate-field">Rerolls allowed
-                    <input className="gate-input small" type="number" min={0} max={10} value={rerolls} onChange={(e) => setRerolls(Number(e.target.value) || 0)} />
-                  </label>
-                )}
-                <div className="gate-field">Team overall rating (optional)
-                  <div className="gate-pair">
-                    <input className="gate-input small" inputMode="numeric" placeholder="Min" value={minOvr} onChange={(e) => setMinOvr(e.target.value.replace(/\D/g, ''))} />
-                    <input className="gate-input small" inputMode="numeric" placeholder="Max" value={maxOvr} onChange={(e) => setMaxOvr(e.target.value.replace(/\D/g, ''))} />
-                  </div>
-                </div>
-                {allConfs.length > 0 && (
-                  <div className="gate-field">Limit to conferences (none selected = all)
-                    <div className="gate-chips">
-                      {allConfs.map((c) => (
-                        <button key={c} className={`gate-chip ${confs.indexOf(c) > -1 ? 'on' : ''}`} onClick={() => toggleConf(c)}>{c}</button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <>
+                <p className="gate-hint">How coaches get a team. You can change this later under Community, then Rules.</p>
+                <ClaimRulesForm value={rules} onChange={setRules} teams={metaTeams} conferences={allConfs} />
+              </>
             )}
             <button className="gate-btn" disabled={busy || name.trim().length < 2} onClick={create}>Create dynasty</button>
             <button className="gate-link" onClick={() => setView('choose')}>Back</button>
