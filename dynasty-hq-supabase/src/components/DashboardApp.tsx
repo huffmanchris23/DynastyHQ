@@ -25,6 +25,8 @@ import { MyCoach, HotSeats } from '@/components/tabs/CoachingCorner';
 import FourthAndForever from '@/components/tabs/FourthAndForever';
 import Upload from '@/components/tabs/Commissioner';
 import Community from '@/components/tabs/Community';
+import Help from '@/components/tabs/Help';
+import NotificationBell from '@/components/NotificationBell';
 
 // Season/History switcher — built but hidden for now (Cincinnati transition
 // just happened; no history to show yet). Flip back to true to restore the
@@ -34,10 +36,11 @@ const SHOW_SEASON_SWITCHER = false;
 const SHOW_WILSON = false;
 /* Direct port of renderTabBody(). */
 
-function TabBody({ data, tab, subtab }: {
+function TabBody({ data, tab, subtab, page }: {
   data: DashboardData;
   tab: string;
   subtab: string | null;
+  page: string;
 }) {
   const g = gateInfo(data);
 
@@ -77,6 +80,8 @@ function TabBody({ data, tab, subtab }: {
       return subtab === 'upload' ? <Upload /> : <ComingSoon />;
     case 'community':
       return <Community d={data} subtab={subtab} />;
+    case 'help':
+      return <Help subtab={subtab} page={page} />;
     case 'takes':
       return <FourthAndForever d={data} />;
     default:
@@ -135,6 +140,19 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
     document.documentElement.style.setProperty('--on-primary', pickOnPrimary(colors.primary, colors.secondary));
   }, [colors]);
 
+  // Notification taps (and anything else) can ask the app to jump to a tab.
+  useEffect(() => {
+    const go = (e: Event) => {
+      const nav = (e as CustomEvent).detail || {};
+      if (!nav.tab) return;
+      const def = TABS.find((t) => t.id === nav.tab);
+      setTab(nav.tab);
+      setSubtab(nav.subtab || (def && def.subtabs ? def.subtabs[0].id : null));
+    };
+    window.addEventListener('dhq-nav', go);
+    return () => window.removeEventListener('dhq-nav', go);
+  }, []);
+
   function selectTab(id: string) {
     setTab(id);
     const def = TABS.find((t) => t.id === id);
@@ -152,6 +170,7 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
   // up to match so it doesn't look undersized next to a taller name block.
   const headerLogoSize = (team.TEAM_NAME || '').length > 13 ? 56 : 44;
   const currentTabDef = TABS.find((t) => t.id === tab) as TabDef | undefined;
+  const pageLabel = `${currentTabDef ? currentTabDef.label : tab}${subtab && currentTabDef?.subtabs ? ' > ' + (currentTabDef.subtabs.find((s) => s.id === subtab)?.label || subtab) : ''}`;
   const g = gateInfo(data);
   // The commissioner's tab is commish-only; Community only exists in multi-user dynasties.
   const visibleTabs = TABS.filter((t) => !isComingSoonTab(t.id) && (t.id !== 'commissioner' || data.viewer.isCommish) && (t.id !== 'community' || data.viewer.mode === 'multi'));
@@ -167,7 +186,10 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
                 <img src="/icon-192.png" alt="Dynasty HQ" style={{ width: 18, height: 18, borderRadius: 4 }} />
                 <span>Dynasty HQ — {data.settings.currentDataSheet || ''}</span>
               </div>
-              <DynastySwitcher />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <NotificationBell />
+                <DynastySwitcher />
+              </div>
             </div>
             <div className="header-row">
               <div className="header-team">
@@ -227,7 +249,7 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
                   })()
                 : null}
               <div className="stack">
-                <TabBody data={data} tab={tab} subtab={subtab} />
+                <TabBody data={data} tab={tab} subtab={subtab} page={pageLabel} />
               </div>
             </>
           )}
