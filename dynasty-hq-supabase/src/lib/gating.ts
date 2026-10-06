@@ -49,6 +49,15 @@ export const TABS: TabDef[] = [
       { id: 'uploads', label: 'Weekly Uploads' },
     ],
   },
+  {
+    id: 'help', label: 'Help', subtabs: [
+      { id: 'tips', label: 'Tips & Tricks' },
+      { id: 'support', label: 'Support' },
+      { id: 'faq', label: 'FAQs' },
+      { id: 'bug', label: 'Report a Bug' },
+      { id: 'feature', label: 'Request a Feature' },
+    ],
+  },
   { id: 'takes', label: '4th & Forever' },
 ];
 

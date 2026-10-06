@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { getSupabase } from './supabaseClient';
 import { getUser } from './auth';
 import { getDynastyCtx, type DynastyCtx } from './dynastyContext';
+import { notify } from './notify';
 
 export async function requireMemberCtx(): Promise<{ ctx: DynastyCtx } | { res: NextResponse }> {
   const user = await getUser();
@@ -100,6 +101,9 @@ export async function syncUserGames(ctx: DynastyCtx, week: number) {
     await sb.from('user_games').insert({
       dynasty_id: ctx.dynastyId, season: ctx.season, week, team_a: a, team_b: b, thread_id: thread?.id ?? null,
     });
+    // Created exactly once per game, so each coach is told exactly once.
+    await notify([pa.userId], { dynastyId: ctx.dynastyId, type: 'user_game', title: `You play ${b} this week`, body: `Week ${week}: find a time with ${pb.name}, or agree to sim.`, nav: { tab: 'community', subtab: 'schedule' } });
+    await notify([pb.userId], { dynastyId: ctx.dynastyId, type: 'user_game', title: `You play ${a} this week`, body: `Week ${week}: find a time with ${pa.name}, or agree to sim.`, nav: { tab: 'community', subtab: 'schedule' } });
   }
 
   const { data: games } = await sb.from('user_games').select('*').eq('dynasty_id', ctx.dynastyId).eq('season', ctx.season).eq('week', week).order('created_at');

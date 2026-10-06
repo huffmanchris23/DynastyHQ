@@ -5,6 +5,9 @@
  *   conferences: string[]   - empty = any conference
  *   min_overall/max_overall - team overall rating bounds
  *   teams: string[]         - if non-empty, ONLY these teams (hand-picked list)
+ *
+ * Ratings come from ocr_helper.overall_rating (a text column, populated for all
+ * 138 teams). assets.team_overall is empty and must not be used.
  */
 import { getSupabase } from './supabaseClient';
 
@@ -21,24 +24,48 @@ export interface PoolTeam {
   logo_url: string | null;
 }
 
+/** All 138 teams with conference, logo, and starting overall rating. */
+export async function allTeams(): Promise<PoolTeam[]> {
+  const sb = getSupabase();
+  const [{ data: assets }, { data: helper }] = await Promise.all([
+    sb.from('assets').select('team_name, team_conference, logo_url').order('team_name'),
+    sb.from('ocr_helper').select('team_name, overall_rating'),
+  ]);
+  const ovr = new Map<string, number>();
+  (helper || []).forEach((h: any) => {
+    const n = parseInt(String(h.overall_rating ?? ''), 10);
+    if (!isNaN(n)) ovr.set(h.team_name, n);
+  });
+  return (assets || []).map((a: any) => ({
+    team_name: a.team_name,
+    team_conference: a.team_conference,
+    logo_url: a.logo_url,
+    team_overall: ovr.has(a.team_name) ? (ovr.get(a.team_name) as number) : null,
+  }));
+}
+
+export function inPool(t: PoolTeam, pool: TeamPool): boolean {
+  if (pool.teams && pool.teams.length) return pool.teams.indexOf(t.team_name) > -1;
+  if (pool.conferences && pool.conferences.length && pool.conferences.indexOf(t.team_conference || '') === -1) return false;
+  // A team with no known rating is never silently excluded by a rating filter.
+  if (t.team_overall !== null) {
+    if (pool.min_overall != null && t.team_overall < pool.min_overall) return false;
+    if (pool.max_overall != null && t.team_overall > pool.max_overall) return false;
+  }
+  return true;
+}
+
 export async function teamsForDynasty(dynasty: any, ignorePool: boolean) {
   const sb = getSupabase();
-  const [{ data: assets }, { data: held }] = await Promise.all([
-    sb.from('assets').select('team_name, team_conference, team_overall, logo_url').order('team_name'),
+  const [all, { data: held }] = await Promise.all([
+    allTeams(),
     sb.from('dynasty_members').select('team, user_id').eq('dynasty_id', dynasty.id).eq('status', 'active').not('team', 'is', null),
   ]);
   const taken = new Set((held || []).map((h: any) => h.team));
   const pool: TeamPool = ignorePool ? {} : (dynasty.team_pool || {});
-  const all = (assets || []) as PoolTeam[];
-  const inPool = all.filter((t) => {
-    if (pool.teams && pool.teams.length) return pool.teams.indexOf(t.team_name) > -1;
-    if (pool.conferences && pool.conferences.length && pool.conferences.indexOf(t.team_conference || '') === -1) return false;
-    if (pool.min_overall != null && (t.team_overall ?? 0) < pool.min_overall) return false;
-    if (pool.max_overall != null && (t.team_overall ?? 0) > pool.max_overall) return false;
-    return true;
-  });
+  const eligible = all.filter((t) => inPool(t, pool));
   return {
-    available: inPool.filter((t) => !taken.has(t.team_name)),
+    available: eligible.filter((t) => !taken.has(t.team_name)),
     takenNames: Array.from(taken) as string[],
     allTeamNames: all.map((t) => t.team_name),
   };
