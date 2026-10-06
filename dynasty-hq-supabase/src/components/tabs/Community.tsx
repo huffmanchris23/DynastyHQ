@@ -5,6 +5,7 @@ import type { DashboardData } from '@/lib/types';
 import Badge from '@/components/shared/Badge';
 import Upload from '@/components/tabs/Commissioner';
 import { weekLabel } from '@/lib/weeks';
+import ClaimRulesForm, { matchCount, type ClaimRules, type MetaTeam } from '@/components/gate/ClaimRulesForm';
 
 /* ---------------------------------- helpers ---------------------------------- */
 
@@ -34,6 +35,115 @@ async function api(url: string, method = 'GET', body?: any) {
 
 function Err({ msg }: { msg: string | null }) {
   return msg ? <div className="card" style={{ color: '#b00020', fontSize: 13 }}>{msg}</div> : null;
+}
+
+/* --------------------------------- team picker --------------------------------- */
+
+function TeamPicker({ dynastyId, title, confirmLabel, onPick, onCancel }: { dynastyId: string; title: string; confirmLabel: (team: string) => string; onPick: (team: string) => Promise<void>; onCancel: () => void }) {
+  const [teams, setTeams] = useState<any[] | null>(null);
+  const [q, setQ] = useState('');
+  const [sel, setSel] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => { api(`/api/dynasties/${dynastyId}/teams`).then((r) => setTeams(r.available)).catch((e) => setErr(e.message)); }, [dynastyId]);
+  const shown = (teams || []).filter((t) => !q.trim() || t.team_name.toLowerCase().includes(q.trim().toLowerCase()) || (t.team_conference || '').toLowerCase().includes(q.trim().toLowerCase()));
+  return (
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div>
+      <input className="gate-input" placeholder="Search teams or conferences" value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className="gate-teamlist">
+        {teams === null ? <div className="gate-hint" style={{ padding: 10 }}>{err || 'Loading…'}</div> : null}
+        {teams && !shown.length ? <div className="gate-hint" style={{ padding: 10 }}>No open teams match.</div> : null}
+        {shown.map((t) => (
+          <button key={t.team_name} type="button" className={`gate-team ${sel === t.team_name ? 'sel' : ''}`} onClick={() => setSel(t.team_name)}>
+            {t.logo_url ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={t.logo_url} alt="" width={28} height={28} /> : <span className="ph" />}
+            <span className="nm">{t.team_name}</span>
+            <span className="meta">{t.team_conference}{t.team_overall != null ? ` · ${t.team_overall}` : ''}</span>
+          </button>
+        ))}
+      </div>
+      {sel ? <button type="button" style={btn(true, busy)} disabled={busy} onClick={async () => { setBusy(true); setErr(null); try { await onPick(sel); } catch (e: any) { setErr(e.message); setBusy(false); } }}>{confirmLabel(sel)}</button> : null}
+      <button type="button" style={btn()} onClick={onCancel}>Cancel</button>
+      {err ? <div className="gate-error">{err}</div> : null}
+    </div>
+  );
+}
+
+function Moves({ d, members, onChanged }: { d: DashboardData; members: any[]; onChanged: () => void }) {
+  const [data, setData] = useState<any>(null);
+  const [requesting, setRequesting] = useState(false);
+  const [movingUser, setMovingUser] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const dynastyId = d.viewer.dynastyId;
+  const load = useCallback(() => api('/api/community/moves').then(setData).catch((e) => setErr(e.message)), []);
+  useEffect(() => { load(); }, [load]);
+
+  async function decide(id: string, action: string) {
+    setBusy(true); setErr(null);
+    try { await api(`/api/community/moves/${id}`, 'POST', { action }); await load(); onChanged(); }
+    catch (e: any) { setErr(e.message); } finally { setBusy(false); }
+  }
+  if (!data) return null;
+  const myPending = (data.mine || []).find((m: any) => m.status === 'pending');
+  const lastDecided = (data.mine || []).find((m: any) => m.status !== 'pending' && m.status !== 'cancelled');
+
+  return (
+    <>
+      {data.isCommish && data.pending.length ? (
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>Team change requests</div>
+          {!data.movesOpen ? <div style={{ ...small, color: '#8a6100' }}>A week is open, so moves can be approved once it goes live.</div> : null}
+          {data.pending.map((m: any) => (
+            <div key={m.id} style={{ borderTop: '1px solid rgba(0,0,0,0.08)', paddingTop: 8 }}>
+              <div style={{ fontSize: 14 }}><strong>{m.name}</strong>: {m.fromTeam} → <strong>{m.toTeam}</strong></div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                <button type="button" style={{ ...btn(true, busy || !data.movesOpen), padding: '6px 12px' }} disabled={busy || !data.movesOpen} onClick={() => decide(m.id, 'approve')}>Approve</button>
+                <button type="button" style={{ ...btn(), padding: '6px 12px' }} disabled={busy} onClick={() => decide(m.id, 'deny')}>Deny</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {d.viewer.team ? (
+        requesting ? (
+          <TeamPicker dynastyId={dynastyId} title="Which team do you want to move to?" confirmLabel={(t) => `Request ${t}`}
+            onCancel={() => setRequesting(false)}
+            onPick={async (t) => { await api('/api/community/moves', 'POST', { toTeam: t }); setRequesting(false); await load(); }} />
+        ) : myPending ? (
+          <div className="card">
+            <div style={{ fontSize: 14 }}>Your request to move to <strong>{myPending.toTeam}</strong> is waiting for the commissioner.</div>
+            <button type="button" style={{ ...btn(), marginTop: 8 }} disabled={busy} onClick={() => decide(myPending.id, 'cancel')}>Cancel request</button>
+          </div>
+        ) : (
+          <div className="card">
+            <button type="button" style={btn()} onClick={() => setRequesting(true)}>Request a team change</button>
+            {lastDecided ? <div style={{ ...small, marginTop: 6 }}>Last request ({lastDecided.toTeam}): {lastDecided.status}.</div> : <div style={{ ...small, marginTop: 6 }}>Took a new job in the game? Ask the commissioner to move you.</div>}
+          </div>
+        )
+      ) : null}
+
+      {data.isCommish ? (
+        movingUser ? (
+          <TeamPicker dynastyId={dynastyId} title={`Move ${movingUser.name} to…`} confirmLabel={(t) => `Move to ${t}`}
+            onCancel={() => setMovingUser(null)}
+            onPick={async (t) => { await api('/api/community/moves', 'POST', { userId: movingUser.userId, toTeam: t }); setMovingUser(null); await load(); onChanged(); }} />
+        ) : (
+          <div className="card">
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Move a coach</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {members.filter((m) => m.team).map((m) => (
+                <button key={m.userId} type="button" style={{ ...btn(), padding: '6px 10px', fontSize: 12 }} disabled={!data.movesOpen} onClick={() => setMovingUser(m)}>{m.name} ({m.team})</button>
+              ))}
+            </div>
+            <div style={{ ...small, marginTop: 6 }}>{data.movesOpen ? 'Moves outside the allowed team pool are fine when you do them directly.' : 'Moves are paused while a week is open.'}</div>
+          </div>
+        )
+      ) : null}
+      <Err msg={err} />
+    </>
+  );
 }
 
 /* ----------------------------------- users ----------------------------------- */
@@ -94,6 +204,8 @@ function Users({ d }: { d: DashboardData }) {
         </div>
       ))}
 
+      <Moves d={d} members={data.members} onChanged={load} />
+
       {data.isCommish ? (
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontSize: 13, fontWeight: 600 }}>Commissioner tools</div>
@@ -124,6 +236,8 @@ function Rules() {
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [editSel, setEditSel] = useState<ClaimRules | null>(null);
+  const [meta, setMeta] = useState<{ teams: MetaTeam[]; conferences: string[] }>({ teams: [], conferences: [] });
 
   const load = useCallback(() => api('/api/community/rules').then((r) => { setData(r); setText(r.body || ''); }).catch((e) => setErr(e.message)), []);
   useEffect(() => { load(); }, [load]);
@@ -132,6 +246,22 @@ function Rules() {
     setBusy(true); setErr(null);
     try { await api('/api/community/rules', 'PUT', { body: text }); setEditing(false); await load(); }
     catch (e: any) { setErr(e.message); } finally { setBusy(false); }
+  }
+  async function startEditSelection() {
+    const ts = data.teamSelection;
+    const pool = ts?.pool || {};
+    setEditSel({ allowPick: !!ts?.allowPick, allowRandom: !!ts?.allowRandom, rerollLimit: ts?.rerollLimit || 0, minOverall: pool.min_overall ?? null, maxOverall: pool.max_overall ?? null, conferences: pool.conferences || [] });
+    if (!meta.teams.length) { try { const m = await api('/api/teams/meta'); setMeta({ teams: m.teams || [], conferences: m.conferences || [] }); } catch (e: any) { setErr(e.message); } }
+  }
+  async function saveSelection() {
+    if (!editSel) return;
+    if (meta.teams.length && matchCount(editSel, meta.teams) === 0) { setErr('No teams match those settings. Widen them first.'); return; }
+    if (!editSel.allowPick && !editSel.allowRandom) { setErr('Turn on picking or random draw so coaches can get a team.'); return; }
+    setBusy(true); setErr(null);
+    try {
+      await api(`/api/dynasties/${data.dynastyId}`, 'PATCH', { allow_pick: editSel.allowPick, allow_random: editSel.allowRandom, reroll_limit: editSel.rerollLimit, team_pool: { conferences: editSel.conferences, min_overall: editSel.minOverall, max_overall: editSel.maxOverall, teams: [] } });
+      setEditSel(null); await load();
+    } catch (e: any) { setErr(e.message); } finally { setBusy(false); }
   }
   async function setWeek(h: number) {
     setErr(null);
@@ -160,8 +290,20 @@ function Rules() {
 
       {ts ? (
         <div className="card">
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Team selection</div>
-          <div style={{ fontSize: 13, lineHeight: 1.6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>Team selection</div>
+            {data.canEdit && !editSel ? <button type="button" style={{ ...btn(), padding: '6px 12px' }} onClick={startEditSelection}>Edit</button> : null}
+          </div>
+          {editSel ? (
+            <>
+              <ClaimRulesForm value={editSel} onChange={setEditSel} teams={meta.teams} conferences={meta.conferences} />
+              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                <button type="button" style={btn(true, busy)} disabled={busy} onClick={saveSelection}>Save</button>
+                <button type="button" style={btn()} onClick={() => { setEditSel(null); setErr(null); }}>Cancel</button>
+              </div>
+            </>
+          ) : null}
+          <div style={{ fontSize: 13, lineHeight: 1.6, display: editSel ? 'none' : 'block' }}>
             Claiming is {ts.claimsOpen ? 'open' : 'closed'}. {ts.allowPick ? 'Coaches can pick their team. ' : ''}{ts.allowRandom ? `Random draw is allowed${ts.rerollLimit ? ` (${ts.rerollLimit} reroll${ts.rerollLimit === 1 ? '' : 's'})` : ''}. ` : ''}
             {(pool.conferences || []).length ? `Limited to: ${pool.conferences.join(', ')}. ` : ''}
             {pool.min_overall != null || pool.max_overall != null ? `Team overall ${pool.min_overall ?? 'any'}–${pool.max_overall ?? 'any'}. ` : ''}
