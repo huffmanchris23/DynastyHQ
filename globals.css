@@ -1,0 +1,318 @@
+/**
+ * Verbatim port of Stylesheet.html. Only the outer <style> tags were
+ * stripped — every selector, rule, and value below is unchanged.
+ *
+ * Theme: light/white content area, red (--primary) header + tab strip kept
+ * as the one dark-background exception. Anywhere text/borders were tuned
+ * for a dark background (rgba(255,255,255,X)) has been flipped to its
+ * dark-on-light equivalent (rgba(0,0,0,X)) EXCEPT the tab strip itself,
+ * which intentionally stays on the red header band.
+ */
+
+:root {
+  --primary: #7A2426;
+  --accent: #C9962E;
+  --on-primary: #E4D2BA; /* text color on the primary surface; recomputed per team in DashboardApp */
+  --bg: #E4D2BA;
+  --text: rgba(0,0,0,0.87);
+  /* DHQ brand tokens, pulled from the crest — used for static brand chrome
+     (logo, PWA icon, tab masthead) which stays fixed regardless of which
+     team's colors --primary/--accent are currently themed to. */
+  --dhq-navy: #12233F;
+  --dhq-tan: #EDE0C8;
+  --dhq-red: #B3242A;
+  --font-display: 'Anton', -apple-system, sans-serif;
+  --font-label: 'Oswald', -apple-system, sans-serif;
+  --font-fun: 'Bangers', -apple-system, cursive;
+  /* Loaded via a <link> tag in layout.tsx's <head>, not next/font/google —
+     see the comment there for why. These are now the single source of
+     truth for these three variables; don't add a next/font loader back in
+     alongside this without removing this block, or it's the same bug
+     again. */
+  /* Cincinnati's brand font. Not on Google Fonts (commercial typeface), so
+     this only actually renders as Friz Quadrata for visitors who happen to
+     have it installed locally — everyone else falls back to Georgia/serif.
+     Swap in a real next/font Google Font here (e.g. Cinzel) for guaranteed
+     consistent rendering if that's preferred over the accurate name. */
+  --font-team: 'Friz Quadrata', Georgia, 'Times New Roman', serif;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+
+.loading-screen {
+  height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+}
+.spinner {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 3px solid rgba(0,0,0,0.12); border-top-color: var(--primary);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(0,0,0,0.5); }
+
+.wrap { max-width: 720px; margin: 0 auto; min-height: 100vh; }
+
+/* ---- Header band ---- */
+/* The header surface is the team's PRIMARY color; text on it is --on-primary
+   (see src/lib/colors.ts). */
+.header-band { background: var(--primary); position: relative; }
+.header-band::after {
+  content: ''; display: block; height: 3px;
+  background: linear-gradient(90deg, var(--dhq-navy) 0 33%, var(--dhq-tan) 33% 66%, var(--dhq-red) 66% 100%);
+}
+/* padding-top uses env(safe-area-inset-top) so the header always clears the
+   device status bar on installed/PWA views — previously a flat 20px, which
+   was only just enough for a single-line team name and let a two-line name
+   (e.g. "Louisiana-Monroe") push up underneath the status bar icons. */
+.header-inner { padding: max(20px, env(safe-area-inset-top)) 16px 12px; background: var(--primary); }
+.header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.header-tag { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: color-mix(in srgb, var(--on-primary) 80%, transparent); }
+.palette-btn {
+  background: none; border: none; color: color-mix(in srgb, var(--on-primary) 75%, transparent); cursor: pointer; padding: 4px; border-radius: 2px;
+}
+.palette-btn:hover { background: color-mix(in srgb, var(--on-primary) 14%, transparent); color: var(--on-primary); }
+
+.header-row { display: flex; align-items: flex-end; justify-content: space-between; padding-bottom: 8px; }
+.header-team { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; }
+.header-team-text { display: flex; flex-direction: column; min-width: 0; }
+.header-team h1 { font-family: var(--font-team); color: var(--on-primary); font-size: 28px; font-weight: 400; margin: 0; letter-spacing: -0.01em; line-height: 1.05; text-transform: uppercase; transform: skewX(-8deg); transform-origin: left bottom; display: inline-block; -webkit-text-stroke: 1px currentColor; text-shadow: 0.5px 0 currentColor, -0.5px 0 currentColor, 0 0.5px currentColor, 0 -0.5px currentColor; overflow-wrap: break-word; word-break: break-word; }
+.header-team .philosophy { font-family: var(--font-team); font-style: italic; font-size: 11px; color: color-mix(in srgb, var(--on-primary) 80%, transparent); margin-top: 3px; letter-spacing: 0.01em; }
+.header-record { text-align: right; flex-shrink: 0; white-space: nowrap; margin-left: 10px; }
+.header-record .rec { white-space: nowrap; }
+.header-record .rec { font-family: var(--font-team); font-weight: 400; font-size: 28px; line-height: 1; color: var(--on-primary); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; transform: skewX(-8deg); transform-origin: right bottom; display: inline-block; -webkit-text-stroke: 1px currentColor; text-shadow: 0.5px 0 currentColor, -0.5px 0 currentColor, 0 0.5px currentColor, 0 -0.5px currentColor; }
+.header-record .rk { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: color-mix(in srgb, var(--on-primary) 75%, transparent); margin-top: 2px; }
+
+.header-logo { display: flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 50%; background: #F7F1E6; }
+.header-logo .badge { background: transparent; border-color: transparent; color: var(--primary); }
+
+.badge {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; font-weight: 700;
+  background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.65); border: 1px solid rgba(0,0,0,0.14);
+}
+
+/* ---- Tab strip ---- */
+/* Sits on the red header band (--primary); tan text/underline to match the header above. */
+.tabstrip-outer { padding: 0 16px; overflow-x: auto; scrollbar-width: none; }
+.tabstrip-outer::-webkit-scrollbar { display: none; }
+.tabstrip { display: flex; gap: 2px; width: max-content; border-bottom: 1px solid color-mix(in srgb, var(--on-primary) 30%, transparent); }
+.tab-btn {
+  font-family: var(--font-label);
+  padding: 8px 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+  white-space: nowrap; border: none; border-bottom: 2px solid transparent; background: transparent; color: color-mix(in srgb, var(--on-primary) 70%, transparent);
+  cursor: pointer;
+}
+.tab-btn.active { color: var(--on-primary); background: color-mix(in srgb, var(--on-primary) 14%, transparent); border-bottom-color: var(--on-primary); }
+.tab-btn.is-coming-soon { color: color-mix(in srgb, var(--on-primary) 40%, transparent); }
+.tab-btn.is-coming-soon.active { color: color-mix(in srgb, var(--on-primary) 70%, transparent); background: color-mix(in srgb, var(--on-primary) 14%, transparent); border-bottom-color: color-mix(in srgb, var(--on-primary) 40%, transparent); }
+
+/* ---- Subtab bar ---- */
+/* Renders inside the white main content area (not the red band), so this
+   gets the dark-on-light treatment along with everything else below. */
+.subtab-bar { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.subtab-btn {
+  font-family: var(--font-label);
+  padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+  border: 1px solid rgba(0,0,0,0.15); background: transparent; color: rgba(0,0,0,0.5); cursor: pointer;
+}
+.subtab-btn.active { color: var(--primary); border-color: var(--primary); background: color-mix(in srgb, var(--primary) 12%, transparent); }
+.subtab-btn.is-coming-soon { color: rgba(0,0,0,0.28); }
+.subtab-btn.is-coming-soon.active { color: rgba(0,0,0,0.5); border-color: rgba(0,0,0,0.28); background: rgba(0,0,0,0.05); }
+
+main { padding: 12px 16px 32px; }
+.stack { display: flex; flex-direction: column; gap: 16px; }
+.stack-sm > * + * { margin-top: 12px; }
+
+/* ---- Cards / Tables ---- */
+.card {
+  border: 1px solid rgba(0,0,0,0.1); border-radius: 2px; padding: 12px; background: rgba(0,0,0,0.02);
+}
+.card.accent { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.card.primary { border-color: color-mix(in srgb, var(--primary) 40%, transparent); }
+.card.center { text-align: center; }
+.card.tight { padding: 10px; }
+
+.section-label { display: flex; align-items: center; gap: 6px; margin-top: 18px; margin-bottom: 6px; }
+.section-label:first-child { margin-top: 0; }
+.section-label .dot { width: 6px; height: 6px; border-radius: 2px; background: var(--primary); }
+.section-label span { font-family: var(--font-label); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(0,0,0,0.85); }
+
+.table { border: 1px solid rgba(0,0,0,0.1); border-radius: 2px; overflow: hidden; }
+.table.primary { border-color: color-mix(in srgb, var(--primary) 35%, transparent); }
+.thead {
+  padding: 6px 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: rgba(0,0,0,0.85);
+  background: rgba(0,0,0,0.03); border-bottom: 1px solid rgba(0,0,0,0.08); display: grid; align-items: center;
+}
+.thead.primary { border-bottom-color: color-mix(in srgb, var(--primary) 50%, transparent); }
+.thead > div { text-align: center; }
+.row { padding: 8px 12px; font-size: 14px; display: grid; align-items: center; border-top: 1px solid rgba(0,0,0,0.06); }
+.row.first { border-top: none; }
+.row.mine { background: color-mix(in srgb, var(--primary) 8%, transparent); box-shadow: inset 2px 0 0 var(--primary); }
+.row .right { text-align: right; }
+.row .center { text-align: center; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tabular { font-variant-numeric: tabular-nums; }
+
+.move-up { color: #1a9c5e; display: inline-flex; align-items: center; gap: 2px; justify-content: flex-end; width: 100%; }
+.move-down { color: #d3383d; display: inline-flex; align-items: center; gap: 2px; justify-content: flex-end; width: 100%; }
+.move-flat { color: rgba(0,0,0,0.3); text-align: right; }
+
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.stat-label { font-family: var(--font-label); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(0,0,0,0.45); margin-bottom: 4px; }
+.stat-value { font-family: var(--font-display); font-weight: 400; font-size: 22px; font-variant-numeric: tabular-nums; }
+.stat-name { font-size: 14px; font-weight: 600; }
+.stat-sub { font-size: 11px; color: rgba(0,0,0,0.5); margin-top: 2px; }
+
+/* News cards */
+.news-card { display: flex; gap: 10px; padding: 10px; }
+.news-thumb {
+  flex-shrink: 0; width: 60px; height: 60px; border-radius: 2px; display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--primary) 12%, transparent); border: 1px solid color-mix(in srgb, var(--primary) 45%, transparent);
+  font-size: 22px;
+}
+.news-headline { font-size: 14px; font-weight: 600; line-height: 1.3; }
+.news-snip { font-size: 11px; color: rgba(0,0,0,0.55); margin-top: 4px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.news-time { font-size: 10px; color: rgba(0,0,0,0.4); margin-top: 4px; }
+
+/* Next game card */
+.team-line { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+.team-line + .team-line { border-top: 1px solid rgba(0,0,0,0.08); }
+.odds-toggle {
+  margin-top: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 2px; background: rgba(0,0,0,0.02); overflow: hidden;
+}
+.odds-toggle button {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; background: none; border: none; color: inherit;
+  padding: 8px 10px; font-size: 11px; cursor: pointer;
+}
+.odds-body { padding: 0 10px 10px; border-top: 1px solid rgba(0,0,0,0.08); font-size: 11px; color: rgba(0,0,0,0.45); padding-top: 4px; }
+
+/* Win probability bar */
+.wp-bar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; background: rgba(0,0,0,0.07); }
+
+/* Bracket */
+.bracket-scroll { overflow-x: auto; margin: 0 -16px; padding: 0 16px; }
+.bracket-flex { display: flex; gap: 16px; min-width: 920px; }
+.bracket-col { width: 200px; }
+.bracket-round-title {
+  text-align: center; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 10px;
+  padding: 6px; border-radius: 2px; color: var(--primary); border: 1px solid color-mix(in srgb, var(--primary) 60%, transparent);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.bracket-col-body { display: flex; flex-direction: column; justify-content: space-around; height: 640px; }
+.matchbox { border: 1px solid rgba(0,0,0,0.14); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
+.matchbox-team { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; }
+.matchbox-team + .matchbox-team { border-top: 1px solid rgba(0,0,0,0.1); }
+.matchbox-team.mine { background: color-mix(in srgb, var(--primary) 10%, transparent); }
+.matchbox-team.faded { opacity: 0.4; }
+.bowl-tag { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; padding: 0 2px; }
+.bowl-tag .pill {
+  width: 16px; height: 16px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+  font-size: 8px; font-weight: 700; color: var(--primary); background: color-mix(in srgb, var(--primary) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 55%, transparent);
+}
+.bowl-tag .name { font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em; color: rgba(0,0,0,0.45); font-weight: 600; }
+
+/* Color picker modal */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 30; }
+.modal-box { width: 100%; max-width: 380px; border: 1px solid rgba(0,0,0,0.12); border-radius: 2px; padding: 16px; background: var(--bg); }
+.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.modal-head h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; margin: 0; }
+.modal-close { background: none; border: none; color: rgba(0,0,0,0.5); cursor: pointer; font-size: 16px; }
+.preset-btn {
+  width: 100%; display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 2px; border: 1px solid rgba(0,0,0,0.12);
+  background: transparent; color: var(--text); text-align: left; cursor: pointer; margin-bottom: 6px; font-size: 12px;
+}
+.preset-btn.active { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 12%, transparent); }
+.swatch-pair { display: flex; gap: 4px; }
+.swatch { width: 14px; height: 14px; border-radius: 999px; }
+.hex-inputs { display: flex; gap: 6px; }
+.hex-inputs input { flex: 1; background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.12); border-radius: 2px; padding: 6px 8px; font-size: 12px; color: var(--text); }
+.small-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em; color: rgba(0,0,0,0.45); margin-bottom: 6px; }
+
+/* Content tab */
+.content-item { cursor: pointer; }
+.content-item-head { display: flex; align-items: center; gap: 10px; }
+.content-body { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); font-size: 13px; color: rgba(0,0,0,0.7); white-space: pre-wrap; }
+
+.empty-state { text-align: center; padding: 32px 16px; color: rgba(0,0,0,0.45); font-size: 13px; }
+
+select.season-select { background: transparent; border: none; color: var(--primary); font-size: 13px; font-weight: 600; outline: none; text-align: right; }
+.season-bar { display: flex; align-items: center; justify-content: space-between; border: 1px solid color-mix(in srgb, var(--primary) 45%, transparent); border-radius: 2px; padding: 8px 12px; background: rgba(0,0,0,0.02); margin: 0 16px 24px; }
+.season-bar .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: rgba(0,0,0,0.45); }
+
+/* ============================== ACCOUNT / DYNASTY GATE ==============================
+ * Sign-in, onboarding, team claim, and the dynasty switcher. Reuses the app's
+ * existing tokens (--dhq-navy, --dhq-red, --font-display/label) so these screens
+ * read as part of the same product. */
+.gate-wrap { max-width: 440px; margin: 0 auto; min-height: 100vh; padding: max(28px, env(safe-area-inset-top)) 16px 32px; display: flex; flex-direction: column; gap: 18px; }
+.gate-masthead { display: flex; align-items: center; gap: 12px; color: var(--dhq-navy); }
+.gate-masthead img { border-radius: 10px; }
+.gate-masthead h1 { font-family: var(--font-display); font-weight: 400; font-size: 34px; margin: 0; letter-spacing: 0.01em; text-transform: uppercase; }
+.gate-card { background: #fff; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.gate-card.center { align-items: center; text-align: center; }
+.gate-card h2 { font-family: var(--font-label); font-size: 18px; font-weight: 600; margin: 0; color: var(--dhq-navy); }
+.gate-hint { font-size: 13px; color: rgba(0,0,0,0.55); margin: 0; line-height: 1.4; }
+.gate-error { font-size: 13px; color: var(--dhq-red); line-height: 1.4; }
+.gate-input { width: 100%; font: inherit; font-size: 16px; padding: 11px 12px; border: 1px solid rgba(0,0,0,0.25); border-radius: 4px; background: #fff; color: var(--text); }
+.gate-input:focus { outline: 2px solid var(--dhq-navy); outline-offset: 1px; }
+.gate-input.small { width: 100%; max-width: 110px; padding: 8px 10px; }
+.gate-input.code { letter-spacing: 0.25em; text-align: center; font-family: var(--font-label); }
+.gate-btn { width: 100%; font-family: var(--font-label); font-size: 15px; font-weight: 600; letter-spacing: 0.03em; padding: 12px 14px; border: 2px solid var(--dhq-navy); border-radius: 4px; background: var(--dhq-navy); color: var(--dhq-tan); cursor: pointer; }
+.gate-btn.secondary { background: transparent; color: var(--dhq-navy); }
+.gate-btn:disabled { opacity: 0.45; cursor: default; }
+.gate-btn:focus-visible, .gate-link:focus-visible, .gate-team:focus-visible, .gate-chip:focus-visible, .switcher-btn:focus-visible { outline: 2px solid var(--dhq-red); outline-offset: 2px; }
+.gate-link { background: none; border: none; color: var(--dhq-navy); font: inherit; font-size: 13px; text-decoration: underline; cursor: pointer; padding: 6px; align-self: center; }
+.gate-or { display: flex; align-items: center; gap: 10px; color: rgba(0,0,0,0.45); font-size: 12px; }
+.gate-or::before, .gate-or::after { content: ''; flex: 1; height: 1px; background: rgba(0,0,0,0.12); }
+.gate-seg { display: grid; grid-template-columns: 1fr 1fr; border: 2px solid var(--dhq-navy); border-radius: 4px; overflow: hidden; }
+.gate-seg button { font-family: var(--font-label); font-size: 14px; padding: 10px; border: none; background: transparent; color: var(--dhq-navy); cursor: pointer; }
+.gate-seg button.on { background: var(--dhq-navy); color: var(--dhq-tan); }
+.gate-rules { display: flex; flex-direction: column; gap: 10px; padding: 12px; background: color-mix(in srgb, var(--dhq-navy) 6%, transparent); border-radius: 4px; }
+.gate-check { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.gate-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: rgba(0,0,0,0.7); }
+.gate-pair { display: flex; gap: 8px; }
+.gate-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.gate-chip { font: inherit; font-size: 12px; padding: 5px 9px; border: 1px solid rgba(0,0,0,0.3); border-radius: 999px; background: #fff; cursor: pointer; }
+.gate-chip.on { background: var(--dhq-navy); color: var(--dhq-tan); border-color: var(--dhq-navy); }
+.gate-teamlist { max-height: 46vh; overflow-y: auto; border: 1px solid rgba(0,0,0,0.1); border-radius: 4px; }
+.gate-team { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 9px 10px; border: none; border-top: 1px solid rgba(0,0,0,0.06); background: #fff; font: inherit; cursor: pointer; }
+.gate-team:first-child { border-top: none; }
+.gate-team .nm { font-weight: 600; font-size: 14px; flex: 1; min-width: 0; }
+.gate-team .meta { font-size: 11px; color: rgba(0,0,0,0.5); }
+.gate-team .ph { width: 28px; height: 28px; border-radius: 4px; background: rgba(0,0,0,0.08); }
+.gate-team.sel { background: color-mix(in srgb, var(--dhq-navy) 12%, transparent); box-shadow: inset 3px 0 0 var(--dhq-navy); }
+.gate-drawn { font-family: var(--font-display); font-size: 32px; color: var(--dhq-navy); text-transform: uppercase; }
+.gate-overlay { position: fixed; inset: 0; z-index: 50; background: rgba(18,35,63,0.55); overflow-y: auto; }
+.gate-overlay > .gate-wrap { background: var(--bg); }
+.gate-sheet { background: var(--bg); max-width: 440px; margin: 0 auto; margin-top: max(60px, env(safe-area-inset-top)); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.gate-sheet h3 { font-family: var(--font-label); font-size: 15px; font-weight: 600; margin: 0; color: var(--dhq-navy); }
+.gate-invite { display: flex; flex-direction: column; gap: 8px; }
+.switcher-btn { font-family: var(--font-label); font-size: 12px; letter-spacing: 0.03em; color: var(--on-primary); background: color-mix(in srgb, var(--on-primary) 12%, transparent); border: 1px solid color-mix(in srgb, var(--on-primary) 35%, transparent); border-radius: 999px; padding: 4px 10px; cursor: pointer; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
+
+/* coach image + guide */
+.gate-portrait-row { display: flex; align-items: center; gap: 14px; }
+.gate-portrait { width: 88px; height: 88px; flex: 0 0 88px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; color: var(--dhq-tan); font-family: var(--font-display); font-size: 34px; letter-spacing: 0.02em; }
+.gate-portrait img { width: 100%; height: 100%; object-fit: cover; }
+.gate-portrait-actions { flex: 1; display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
+.gate-guide { font-size: 13px; line-height: 1.5; display: flex; flex-direction: column; gap: 8px; padding: 12px; background: color-mix(in srgb, var(--dhq-navy) 6%, transparent); border-radius: 4px; }
+.gate-guide ol { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.gate-prompt { font-size: 12px; line-height: 1.45; padding: 10px; background: #fff; border: 1px solid rgba(0,0,0,0.15); border-radius: 4px; user-select: all; }
+.gate-chip:disabled { opacity: 0.4; cursor: default; }
+
+.gate-seg3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.gate-seg3 button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; border: 2px solid var(--dhq-navy); border-radius: 4px; background: transparent; color: var(--dhq-navy); cursor: pointer; font: inherit; }
+.gate-seg3 button strong { font-family: var(--font-label); font-size: 18px; }
+.gate-seg3 button span { font-size: 10px; line-height: 1.2; text-align: center; }
+.gate-seg3 button.on { background: var(--dhq-navy); color: var(--dhq-tan); }
+.gate-seg3 button:focus-visible { outline: 2px solid var(--dhq-red); outline-offset: 2px; }
+
+/* notification bell (sits on the primary-colored header) */
+.bell-btn { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 28px; border: 1px solid color-mix(in srgb, var(--on-primary) 35%, transparent); border-radius: 999px; background: transparent; color: var(--on-primary); cursor: pointer; padding: 0; }
+.bell-btn:focus-visible { outline: 2px solid var(--on-primary); outline-offset: 2px; }
+.bell-badge { position: absolute; top: -5px; right: -5px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: #d3202f; color: #fff; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; }
