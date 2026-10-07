@@ -81,7 +81,7 @@ function TabBody({ data, tab, subtab, page }: {
     case 'community':
       return <Community d={data} subtab={subtab} />;
     case 'help':
-      return <Help subtab={subtab} page={page} />;
+      return <Help subtab={subtab} page={page} isOwner={!!data.viewer.isOwner} />;
     case 'takes':
       return <FourthAndForever d={data} />;
     default:
@@ -234,7 +234,7 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
               {currentTabDef && currentTabDef.subtabs
                 ? (() => {
                     const visibleSubtabs = currentTabDef.subtabs!.filter(
-                      (s) => comingSoonSubtabIds(currentTabDef.id).indexOf(s.id) === -1
+                      (s) => comingSoonSubtabIds(currentTabDef.id).indexOf(s.id) === -1 && (s.id !== 'inbox' || !!data.viewer.isOwner)
                     );
                     if (!visibleSubtabs.length) return null;
                     return (
