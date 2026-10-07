@@ -116,12 +116,100 @@ function ReportForm({ kind, page }: { kind: 'bug' | 'feature'; page: string }) {
   );
 }
 
-export default function Help({ subtab, page }: { subtab: string | null; page: string }) {
+const KIND_ICON: Record<string, string> = { bug: '🐞', feature: '💡' };
+const FILTERS: { id: string; label: string }[] = [
+  { id: 'open', label: 'Open' },
+  { id: 'planned', label: 'Planned' },
+  { id: 'done', label: 'Done' },
+  { id: 'closed', label: 'Closed' },
+  { id: 'all', label: 'All' },
+];
+
+function splitBody(body: string): { text: string; context: string } {
+  const i = body.indexOf('\n\n---\n');
+  return i === -1 ? { text: body, context: '' } : { text: body.slice(0, i), context: body.slice(i + 6) };
+}
+
+function Inbox() {
+  const [reports, setReports] = useState<any[] | null>(null);
+  const [filter, setFilter] = useState('open');
+  const [err, setErr] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  async function load() {
+    const res = await fetch('/api/admin/reports');
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok) { setErr(out.error || 'Could not load reports.'); setReports([]); return; }
+    setErr(null); setReports(out.reports || []);
+  }
+  useEffect(() => { load(); }, []);
+
+  async function setStatus(id: string, status: string) {
+    setBusyId(id);
+    const res = await fetch('/api/admin/reports', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status }) });
+    const out = await res.json().catch(() => ({}));
+    setBusyId(null);
+    if (!res.ok) return setErr(out.error || 'Could not update that.');
+    setErr(null);
+    setReports((cur) => (cur || []).map((r) => (r.id === id ? { ...r, status } : r)));
+  }
+
+  if (reports === null) return <div className="card" style={small}>Loading…</div>;
+  const counts: Record<string, number> = { all: reports.length };
+  reports.forEach((r) => { counts[r.status] = (counts[r.status] || 0) + 1; });
+  const shown = filter === 'all' ? reports : reports.filter((r) => r.status === filter);
+
+  return (
+    <div className="stack-sm">
+      <div className="card" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {FILTERS.map((f) => (
+          <button key={f.id} type="button" onClick={() => setFilter(f.id)}
+            style={{ ...btn(filter === f.id), padding: '6px 10px', fontSize: 13 }}>
+            {f.label} {counts[f.id] || 0}
+          </button>
+        ))}
+      </div>
+      {err ? <div className="gate-error">{err}</div> : null}
+      {shown.length === 0 ? <div className="card" style={small}>Nothing here.</div> : null}
+      {shown.map((r) => {
+        const { text, context } = splitBody(r.body || '');
+        const who = r.reporter ? (r.reporter.name || r.reporter.email || 'Unknown') : 'Unknown';
+        return (
+          <div className="card" key={r.id}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>{KIND_ICON[r.kind] || '•'} {r.title}</div>
+              <span style={{ fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap', color: r.status === 'done' ? '#1b7a3a' : 'rgba(0,0,0,0.6)' }}>{STATUS[r.status] || r.status}</span>
+            </div>
+            <div style={{ ...small, margin: '2px 0 8px' }}>
+              {who}{r.dynasty ? ` · ${r.dynasty}` : ''} · {new Date(r.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+            </div>
+            <div style={{ fontSize: 14, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{text}</div>
+            {context ? (
+              <details style={{ marginTop: 6 }}>
+                <summary style={{ ...small, cursor: 'pointer' }}>Details</summary>
+                <div style={{ ...small, whiteSpace: 'pre-wrap', marginTop: 4, wordBreak: 'break-word' }}>{context}</div>
+              </details>
+            ) : null}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+              {r.status !== 'done' ? <button type="button" style={{ ...btn(true, busyId === r.id), padding: '8px 12px' }} disabled={busyId === r.id} onClick={() => setStatus(r.id, 'done')}>Mark done</button> : null}
+              {r.status === 'open' ? <button type="button" style={{ ...btn(), padding: '8px 12px' }} disabled={busyId === r.id} onClick={() => setStatus(r.id, 'planned')}>Planned</button> : null}
+              {r.status !== 'closed' && r.status !== 'done' ? <button type="button" style={{ ...btn(), padding: '8px 12px' }} disabled={busyId === r.id} onClick={() => setStatus(r.id, 'closed')}>Close</button> : null}
+              {r.status !== 'open' ? <button type="button" style={{ ...btn(), padding: '8px 12px' }} disabled={busyId === r.id} onClick={() => setStatus(r.id, 'open')}>Reopen</button> : null}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function Help({ subtab, page, isOwner = false }: { subtab: string | null; page: string; isOwner?: boolean }) {
   switch (subtab) {
     case 'support': return <Support />;
     case 'faq': return <Faq />;
     case 'bug': return <ReportForm kind="bug" page={page} />;
     case 'feature': return <ReportForm kind="feature" page={page} />;
+    case 'inbox': return isOwner ? <Inbox /> : <Tips />;
     case 'tips':
     default: return <Tips />;
   }
