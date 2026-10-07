@@ -645,8 +645,10 @@ export async function getDashboardData(ctx: DynastyCtx): Promise<DashboardData> 
   const myApRank = rank.ap.find((r) => norm(r.team) === norm(myTeamName));
   const oppAsset = preview?.oppTeam ? findAsset(assetIdx, preview.oppTeam) : null;
 
+  const { data: ownerRow } = await sb.from('app_owners').select('user_id').eq('user_id', ctx.userId).maybeSingle();
+
   const result: DashboardData = {
-    viewer: { userId: ctx.userId, dynastyId: ctx.dynastyId, dynastyName: ctx.dynastyName, mode: ctx.mode, isCommish: ctx.isCommish, team: ctx.team },
+    viewer: { userId: ctx.userId, dynastyId: ctx.dynastyId, dynastyName: ctx.dynastyName, mode: ctx.mode, isCommish: ctx.isCommish, isOwner: !!ownerRow, team: ctx.team },
     settings: {
       currentDataSheet: displayWeekLabel(statsWeek, scheduleRes.data || []),
       currentTeam: myTeamName || undefined,

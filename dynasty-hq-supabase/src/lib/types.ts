@@ -329,6 +329,7 @@ export interface Viewer {
   dynastyName: string;
   mode: 'solo' | 'multi';
   isCommish: boolean;
+  isOwner?: boolean;
   team: string | null;
 }
 

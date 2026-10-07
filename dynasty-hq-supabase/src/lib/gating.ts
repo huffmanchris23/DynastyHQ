@@ -56,6 +56,7 @@ export const TABS: TabDef[] = [
       { id: 'faq', label: 'FAQs' },
       { id: 'bug', label: 'Report a Bug' },
       { id: 'feature', label: 'Request a Feature' },
+      { id: 'inbox', label: 'Reports Inbox' }, // owner only (hidden for everyone else in DashboardApp)
     ],
   },
   { id: 'takes', label: '4th & Forever' },
