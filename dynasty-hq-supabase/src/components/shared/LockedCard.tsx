@@ -17,7 +17,7 @@ export default function LockedCard({ untilWeek, label }: { untilWeek?: number; l
       >
         <span style={{ fontWeight: 700, color: 'var(--accent)' }}>🔒</span>
       </div>
-      <div style={{ fontSize: 15, fontWeight: 600, textTransform: 'uppercase' }}>{text}</div>
+      <div style={{ fontSize: 15, fontWeight: 600 }}>{text}</div>
     </div>
   );
 }
