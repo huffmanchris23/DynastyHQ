@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getUser, unauthorized } from '@/lib/auth';
 import { getSupabase } from '@/lib/supabaseClient';
 import { getDynastyCtx } from '@/lib/dynastyContext';
-import { buildFileName, sniffImageMediaType, openWeekOf, toOcrCtx, MEMBER_SLOTS, SCREEN_TYPES, type ScreenType } from '@/lib/ocrShared';
+import { buildFileName, sniffImageMediaType, openWeekOf, toOcrCtx, MEMBER_SLOTS, SCREEN_TYPES, isStatsSlot, statsOpenForWeek, slotsForWeek, type ScreenType } from '@/lib/ocrShared';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,7 +16,7 @@ export async function GET() {
   if (!c || !c.team) return NextResponse.json({ error: 'Join a dynasty and pick a team first.' }, { status: 409 });
 
   const week = openWeekOf(c);
-  const slots = c.isCommish ? [...SCREEN_TYPES] : MEMBER_SLOTS;
+  const slots = slotsForWeek(c.isCommish, week);
   if (week === null) return NextResponse.json({ open: false, week: null, slots, uploadedSlots: [], isCommish: c.isCommish });
 
   const o = toOcrCtx(c, week);
@@ -63,6 +63,7 @@ export async function POST(req: Request) {
 
   const week = openWeekOf(c);
   if (week === null) return NextResponse.json({ error: 'No week is open for uploads. Your commissioner opens the next week first.' }, { status: 409 });
+  if (isStatsSlot(slot) && !statsOpenForWeek(week)) return NextResponse.json({ error: 'Team stats start in Week 1 — nothing to upload for them yet.' }, { status: 409 });
 
   const raw = body.imageBase64.includes(',') ? body.imageBase64.split(',')[1] : body.imageBase64;
   const buffer = Buffer.from(raw, 'base64');

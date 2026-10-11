@@ -10,6 +10,8 @@ import {
   toOcrCtx,
   MEMBER_SLOTS,
   SCREEN_TYPES,
+  isStatsSlot,
+  statsOpenForWeek,
   type OcrCtx,
   type ScreenType,
 } from '@/lib/ocrShared';
@@ -132,11 +134,16 @@ export async function POST() {
   for (const file of weekFiles) {
     const slot = file.name.slice(prefix.length, -'.png'.length) as ScreenType;
     if (!ctx.isCommish && !MEMBER_SLOTS.includes(slot)) {
-      summary.push({ file: file.name, status: 'skipped', reason: 'members only upload their own five screens' });
+      summary.push({ file: file.name, status: 'skipped', reason: 'members only upload their own team screens' });
       continue;
     }
     if (!SCREEN_TYPES.includes(slot)) {
       summary.push({ file: file.name, status: 'skipped', reason: 'unrecognized slot in filename' });
+      continue;
+    }
+    // Week 0 is the opener — there are no team stats to read yet.
+    if (isStatsSlot(slot) && !statsOpenForWeek(ctx.week)) {
+      summary.push({ file: file.name, status: 'skipped', reason: 'team stats start in Week 1' });
       continue;
     }
     const guideType = guideScreenType(slot);
@@ -178,6 +185,15 @@ export async function POST() {
   // this same batch and both legitimately contribute rows, only prune
   // AFTER the whole batch finishes, keeping every team either screenshot
   // wrote this run and removing anything else in that category/week.
+  // Teams that belong to a dynasty member are never pruned here: the commish's
+  // national top-group screenshot can touch a member's row, but that row is the
+  // member's own data for the Dynasty Off/Def tabs and must survive the
+  // top group changing. Members refresh it themselves by re-uploading.
+  const protectedTeams = new Set<string>();
+  if (touchedStatsCategories.size) {
+    const { data: memberTeamRows } = await sb.from('dynasty_members').select('team').eq('dynasty_id', ctx.dynastyId).eq('status', 'active');
+    (memberTeamRows || []).forEach((m: any) => { if (m.team) protectedTeams.add(m.team); });
+  }
   for (const category of touchedStatsCategories) {
     const { data: existingRows, error: selErr } = await sb
       .from('team_stats')
@@ -191,7 +207,7 @@ export async function POST() {
       summary.push({ file: `team_stats cleanup (${category})`, status: 'failed', error: selErr.message });
       continue;
     }
-    const staleIds = (existingRows || []).filter((r: any) => !statsTeamsWritten[category].has(r.team)).map((r: any) => r.id);
+    const staleIds = (existingRows || []).filter((r: any) => !statsTeamsWritten[category].has(r.team) && !protectedTeams.has(r.team)).map((r: any) => r.id);
     if (staleIds.length) {
       const { error: delErr } = await sb.from('team_stats').delete().in('id', staleIds);
       if (delErr) summary.push({ file: `team_stats cleanup (${category})`, status: 'failed', error: delErr.message });
@@ -609,7 +625,10 @@ async function processOneImage({
   // Auto-crop to just the region this slot needs (see lib/ocrCrop.ts) to cut
   // image tokens. Falls back to the untouched original on any problem, and the
   // retry below also drops back to the full frame if a cropped attempt fails.
-  const crop = await cropForOcr(imageBuffer, originalMediaType, slot);
+  // A member's single offense/defense screen is their own team's row (scrolled
+  // to it), so it uses the same crop as the commish's "my team" part 2.
+  const memberStatsShot = !ctx.isCommish && isStatsSlot(slot);
+  const crop = await cropForOcr(imageBuffer, originalMediaType, memberStatsShot ? slot.replace(/_1$/, '_2') : slot);
   if (!crop.cropped && crop.reason) console.warn(`[ocr-crop] ${slot}: sending full frame — ${crop.reason}`);
   const fullImage = { data: imageBuffer.toString('base64'), mediaType: originalMediaType };
   const attemptImages = crop.cropped
@@ -638,9 +657,9 @@ async function processOneImage({
       });
   });
 
-  const isMyTeamOnlyPart = /_2$/.test(slot) && (guide.screen_type === 'stats_offense' || guide.screen_type === 'stats_defense');
+  const isMyTeamOnlyPart = (/_2$/.test(slot) || memberStatsShot) && (guide.screen_type === 'stats_offense' || guide.screen_type === 'stats_defense');
   const partNote = isMyTeamOnlyPart
-    ? '\n\nIMPORTANT — this is the SECOND screenshot for this category, only sent when Chris\u2019s own team wasn\u2019t visible in the first (top-group) screenshot. This screenshot shows ONLY his team, scrolled to find it. Extract exactly ONE row: his team\u2019s row, with whatever stats are shown for it. If a rank number is shown specifically for his team in this scrolled context, use it for national_rank; if the only number visible near his name is an AP Top 25 poll ranking badge (unrelated to this offense/defense category) and no separate leaderboard-position number is shown, leave national_rank null rather than using that poll rank. Do not include any other team, even if one is partially visible at the edge of the screen.'
+    ? '\n\nIMPORTANT — this screenshot is for ONE team only: the uploader\u2019s own team, scrolled to find it (a commissioner sends it as the SECOND screenshot when his team wasn\u2019t in the top-group one; a league member sends it as their only screenshot for this category). Extract exactly ONE row: the uploader\u2019s team row, with whatever stats are shown for it. If a rank number is shown specifically for that team in this scrolled context, use it for national_rank; if the only number visible near the team name is an AP Top 25 poll ranking badge (unrelated to this offense/defense category) and no separate leaderboard-position number is shown, leave national_rank null rather than using that poll rank. Do not include any other team, even if one is partially visible at the edge of the screen.'
     : '';
 
   const systemPrompt = `You extract structured data from a single College Football 27 screenshot for Dynasty HQ, a personal dynasty tracker.
@@ -737,7 +756,9 @@ async function writeRows({
   const issues: string[] = [];
   const teamsWritten: string[] = [];
   const isStatsScreen = guide.screen_type === 'stats_offense' || guide.screen_type === 'stats_defense';
-  const isStatsSecondPart = isStatsScreen && /_2$/.test(slot);
+  // The commish's "_2" and every member's single stats screen show just one
+  // team, so neither gets a position-based rank assigned.
+  const isStatsSecondPart = isStatsScreen && (/_2$/.test(slot) || !ctx.isCommish);
 
   for (const [rowIndex, row] of rows.entries()) {
     const mapped: Record<string, any> = {};
@@ -823,6 +844,10 @@ async function writeRows({
         continue;
       }
       mapped.matchup_number = Number(slotMatch[1]);
+      const unreadable = ['time', 'game_date', 'game_location'].filter((k) => mapped[k] === null || mapped[k] === undefined || mapped[k] === '');
+      if (unreadable.length) {
+        issues.push(`matchup ${slotMatch[1]}: couldn't read ${unreadable.join(', ')}. The game's detail panel may not have been showing — re-take that screenshot with the game selected.`);
+      }
     }
 
     // Always scope the match to THIS dynasty so one league can never overwrite another's rows.
