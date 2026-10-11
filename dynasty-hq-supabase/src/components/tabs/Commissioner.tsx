@@ -147,7 +147,7 @@ export default function Upload() {
   const cd = countdownText(state.countdownEndsAt);
 
   return (
-    <div className="stack-sm caps-ui">
+    <div className="stack-sm">
       <div className="card">
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
           Weekly Uploads{open !== null ? ` — ${weekLabel(open)}` : ''}

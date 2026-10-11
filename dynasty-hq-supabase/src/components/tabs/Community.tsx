@@ -549,5 +549,5 @@ function CommunityBody({ d, subtab }: { d: DashboardData; subtab: string | null 
 // Headers and sentences in the app's own copy are ALL CAPS; text people wrote
 // themselves (posts, thread titles, rules) is marked "keep-case".
 export default function Community({ d, subtab }: { d: DashboardData; subtab: string | null }) {
-  return <div className="caps-ui"><CommunityBody d={d} subtab={subtab} /></div>;
+  return <CommunityBody d={d} subtab={subtab} />;
 }

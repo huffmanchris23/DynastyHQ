@@ -216,5 +216,5 @@ function HelpBody({ subtab, page, isOwner }: { subtab: string | null; page: stri
 }
 
 export default function Help({ subtab, page, isOwner = false }: { subtab: string | null; page: string; isOwner?: boolean }) {
-  return <div className="caps-ui"><HelpBody subtab={subtab} page={page} isOwner={isOwner} /></div>;
+  return <HelpBody subtab={subtab} page={page} isOwner={isOwner} />;
 }

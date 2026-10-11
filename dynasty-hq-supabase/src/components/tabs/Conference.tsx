@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { DashboardData } from '@/lib/types';
 import { isMine as isMineFn, logoFor, rankedName } from '@/lib/format';
 import { Row, Thead } from '@/components/shared/Row';
@@ -26,8 +26,7 @@ export default function Conference({ d }: { d: DashboardData }) {
   }, [allRows]);
 
   const defaultConf = conferences.find((c) => String(c).toLowerCase() === String(myConference || '').toLowerCase()) || conferences[0] || '';
-  const [selected, setSelected] = useState(defaultConf);
-  const activeConf = conferences.includes(selected) ? selected : defaultConf;
+  const activeConf = defaultConf;
 
   if (!allRows.length) return <EmptyState>No conference data yet.</EmptyState>;
 
@@ -45,29 +44,7 @@ export default function Conference({ d }: { d: DashboardData }) {
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="stat-label">Conference</div>
-          {conferences.length > 1 ? (
-            <select
-              value={activeConf}
-              onChange={(e) => setSelected(e.target.value)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text)',
-                fontSize: 17,
-                fontWeight: 700,
-                padding: 0,
-                width: '100%',
-              }}
-            >
-              {conferences.map((c) => (
-                <option key={c} value={c} style={{ background: 'var(--bg)', color: 'var(--text)' }}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <div style={{ fontSize: 17, fontWeight: 700 }}>{activeConf}</div>
-          )}
+          <div style={{ fontSize: 17, fontWeight: 700 }}>{activeConf}</div>
         </div>
       </div>
       <div className="table primary">
