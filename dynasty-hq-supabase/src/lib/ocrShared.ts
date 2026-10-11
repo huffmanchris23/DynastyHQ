@@ -48,10 +48,43 @@ export function guideScreenType(slot: ScreenType): string {
 
 import type { DynastyCtx } from './dynastyContext';
 
-/** Screens every member uploads (their own team). The commish may upload every slot. */
+/**
+ * Screens every member uploads (their own team). The commish may upload every slot.
+ * Members get ONE offense and ONE defense stats screen (their own team's row);
+ * only the commish has the second "my team wasn't in the top group" slot.
+ */
 export const MEMBER_SLOTS: ScreenType[] = SCREEN_TYPES.filter((s) =>
-  /^(team_schedule_[12]|stats_offense_[12]|stats_defense_[12]|conference_standings(_\d+)?)$/.test(s)
+  /^(team_schedule_[12]|stats_offense_1|stats_defense_1|conference_standings(_\d+)?)$/.test(s)
 ) as ScreenType[];
+
+/** Any of the four team-stats upload slots. */
+export function isStatsSlot(slot: string): boolean {
+  return /^stats_(offense|defense)_[12]$/.test(slot);
+}
+
+/**
+ * Week 0 is the opener: nobody has stats yet, so nobody uploads (or is asked
+ * for) team stats. Schedule, standings and the preseason polls still go in.
+ */
+export function statsOpenForWeek(week: number | null): boolean {
+  return week !== null && week >= 1;
+}
+
+/** The slots a caller may upload for a given open week. */
+export function slotsForWeek(isCommish: boolean, week: number | null): ScreenType[] {
+  const base: ScreenType[] = isCommish ? [...SCREEN_TYPES] : MEMBER_SLOTS;
+  return statsOpenForWeek(week) ? base : base.filter((s) => !isStatsSlot(s));
+}
+
+/** What a member must have processed before they count as "ready" for a week. */
+export function requiredForWeek(week: number | null): { screen: string; min: number; label: string }[] {
+  const req = [{ screen: 'team_schedule', min: 2, label: 'Team schedule (2 screens)' }];
+  if (statsOpenForWeek(week)) {
+    req.push({ screen: 'stats_offense', min: 1, label: 'Offense stats' }, { screen: 'stats_defense', min: 1, label: 'Defense stats' });
+  }
+  req.push({ screen: 'conference_standings', min: 1, label: 'Conference standings' });
+  return req;
+}
 
 /** One private bucket for every dynasty's screenshots: {dynastyId}/{userId}/w{week}_{slot}.png */
 export const SCREENSHOT_BUCKET = 'screenshots';

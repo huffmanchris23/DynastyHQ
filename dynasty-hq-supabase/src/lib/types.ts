@@ -205,6 +205,24 @@ export interface TeamStats {
   defense: TeamStatsSplit;
 }
 
+/** One coach's team stats row in a multi-user dynasty (Dynasty Off / Dynasty Def). Stats are null until that member has uploaded. */
+export interface DynastyStatRow {
+  userId: string;
+  name: string;
+  team: string;
+  isMe: boolean;
+  ppg: any;
+  ypg: any;
+  passYpg: any;
+  rushYpg: any;
+}
+
+/** Every active member's offense/defense row. Empty in solo dynasties. */
+export interface DynastyStats {
+  offense: DynastyStatRow[];
+  defense: DynastyStatRow[];
+}
+
 export interface RecruitBoardRow {
   name: any;
   position: any;
@@ -355,6 +373,7 @@ export interface DashboardData {
   playoffBracketUrl: string | null;
   conf: ConfRow[];
   teamStats: TeamStats;
+  dynastyStats: DynastyStats;
   recruit: Recruit;
   roster: Roster;
   coach: Coach;

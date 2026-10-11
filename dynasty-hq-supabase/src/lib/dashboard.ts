@@ -25,6 +25,8 @@ import type {
   ConfRow,
   TeamStats,
   TeamStatsSplit,
+  DynastyStats,
+  DynastyStatRow,
   Recruit,
   Roster,
   Coach,
@@ -510,6 +512,38 @@ export async function getDashboardData(ctx: DynastyCtx): Promise<DashboardData> 
   }
   const teamStats: TeamStats = { offense: statsSplit('offense'), defense: statsSplit('defense') };
 
+  /* -------- Dynasty stats (multi-user only): one row per active member's team,
+     read from the same team_stats rows the national table uses. Members who
+     haven't uploaded yet still get a row (stats null) so the table shows
+     everyone. Already week-gated by statsWeek above. -------- */
+  const dynastyStats: DynastyStats = { offense: [], defense: [] };
+  if (ctx.mode === 'multi') {
+    const { data: memberRows, error: memberErr } = await sb
+      .from('dynasty_members')
+      .select('user_id, team, profiles(display_name)')
+      .eq('dynasty_id', dynastyId)
+      .eq('status', 'active');
+    if (memberErr) throw new Error(`dynasty_members: ${memberErr.message}`);
+    const people = (memberRows || []).filter((m: any) => m.team);
+    (['offense', 'defense'] as const).forEach((kind) => {
+      const rows = teamStatsRows.filter((r: any) => norm(r.offense_or_defense_stat) === kind);
+      dynastyStats[kind] = people.map((m: any): DynastyStatRow => {
+        const prof = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
+        const r = rows.find((x: any) => norm(x.team) === norm(m.team));
+        return {
+          userId: m.user_id,
+          name: prof?.display_name || m.team,
+          team: m.team,
+          isMe: m.user_id === ctx.userId,
+          ppg: r ? r.points_per_game : null,
+          ypg: r ? r.yards_per_game : null,
+          passYpg: r ? r.pass_yards_per_game : null,
+          rushYpg: r ? r.rush_yards_per_game : null,
+        };
+      });
+    });
+  }
+
   /* -------- Recruiting --------
    * my_recruit_board / national_recruit_ranks were dropped — no data
    * source, and the Recruiting subtab stays parked in Coming Soon anyway.
@@ -685,6 +719,7 @@ export async function getDashboardData(ctx: DynastyCtx): Promise<DashboardData> 
     playoffBracketUrl,
     conf,
     teamStats,
+    dynastyStats,
     recruit,
     roster,
     coach,

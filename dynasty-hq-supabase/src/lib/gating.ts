@@ -29,7 +29,16 @@ export const TABS: TabDef[] = [
   { id: 'rankings', label: 'Top 25' },
   { id: 'conference', label: 'Conference' },
   { id: 'playoffs', label: 'Playoffs' },
-  { id: 'stats', label: 'Stats', subtabs: [{ id: 'offense', label: 'Offense' }, { id: 'defense', label: 'Defense' }] },
+  {
+    id: 'stats', label: 'Stats', subtabs: [
+      { id: 'offense', label: 'Offense' },
+      { id: 'defense', label: 'Defense' },
+      // Multi-user dynasties only (DashboardApp hides these in solo and
+      // relabels the first two "National Off" / "National Def").
+      { id: 'dyn_offense', label: 'Dynasty Off' },
+      { id: 'dyn_defense', label: 'Dynasty Def' },
+    ],
+  },
   { id: 'roster', label: 'Roster', subtabs: [{ id: 'depth', label: 'Depth Charts' }] },
   { id: 'awards', label: 'Heisman' },
   { id: 'coachingcorner', label: 'Coaching Corner', subtabs: [{ id: 'mycoach', label: 'My Coach' }, { id: 'hotseat', label: 'Hot Seats' }] },
@@ -68,7 +77,8 @@ export const TABS: TabDef[] = [
  * ~30 screenshots/week down to 9-11 — not tied to week number or data
  * presence, just a flat on/off per tab or subtab until built out.
  */
-export const COMING_SOON_TABS: string[] = [];
+// Roster is hidden for every dynasty for now (may return in a later version).
+export const COMING_SOON_TABS: string[] = ['roster'];
 
 export const COMING_SOON_SUBTABS: Record<string, string[]> = {
   // Commissioner tab: only Upload (the OCR pipeline) is built. Settings,
