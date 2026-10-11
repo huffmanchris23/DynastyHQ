@@ -1,17 +1,10 @@
 import { NextResponse } from 'next/server';
 import { requireMemberCtx, peopleOf } from '@/lib/community';
-import { openWeekOf } from '@/lib/ocrShared';
+import { openWeekOf, requiredForWeek } from '@/lib/ocrShared';
 import { getSupabase } from '@/lib/supabaseClient';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const REQUIRED = [
-  { screen: 'team_schedule', min: 2, label: 'Team schedule (2 screens)' },
-  { screen: 'stats_offense', min: 1, label: 'Offense stats' },
-  { screen: 'stats_defense', min: 1, label: 'Defense stats' },
-  { screen: 'conference_standings', min: 1, label: 'Conference standings' },
-];
 
 // Everyone in the dynasty: team, coach, role, and (while a week is open) ready / not ready.
 export async function GET() {
@@ -25,6 +18,7 @@ export async function GET() {
 
   const ready = new Map<string, { ready: boolean; missing: string[] }>();
   if (open !== null) {
+    const REQUIRED = requiredForWeek(open);
     const { data: logs } = await sb.from('ocr_audit_log').select('uploaded_by, screen_type, file_path, status, id')
       .eq('dynasty_id', ctx.dynastyId).eq('season', ctx.season).eq('week', open).order('id', { ascending: true });
     const latest = new Map<string, any>();
