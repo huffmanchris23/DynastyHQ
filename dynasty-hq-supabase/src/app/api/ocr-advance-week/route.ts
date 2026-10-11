@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUser, unauthorized } from '@/lib/auth';
 import { getSupabase } from '@/lib/supabaseClient';
 import { getDynastyCtx } from '@/lib/dynastyContext';
-import { openWeekOf } from '@/lib/ocrShared';
+import { openWeekOf, requiredForWeek } from '@/lib/ocrShared';
 import { MIN_WEEK, MAX_WEEK, weekLabel } from '@/lib/weeks';
 import { syncUserGames } from '@/lib/community';
 import { memberIds, notify } from '@/lib/notify';
@@ -19,16 +19,12 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// What a member must have processed for the open week. stats _2 screens are optional.
-const REQUIRED: { screen: string; min: number; label: string }[] = [
-  { screen: 'team_schedule', min: 2, label: 'Team schedule (2 screens)' },
-  { screen: 'stats_offense', min: 1, label: 'Offense stats' },
-  { screen: 'stats_defense', min: 1, label: 'Defense stats' },
-  { screen: 'conference_standings', min: 1, label: 'Conference standings' },
-];
+// What a member must have processed for the open week comes from requiredForWeek()
+// (ocrShared.ts): no team stats in Week 0, one offense + one defense from Week 1 on.
 
 async function readiness(dynastyId: string, season: number, week: number) {
   const sb = getSupabase();
+  const REQUIRED = requiredForWeek(week);
   const [{ data: members }, { data: logs }] = await Promise.all([
     sb.from('dynasty_members').select('user_id, team, role, status, profiles(display_name)').eq('dynasty_id', dynastyId).eq('status', 'active'),
     sb.from('ocr_audit_log').select('uploaded_by, screen_type, file_path, status, id').eq('dynasty_id', dynastyId).eq('season', season).eq('week', week).order('id', { ascending: true }),
