@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import type { DashboardData } from '@/lib/types';
 import { numOr, isMine as isMineFn, logoFor } from '@/lib/format';
 import { Row, Thead } from '@/components/shared/Row';
@@ -81,6 +84,153 @@ export function TeamStats({ d, kind }: { d: DashboardData; kind: 'offense' | 'de
           )}
         </div>
       </div>
+    </>
+  );
+}
+
+/* ============================== DYNASTY STATS ============================== */
+/* Multi-user dynasties only: every coach's team side by side, plus a head-to-head picker. */
+
+type StatKey = 'ppg' | 'ypg' | 'passYpg' | 'rushYpg';
+const STATS: { key: StatKey; short: string; off: string; def: string }[] = [
+  { key: 'ppg', short: 'Pts/G', off: 'Points/Game', def: 'Points Allowed/Game' },
+  { key: 'ypg', short: 'Yds/G', off: 'Yards/Game', def: 'Yards Allowed/Game' },
+  { key: 'passYpg', short: 'Pass/G', off: 'Pass Yds/Game', def: 'Pass Yds Allowed/Game' },
+  { key: 'rushYpg', short: 'Rush/G', off: 'Rush Yds/Game', def: 'Rush Yds Allowed/Game' },
+];
+
+function statNum(v: any): number | null {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return isNaN(n) ? null : n;
+}
+
+const selectStyle: React.CSSProperties = {
+  flex: 1, minWidth: 0, padding: '10px 8px', borderRadius: 8, fontSize: 14,
+  border: '1px solid rgba(0,0,0,0.18)', background: 'transparent', color: 'inherit',
+};
+
+export function DynastyStats({ d, kind }: { d: DashboardData; kind: 'offense' | 'defense' }) {
+  const isDefense = kind === 'defense';
+  const rows = (d.dynastyStats && d.dynastyStats[kind]) || [];
+  const [sortKey, setSortKey] = useState<StatKey>('ppg');
+  const [aId, setAId] = useState<string | null>(null);
+  const [bId, setBId] = useState<string | null>(null);
+
+  const me = rows.find((r) => r.isMe) || null;
+  // Offense: bigger is better. Defense: these are yards/points ALLOWED, so smaller is better.
+  const sorted = [...rows].sort((a, b) => {
+    const av = statNum(a[sortKey]);
+    const bv = statNum(b[sortKey]);
+    if (av === null && bv === null) return String(a.team).localeCompare(String(b.team));
+    if (av === null) return 1;
+    if (bv === null) return -1;
+    return isDefense ? av - bv : bv - av;
+  });
+
+  const aRow = rows.find((r) => r.userId === aId) || me || rows[0] || null;
+  const bRow = rows.find((r) => r.userId === bId && r.userId !== aRow?.userId) || rows.find((r) => r.userId !== aRow?.userId) || null;
+
+  const cols = '24px 1fr 50px 50px 52px 52px';
+  const muted = { fontSize: 12, color: 'rgba(0,0,0,0.7)' } as const;
+
+  return (
+    <>
+      <div>
+        <SectionLabel>{`${(me && me.team) || (d.team && d.team.TEAM_NAME) || 'Your team'} — Season ${isDefense ? 'Defense' : 'Offense'}`}</SectionLabel>
+        <div className="grid-2">
+          {STATS.map((st) => (
+            <div className="card" key={st.key}>
+              <div className="stat-label">{isDefense ? st.def : st.off}</div>
+              <div className="stat-value">{numOr(me ? me[st.key] : null)}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <SectionLabel>{`Dynasty — Team ${isDefense ? 'Defense' : 'Offense'}`}</SectionLabel>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+          {STATS.map((st) => (
+            <button
+              key={st.key}
+              type="button"
+              onClick={() => setSortKey(st.key)}
+              style={{
+                padding: '6px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600,
+                border: sortKey === st.key ? '1px solid var(--primary)' : '1px solid rgba(0,0,0,0.18)',
+                background: sortKey === st.key ? 'var(--primary)' : 'transparent',
+                color: sortKey === st.key ? 'var(--on-primary)' : 'inherit',
+              }}
+            >
+              {st.short}
+            </button>
+          ))}
+        </div>
+        <div className="table primary">
+          <Thead cols={cols}>
+            <div style={{ textAlign: 'left' }}>Rk</div>
+            <div style={{ textAlign: 'left' }}>Coach</div>
+            {STATS.map((st) => (<div key={st.key}>{st.short}</div>))}
+          </Thead>
+          {sorted.length ? (
+            sorted.map((r, i) => (
+              <Row key={r.userId} cols={cols} first={i === 0} mine={r.isMe}>
+                <div className="tabular" style={{ fontSize: 12, color: 'rgba(0,0,0,0.45)' }}>{statNum(r[sortKey]) === null ? '–' : i + 1}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
+                  <Badge text={r.team} size={20} mine={r.isMe} logoUrl={logoFor(d.assets, r.team)} />
+                  <div style={{ overflow: 'hidden' }}>
+                    <div className="truncate" style={{ fontWeight: 500 }}>{r.name}</div>
+                    <div className="truncate" style={{ fontSize: 11, color: 'rgba(0,0,0,0.5)' }}>{r.team}</div>
+                  </div>
+                </div>
+                {STATS.map((st) => (<div key={st.key} className="right tabular" style={muted}>{numOr(r[st.key])}</div>))}
+              </Row>
+            ))
+          ) : (
+            <EmptyState>No coaches in this dynasty yet.</EmptyState>
+          )}
+        </div>
+      </div>
+
+      {rows.length >= 2 && aRow && bRow ? (
+        <div style={{ marginTop: 16 }}>
+          <SectionLabel>Compare Coaches</SectionLabel>
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <select aria-label="First coach" value={aRow.userId} onChange={(e) => setAId(e.target.value)} style={selectStyle}>
+                {rows.map((r) => (<option key={r.userId} value={r.userId}>{r.name} · {r.team}</option>))}
+              </select>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.45)' }}>vs</span>
+              <select aria-label="Second coach" value={bRow.userId} onChange={(e) => setBId(e.target.value)} style={selectStyle}>
+                {rows.filter((r) => r.userId !== aRow.userId).map((r) => (<option key={r.userId} value={r.userId}>{r.name} · {r.team}</option>))}
+              </select>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '8px 12px', alignItems: 'center' }}>
+              {STATS.map((st) => {
+                const av = statNum(aRow[st.key]);
+                const bv = statNum(bRow[st.key]);
+                const aBetter = av !== null && bv !== null && av !== bv && (isDefense ? av < bv : av > bv);
+                const bBetter = av !== null && bv !== null && av !== bv && (isDefense ? bv < av : bv > av);
+                const cell = (better: boolean): React.CSSProperties => ({
+                  textAlign: 'center', fontSize: 18, fontVariantNumeric: 'tabular-nums',
+                  fontWeight: better ? 800 : 500, color: better ? 'var(--primary)' : 'rgba(0,0,0,0.7)',
+                });
+                return (
+                  <div key={st.key} style={{ display: 'contents' }}>
+                    <div style={cell(aBetter)}>{numOr(aRow[st.key])}</div>
+                    <div style={{ fontSize: 11, textAlign: 'center', color: 'rgba(0,0,0,0.5)', minWidth: 84 }}>{isDefense ? st.def : st.off}</div>
+                    <div style={cell(bBetter)}>{numOr(bRow[st.key])}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ fontSize: 11, color: 'rgba(0,0,0,0.5)', textAlign: 'center' }}>
+              {isDefense ? 'Lower is better on defense.' : 'Higher is better on offense.'}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

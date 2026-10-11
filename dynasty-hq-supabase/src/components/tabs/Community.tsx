@@ -137,7 +137,7 @@ function Moves({ d, members, onChanged }: { d: DashboardData; members: any[]; on
                 <button key={m.userId} type="button" style={{ ...btn(), padding: '6px 10px', fontSize: 12 }} disabled={!data.movesOpen} onClick={() => setMovingUser(m)}>{m.name} ({m.team})</button>
               ))}
             </div>
-            <div style={{ ...small, marginTop: 6 }}>{data.movesOpen ? 'Moves outside the allowed team pool are fine when you do them directly.' : 'Moves are paused while a week is open.'}</div>
+            {!data.movesOpen ? <div style={{ ...small, marginTop: 6 }}>Moves are paused while a week is open.</div> : null}
           </div>
         )
       ) : null}
@@ -181,9 +181,7 @@ function Users({ d }: { d: DashboardData }) {
         <div style={{ fontSize: 14, fontWeight: 600 }}>
           {data.openWeek !== null ? `${weekLabel(data.openWeek)} is open for uploads` : data.liveWeek !== null ? `${weekLabel(data.liveWeek)} is live` : 'Waiting for the first week'}
         </div>
-        <div style={small}>
-          {data.openWeek !== null ? `${readyCount} of ${withTeam.length} coaches ready` : `${data.members.length} coach${data.members.length === 1 ? '' : 'es'} in this dynasty`}
-        </div>
+        {data.openWeek !== null ? <div style={small}>{`${readyCount} of ${withTeam.length} coaches ready`}</div> : null}
       </div>
 
       {data.members.map((m: any) => (
@@ -326,7 +324,7 @@ function Rules() {
             </div>
           </>
         ) : data.body ? (
-          <div style={{ fontSize: 14, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{data.body}</div>
+          <div className="keep-case" style={{ fontSize: 14, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{data.body}</div>
         ) : <div style={small}>{data.canEdit ? 'No rules written yet. Tap Edit to add them.' : 'The commissioner has not posted rules yet.'}</div>}
       </div>
       <Err msg={err} />
@@ -356,7 +354,7 @@ function ThreadView({ id, onBack, inline }: { id: string; onBack?: () => void; i
       {!inline && onBack ? <button type="button" style={{ ...btn(), alignSelf: 'flex-start' }} onClick={onBack}>← All threads</button> : null}
       {!inline ? (
         <div className="card">
-          <div style={{ fontSize: 16, fontWeight: 700 }}>{data.thread.pinned ? '📌 ' : ''}{data.thread.title}</div>
+          <div className="keep-case" style={{ fontSize: 16, fontWeight: 700 }}>{data.thread.pinned ? '📌 ' : ''}{data.thread.title}</div>
           {data.isCommish && data.thread.kind !== 'user_game' ? (
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               <button type="button" style={{ ...btn(), padding: '6px 12px' }} onClick={() => post('pin', { pinned: !data.thread.pinned })}>{data.thread.pinned ? 'Unpin' : 'Pin'}</button>
@@ -373,7 +371,7 @@ function ThreadView({ id, onBack, inline }: { id: string; onBack?: () => void; i
             {p.team ? <span style={small}>{p.team}</span> : null}
             <span style={{ ...small, marginLeft: 'auto' }}>{ago(p.createdAt)}</span>
           </div>
-          <div style={{ fontSize: 14, lineHeight: 1.5, whiteSpace: 'pre-wrap', fontStyle: p.system ? 'italic' : 'normal' }}>{p.body}</div>
+          <div className="keep-case" style={{ fontSize: 14, lineHeight: 1.5, whiteSpace: 'pre-wrap', fontStyle: p.system ? 'italic' : 'normal' }}>{p.body}</div>
           {(p.mine || data.isCommish) && !p.system ? (
             <button type="button" style={{ ...btn(), padding: '4px 10px', fontSize: 12, marginTop: 8, color: '#b00020' }} onClick={() => post('delete_post', { postId: p.id })}>Delete</button>
           ) : null}
@@ -428,7 +426,7 @@ function Board() {
       {data.threads.length === 0 ? <div className="card" style={small}>No threads yet. Start the conversation.</div> : null}
       {data.threads.map((t: any) => (
         <button key={t.id} type="button" className="card" onClick={() => setOpen(t.id)} style={{ textAlign: 'left', width: '100%', cursor: 'pointer', font: 'inherit' }}>
-          <div style={{ fontWeight: 700, fontSize: 15 }}>
+          <div className="keep-case" style={{ fontWeight: 700, fontSize: 15 }}>
             {t.pinned ? '📌 ' : ''}{t.kind === 'announcement' ? '📣 ' : t.kind === 'user_game' ? '🏈 ' : ''}{t.title}
           </div>
           <div style={small}>{t.author} · {t.posts} post{t.posts === 1 ? '' : 's'} · {ago(t.lastActivity)}</div>
@@ -537,7 +535,7 @@ function ScheduleAssistant() {
 
 /* ------------------------------------ tab ------------------------------------ */
 
-export default function Community({ d, subtab }: { d: DashboardData; subtab: string | null }) {
+function CommunityBody({ d, subtab }: { d: DashboardData; subtab: string | null }) {
   switch (subtab) {
     case 'rules': return <Rules />;
     case 'schedule': return <ScheduleAssistant />;
@@ -546,4 +544,10 @@ export default function Community({ d, subtab }: { d: DashboardData; subtab: str
     case 'users':
     default: return <Users d={d} />;
   }
+}
+
+// Headers and sentences in the app's own copy are ALL CAPS; text people wrote
+// themselves (posts, thread titles, rules) is marked "keep-case".
+export default function Community({ d, subtab }: { d: DashboardData; subtab: string | null }) {
+  return <div className="caps-ui"><CommunityBody d={d} subtab={subtab} /></div>;
 }

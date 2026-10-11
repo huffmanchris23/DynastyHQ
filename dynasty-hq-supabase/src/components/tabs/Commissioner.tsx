@@ -26,6 +26,12 @@ const LABELS: Record<string, string> = {
   heisman: 'Heisman Watch',
 };
 
+// Members upload one offense and one defense screen — their own team's row.
+const MEMBER_LABELS: Record<string, string> = {
+  stats_offense_1: 'Offense Stats (your team)',
+  stats_defense_1: 'Defense Stats (your team)',
+};
+
 interface MemberReady { userId: string; team: string; name: string; role: string; ready: boolean; missing: string[] }
 interface WeekState {
   isCommish: boolean; season: number; liveWeek: number | null; openWeek: number | null;
@@ -141,7 +147,7 @@ export default function Upload() {
   const cd = countdownText(state.countdownEndsAt);
 
   return (
-    <div className="stack-sm">
+    <div className="stack-sm caps-ui">
       <div className="card">
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
           Weekly Uploads{open !== null ? ` — ${weekLabel(open)}` : ''}
@@ -150,7 +156,7 @@ export default function Upload() {
           {open !== null
             ? state.isCommish
               ? 'Upload your screens, then Process. When everyone is ready, Advance & Go Live to publish this week to the whole league.'
-              : 'Upload your five screens, then Process. Your commissioner publishes the week once everyone is ready.'
+              : 'Upload your team screens, then Process. Your commissioner publishes the week once everyone is ready.'
             : state.liveWeek !== null
             ? `Week ${state.liveWeek} is live.${cd ? ` ${cd}.` : ''} Uploads open when your commissioner starts the next week.`
             : 'Nothing is live yet. Uploads open when your commissioner starts the first week.'}
@@ -189,11 +195,16 @@ export default function Upload() {
 
       {open !== null ? (
         <>
+          {open === 0 ? (
+            <div className="card" style={{ fontSize: 12, color: 'rgba(0,0,0,0.55)' }}>
+              Week 0 is the opener, so there are no team stats to upload yet. They start in Week 1.
+            </div>
+          ) : null}
           {slots.map((id) => {
             const s = status[id] || 'idle';
             return (
               <div className="card" key={id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{LABELS[id] || id}</div>
+                <div style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{(!state.isCommish && MEMBER_LABELS[id]) || LABELS[id] || id}</div>
                 <div style={{ fontSize: 18, width: 24, textAlign: 'center' }}>{s === 'done' ? '✅' : s === 'uploading' ? '⏳' : s === 'error' ? '⚠️' : ''}</div>
                 <input ref={(el) => { inputRefs.current[id] = el; }} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handlePick(id, e.target.files?.[0] || null)} />
                 <button type="button" onClick={() => inputRefs.current[id]?.click()} disabled={s === 'uploading'}

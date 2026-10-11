@@ -69,7 +69,7 @@ function Support() {
         {reports && reports.length === 0 ? <div style={small}>You have not sent any reports.</div> : null}
         {(reports || []).map((r) => (
           <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 13, padding: '6px 0', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
-            <span>{r.kind === 'bug' ? '🐞' : '💡'} {r.title}</span>
+            <span className="keep-case">{r.kind === 'bug' ? '🐞' : '💡'} {r.title}</span>
             <span style={{ fontWeight: 700, color: r.status === 'done' ? '#1b7a3a' : 'rgba(0,0,0,0.6)' }}>{STATUS[r.status] || r.status}</span>
           </div>
         ))}
@@ -177,17 +177,17 @@ function Inbox() {
         return (
           <div className="card" key={r.id}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>{KIND_ICON[r.kind] || '•'} {r.title}</div>
+              <div className="keep-case" style={{ fontWeight: 700, fontSize: 15 }}>{KIND_ICON[r.kind] || '•'} {r.title}</div>
               <span style={{ fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap', color: r.status === 'done' ? '#1b7a3a' : 'rgba(0,0,0,0.6)' }}>{STATUS[r.status] || r.status}</span>
             </div>
             <div style={{ ...small, margin: '2px 0 8px' }}>
               {who}{r.dynasty ? ` · ${r.dynasty}` : ''} · {new Date(r.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
             </div>
-            <div style={{ fontSize: 14, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{text}</div>
+            <div className="keep-case" style={{ fontSize: 14, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{text}</div>
             {context ? (
               <details style={{ marginTop: 6 }}>
                 <summary style={{ ...small, cursor: 'pointer' }}>Details</summary>
-                <div style={{ ...small, whiteSpace: 'pre-wrap', marginTop: 4, wordBreak: 'break-word' }}>{context}</div>
+                <div className="keep-case" style={{ ...small, whiteSpace: 'pre-wrap', marginTop: 4, wordBreak: 'break-word' }}>{context}</div>
               </details>
             ) : null}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
@@ -203,7 +203,7 @@ function Inbox() {
   );
 }
 
-export default function Help({ subtab, page, isOwner = false }: { subtab: string | null; page: string; isOwner?: boolean }) {
+function HelpBody({ subtab, page, isOwner }: { subtab: string | null; page: string; isOwner: boolean }) {
   switch (subtab) {
     case 'support': return <Support />;
     case 'faq': return <Faq />;
@@ -213,4 +213,8 @@ export default function Help({ subtab, page, isOwner = false }: { subtab: string
     case 'tips':
     default: return <Tips />;
   }
+}
+
+export default function Help({ subtab, page, isOwner = false }: { subtab: string | null; page: string; isOwner?: boolean }) {
+  return <div className="caps-ui"><HelpBody subtab={subtab} page={page} isOwner={isOwner} /></div>;
 }

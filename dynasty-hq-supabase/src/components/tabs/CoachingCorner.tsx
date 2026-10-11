@@ -214,7 +214,7 @@ export function HotSeats({ d }: { d: DashboardData }) {
         <div>Security</div>
       </Thead>
       {list.map((c, i) => {
-        const color = c.security >= 70 ? '#5FA467' : c.security >= 35 ? 'var(--accent)' : '#C0555A';
+        const color = c.security >= 70 ? '#5FA467' : c.security >= 35 ? '#7D4B00' : '#C0555A';
         return (
           <Row key={i} cols={cols} first={i === 0} mine={isMineFn(myTeamName, c.team)}>
             <div className="truncate" style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
