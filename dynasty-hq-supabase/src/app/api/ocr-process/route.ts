@@ -18,6 +18,7 @@ import {
 import { getDynastyCtx } from '@/lib/dynastyContext';
 import { syncGamePreviewFromSchedule } from '@/lib/gamePreview';
 import { cropForOcr } from '@/lib/ocrCrop';
+import { checkScheduleRows, resolveTeamAlias } from '@/lib/scheduleParse';
 import { computeMatchupOdds } from '@/lib/engines/odds';
 import { assignBroadcasts, type SlateGame, type SlateTeam } from '@/lib/engines/broadcast';
 import { buildContentSystemPrompt, parseContentResponse, CONTENT_TOOL, DRIVE_BY_TYPE, TOP_TAKE_TYPE } from '@/lib/engines/content';
@@ -662,15 +663,29 @@ async function processOneImage({
     ? '\n\nIMPORTANT — this screenshot is for ONE team only: the uploader\u2019s own team, scrolled to find it (a commissioner sends it as the SECOND screenshot when his team wasn\u2019t in the top-group one; a league member sends it as their only screenshot for this category). Extract exactly ONE row: the uploader\u2019s team row, with whatever stats are shown for it. If a rank number is shown specifically for that team in this scrolled context, use it for national_rank; if the only number visible near the team name is an AP Top 25 poll ranking badge (unrelated to this offense/defense category) and no separate leaderboard-position number is shown, leave national_rank null rather than using that poll rank. Do not include any other team, even if one is partially visible at the edge of the screen.'
     : '';
 
+  const isScheduleScreen = guide.screen_type === 'team_schedule';
+
+  // The schedule screen can show opponents that aren't on the known list (a
+  // generic "FCS Southeast", say). Forcing a closed-set answer made the model
+  // swap in the nearest-looking real team (FCS Southeast -> Georgia Southern),
+  // so for this screen it copies unlisted names as printed and the server
+  // flags them instead.
+  const nameRule = isScheduleScreen
+    ? `When the team shown matches a name on this list, output that list value EXACTLY. If the team shown is NOT on this list (for example a generic FCS opponent), output its name exactly as printed on screen — never substitute a different, similar-looking team from the list:\n${nameOptions.join(', ')}`
+    : `Every team name you output must be copied EXACTLY from this list of known values — do not invent, abbreviate, or reformat a name that isn't already on this list:\n${nameOptions.join(', ')}`;
+
+  const scheduleNote = isScheduleScreen
+    ? '\n\nIMPORTANT — read this table literally, one object per visible table row, top to bottom. Include EVERY row, BYE rows included; never skip one. Copy each row’s own WEEK column value: this screenshot may start mid-season (for example at week 8), so never renumber from 0 and never assume weeks are consecutive from what you expect. A row whose WEEK cell says "Conf Champ" is week 15 — output 15. Read dates, kickoff times, "at"/"vs" and every digit character by character from that row; do not copy values from a neighboring row, and do not fill in what a typical schedule would look like. Two different weeks can never share a date.'
+    : '';
+
   const systemPrompt = `You extract structured data from a single College Football 27 screenshot for Dynasty HQ, a personal dynasty tracker.
 
 Screen type: ${guide.screen_type}
 
 Rules for this screen:
-${guide.extraction_rules}${partNote}
+${guide.extraction_rules}${partNote}${scheduleNote}
 
-Every team name you output must be copied EXACTLY from this list of known values — do not invent, abbreviate, or reformat a name that isn't already on this list:
-${nameOptions.join(', ')}
+${nameRule}
 
 Output ONLY a JSON array (no markdown fences, no prose before or after) of objects. Each object must have exactly these keys: ${Object.keys(guide.field_map).join(', ')}.
 Numeric fields must be JSON numbers, not quoted strings. If a value isn't visible or legible in the screenshot, use null for that field rather than guessing or fabricating a number.`;
@@ -709,6 +724,20 @@ Numeric fields must be JSON numbers, not quoted strings. If a value isn't visibl
       // ranks still visible, and the model sometimes includes them despite
       // the instruction above. Filter to the matching team server-side.
       let finalRows = rows;
+
+      // Schedule rows are checked BEFORE anything is written: a misread week or
+      // date used to overwrite good rows silently. A failed check on the
+      // cropped image throws, which sends the retry to the full frame; if the
+      // full frame also fails the check, nothing is written and the problem
+      // shows up in the upload results so the screenshot can be retaken.
+      if (isScheduleScreen) {
+        const check = checkScheduleRows(rows);
+        if (check.problems.length) {
+          throw new Error(`Schedule read looks wrong — ${check.problems.slice(0, 4).join('; ')}. Nothing was written for this screenshot.`);
+        }
+        finalRows = check.rows;
+      }
+
       if (isMyTeamOnlyPart && myTeamName) {
         const myVariant = variantCol ? helperRows.find((r: any) => r.team_name === myTeamName)?.[variantCol] || myTeamName : myTeamName;
         const norm = (s: any) => String(s || '').trim().toLowerCase();
@@ -755,6 +784,7 @@ async function writeRows({
   let written = 0;
   const issues: string[] = [];
   const teamsWritten: string[] = [];
+  const knownCanonical = new Set(Object.values(variantToCanonical));
   const isStatsScreen = guide.screen_type === 'stats_offense' || guide.screen_type === 'stats_defense';
   // The commish's "_2" and every member's single stats screen show just one
   // team, so neither gets a position-based rank assigned.
@@ -767,10 +797,18 @@ async function writeRows({
     }
 
     for (const field of TEAM_NAME_FIELDS) {
-      const canonical = mapped[field] && variantToCanonical[String(mapped[field]).toLowerCase()];
+      // Exact variant first, then known alternate spellings ("Southern
+      // Mississippi" -> "Southern Miss"). Anything still unmatched is left as
+      // printed — never swapped for a similar-looking team.
+      const canonical =
+        mapped[field] && (variantToCanonical[String(mapped[field]).toLowerCase()] || resolveTeamAlias(mapped[field], knownCanonical));
       if (canonical) {
         mapped[field] = canonical;
       }
+    }
+
+    if (guide.screen_type === 'team_schedule' && mapped.opponent && mapped.opponent !== 'bye' && !knownCanonical.has(mapped.opponent)) {
+      issues.push(`week ${row.week}: opponent "${mapped.opponent}" isn't a known team, so it was stored as shown (add it to ocr_helper if it should resolve to a real team).`);
     }
 
     // team_schedule: the game screen lists results winner-score-first, so
