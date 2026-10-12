@@ -113,12 +113,14 @@ const selectStyle: React.CSSProperties = {
 export function DynastyStats({ d, kind }: { d: DashboardData; kind: 'offense' | 'defense' }) {
   const isDefense = kind === 'defense';
   const rows = (d.dynastyStats && d.dynastyStats[kind]) || [];
-  const [sortKey, setSortKey] = useState<StatKey>('ppg');
   const [aId, setAId] = useState<string | null>(null);
   const [bId, setBId] = useState<string | null>(null);
 
   const me = rows.find((r) => r.isMe) || null;
-  // Offense: bigger is better. Defense: these are yards/points ALLOWED, so smaller is better.
+  // Dynasty teams only, ranked by yards per game. Offense: bigger is better.
+  // Defense: these are yards ALLOWED, so smaller is better. Teams that haven't
+  // uploaded yet (no yardage) sort to the bottom.
+  const sortKey: StatKey = 'ypg';
   const sorted = [...rows].sort((a, b) => {
     const av = statNum(a[sortKey]);
     const bv = statNum(b[sortKey]);
@@ -137,36 +139,7 @@ export function DynastyStats({ d, kind }: { d: DashboardData; kind: 'offense' | 
   return (
     <>
       <div>
-        <SectionLabel>{`${(me && me.team) || (d.team && d.team.TEAM_NAME) || 'Your team'} — Season ${isDefense ? 'Defense' : 'Offense'}`}</SectionLabel>
-        <div className="grid-2">
-          {STATS.map((st) => (
-            <div className="card" key={st.key}>
-              <div className="stat-label">{isDefense ? st.def : st.off}</div>
-              <div className="stat-value">{numOr(me ? me[st.key] : null)}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ marginTop: 16 }}>
         <SectionLabel>{`Dynasty — Team ${isDefense ? 'Defense' : 'Offense'}`}</SectionLabel>
-        <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-          {STATS.map((st) => (
-            <button
-              key={st.key}
-              type="button"
-              onClick={() => setSortKey(st.key)}
-              style={{
-                padding: '6px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600,
-                border: sortKey === st.key ? '1px solid var(--primary)' : '1px solid rgba(0,0,0,0.18)',
-                background: sortKey === st.key ? 'var(--primary)' : 'transparent',
-                color: sortKey === st.key ? 'var(--on-primary)' : 'inherit',
-              }}
-            >
-              {st.short}
-            </button>
-          ))}
-        </div>
         <div className="table primary">
           <Thead cols={cols}>
             <div style={{ textAlign: 'left' }}>Rk</div>

@@ -24,16 +24,16 @@ export default function Awards({ d }: { d: DashboardData }) {
         <EmptyState>No Heisman race data yet.</EmptyState>
       </>
     );
-  const cols = '28px 34px 1fr 42px';
+  const cols = '40px 34px 1fr 66px';
   return (
     <>
       {header}
       <div className="table primary">
         <Thead cols={cols}>
-          <div />
+          <div style={{ textAlign: 'left' }}>Rank</div>
           <div />
           <div style={{ textAlign: 'left' }}>Player</div>
-          <div>Pos</div>
+          <div>Pos / Year</div>
         </Thead>
         {list.map((p, i) => (
           <Row key={i} cols={cols} first={i === 0} mine={isMineFn(myTeamName, p.team)}>

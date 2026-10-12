@@ -39,15 +39,7 @@ function TopTakesList({ d }: { d: DashboardData }) {
           T.B.'s Top Takes
         </span>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(0,0,0,0.4)' }}>
-        {d.settings.tacoBellLogoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={d.settings.tacoBellLogoUrl} alt="Taco Bell" style={{ height: 14, width: 'auto' }} />
-        ) : (
-          <span>🌮</span>
-        )}
-        <span>Presented by Taco Bell</span>
-      </div>
+      <div style={{ height: 10 }} />
       {items.length ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {items.map((item, i) => {

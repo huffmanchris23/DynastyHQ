@@ -35,18 +35,7 @@ export default function Conference({ d }: { d: DashboardData }) {
 
   return (
     <>
-      <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-        {d.settings.conferenceLogoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={d.settings.conferenceLogoUrl} alt={activeConf} style={{ width: 40, height: 40, objectFit: 'contain', flexShrink: 0 }} />
-        ) : (
-          <Badge text={activeConf} size={40} mine />
-        )}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="stat-label">Conference</div>
-          <div style={{ fontSize: 17, fontWeight: 700 }}>{activeConf}</div>
-        </div>
-      </div>
+      <div style={{ fontSize: 17, fontWeight: 700, padding: '2px 2px 12px' }}>{activeConf}</div>
       <div className="table primary">
         <Thead cols={cols}>
           <div style={{ textAlign: 'left' }}>Team</div>
