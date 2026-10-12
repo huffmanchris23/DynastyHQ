@@ -32,6 +32,14 @@ export interface CropBox {
 // 1568 / 3840 — what a full 4K frame is effectively downscaled to by the API.
 const DEFAULT_SCALE = 0.41;
 
+// Width of the frame DEFAULT_SCALE was tuned for. The scale is applied relative
+// to THIS width, not to whatever size the upload happens to be: a 2576px-wide
+// screenshot used to be shrunk by the same 0.41 as a 3840px one, leaving the
+// model a crop ~650px wide where digits blur together (Sep 5 read as Sep 2,
+// 9:00 PM as 5:00 PM, week 9 as week 7). Normalizing keeps text the same
+// effective size whatever the export resolution.
+const REFERENCE_WIDTH = 3840;
+
 // Reference frame the boxes were measured on (PS5 4K screenshot).
 const EXPECTED_ASPECT = 3840 / 2160;
 const ASPECT_TOLERANCE = 0.02; // 2% — anything else isn't a PS5 16:9 frame
@@ -110,7 +118,8 @@ export async function cropForOcr(
     const height = Math.min(H - top, Math.round(rule.height * H));
     if (width < 50 || height < 50) return passthrough('crop box collapsed');
 
-    const scale = rule.scale ?? DEFAULT_SCALE;
+    // Same output size a 4K frame would get; never upscale past native pixels.
+    const scale = Math.min(1, (rule.scale ?? DEFAULT_SCALE) * (REFERENCE_WIDTH / W));
     const out = await sharp(original)
       .extract({ left, top, width, height })
       .resize({ width: Math.max(1, Math.round(width * scale)), kernel: 'lanczos3' })
