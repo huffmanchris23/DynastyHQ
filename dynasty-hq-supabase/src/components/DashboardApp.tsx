@@ -18,7 +18,7 @@ import { ScheduleTeam, ScheduleTop25 } from '@/components/tabs/Schedule';
 import Rankings from '@/components/tabs/Rankings';
 import Conference from '@/components/tabs/Conference';
 import { Bracket } from '@/components/tabs/Playoffs';
-import { TeamStats } from '@/components/tabs/Stats';
+import { TeamStats, DynastyStats } from '@/components/tabs/Stats';
 import { DepthCharts } from '@/components/tabs/Roster';
 import Awards from '@/components/tabs/Awards';
 import { MyCoach, HotSeats } from '@/components/tabs/CoachingCorner';
@@ -63,7 +63,12 @@ function TabBody({ data, tab, subtab, page }: {
       return <Bracket d={data} />;
     case 'stats':
       if (!g.statsUnlocked) return <LockedCard untilWeek={1} />;
-      return <TeamStats d={data} kind={subtab === 'defense' ? 'defense' : 'offense'} />;
+      // Dynasty Off / Dynasty Def exist only in multi-user dynasties. A solo
+      // dynasty only ever gets the plain Offense / Defense pages.
+      if ((subtab === 'dyn_offense' || subtab === 'dyn_defense') && data.viewer.mode === 'multi') {
+        return <DynastyStats d={data} kind={subtab === 'dyn_defense' ? 'defense' : 'offense'} />;
+      }
+      return <TeamStats d={data} kind={subtab === 'defense' || subtab === 'dyn_defense' ? 'defense' : 'offense'} />;
     case 'roster':
       if (g.isLocked) return <LockedCard untilWeek={0} />;
       return <DepthCharts d={data} />;
@@ -88,6 +93,8 @@ function TabBody({ data, tab, subtab, page }: {
       return null;
   }
 }
+
+const NATIONAL_LABELS: Record<string, string> = { offense: 'National Off', defense: 'National Def' };
 
 /* ============================== SUBTAB BAR ============================== */
 /* Port of renderSubtabBar(). */
@@ -233,9 +240,16 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
             <>
               {currentTabDef && currentTabDef.subtabs
                 ? (() => {
-                    const visibleSubtabs = currentTabDef.subtabs!.filter(
-                      (s) => comingSoonSubtabIds(currentTabDef.id).indexOf(s.id) === -1 && (s.id !== 'inbox' || !!data.viewer.isOwner)
-                    );
+                    const isMulti = data.viewer.mode === 'multi';
+                    const visibleSubtabs = currentTabDef
+                      .subtabs!.filter(
+                        (s) =>
+                          comingSoonSubtabIds(currentTabDef.id).indexOf(s.id) === -1 &&
+                          (s.id !== 'inbox' || !!data.viewer.isOwner) &&
+                          (!s.id.startsWith('dyn_') || isMulti) // dynasty stats: multi-user only
+                      )
+                      // With Dynasty pages present, the first two become "National".
+                      .map((s) => (currentTabDef.id === 'stats' && isMulti && NATIONAL_LABELS[s.id] ? { ...s, label: NATIONAL_LABELS[s.id] } : s));
                     if (!visibleSubtabs.length) return null;
                     return (
                       <SubtabBar
