@@ -16,11 +16,10 @@ import {
   type ScreenType,
 } from '@/lib/ocrShared';
 import { getDynastyCtx } from '@/lib/dynastyContext';
-import { syncGamePreviewFromSchedule } from '@/lib/gamePreview';
+import { completeWeekPreviews } from '@/lib/previewPipeline';
 import { cropForOcr } from '@/lib/ocrCrop';
 import { checkScheduleRows, resolveTeamAlias } from '@/lib/scheduleParse';
 import { computeMatchupOdds } from '@/lib/engines/odds';
-import { assignBroadcasts, type SlateGame, type SlateTeam } from '@/lib/engines/broadcast';
 import { buildContentSystemPrompt, parseContentResponse, CONTENT_TOOL, DRIVE_BY_TYPE, TOP_TAKE_TYPE } from '@/lib/engines/content';
 
 const CONTENT_MODEL = 'claude-sonnet-5';
@@ -127,7 +126,6 @@ export async function POST() {
 
   const summary: any[] = [];
   let touchedSchedule = false;
-  let touchedBestMatchup = false;
   let touchedResults = false;
   const touchedStatsCategories = new Set<'offense' | 'defense'>();
   const statsTeamsWritten: Record<'offense' | 'defense', Set<string>> = { offense: new Set(), defense: new Set() };
@@ -154,7 +152,6 @@ export async function POST() {
       continue;
     }
     if (guide.screen_type === 'team_schedule') touchedSchedule = true;
-    if (guide.screen_type === 'best_matchup') touchedBestMatchup = true;
     if (guide.screen_type === 'last_week_results') touchedResults = true;
     if (guide.screen_type === 'stats_offense') touchedStatsCategories.add('offense');
     if (guide.screen_type === 'stats_defense') touchedStatsCategories.add('defense');
@@ -215,29 +212,24 @@ export async function POST() {
     }
   }
 
-  // A processed schedule builds this team's game_preview rows (opponent, home
-  // team, kickoff date/time) — nobody seeds them by hand.
-  let gamePreviewSync: any = null;
-  if (touchedSchedule && ctx.team) {
-    try {
-      gamePreviewSync = await syncGamePreviewFromSchedule(sb, { dynastyId: ctx.dynastyId, userId: ctx.userId, team: ctx.team, season: ctx.season });
-    } catch (err: any) {
-      gamePreviewSync = { error: err?.message || String(err) };
-    }
-    await logEngine(sb, ctx, 'game_preview_sync', gamePreviewSync?.error ? 'error' : 'success', (gamePreviewSync?.inserted || 0) + (gamePreviewSync?.updated || 0), gamePreviewSync?.error || null);
+  // Complete EVERY game preview for the week: build rows from all members'
+  // processed schedules, fill odds + win probability, and assign networks
+  // across the whole slate. Runs on every batch (idempotent) and again when
+  // the commissioner makes the week live, so previews are finished no matter
+  // what order uploads arrived in. See lib/previewPipeline.ts.
+  const previews = await completeWeekPreviews(sb, { dynastyId: ctx.dynastyId, season: ctx.season, week: ctx.week });
+  const gamePreviewSync: any = previews.steps.sync;
+  const gamePreviewOddsSummary: any = previews.steps.odds;
+  const broadcastSummary: any = previews.steps.broadcast;
+  const engineErr = (v: { error?: string; issues: string[] }) => v.error || (v.issues.length ? v.issues.join(' | ').slice(0, 4000) : null);
+  if (touchedSchedule || previews.steps.sync.inserted || previews.steps.sync.updated || previews.steps.sync.error || previews.steps.sync.issues.length) {
+    await logEngine(sb, ctx, 'game_preview_sync', gamePreviewSync.error || gamePreviewSync.issues.length ? 'error' : 'success', gamePreviewSync.inserted + gamePreviewSync.updated, engineErr(gamePreviewSync));
   }
-
-  // Odds for this member's game (commish run recomputes every game in the week).
-  const gamePreviewOddsSummary: any = await runGamePreviewOdds({ sb, ctx, ratingsByName, onlyTeam: ctx.isCommish ? null : ctx.team });
-  if (gamePreviewOddsSummary && (gamePreviewOddsSummary.written || gamePreviewOddsSummary.error)) {
-    await logEngine(sb, ctx, 'game_preview_odds', gamePreviewOddsSummary?.error ? 'error' : 'success', gamePreviewOddsSummary?.written || 0, gamePreviewOddsSummary?.error || null);
+  if (gamePreviewOddsSummary.written || gamePreviewOddsSummary.error || gamePreviewOddsSummary.issues.length) {
+    await logEngine(sb, ctx, 'game_preview_odds', gamePreviewOddsSummary.error || gamePreviewOddsSummary.issues.length ? 'error' : 'success', gamePreviewOddsSummary.written, engineErr(gamePreviewOddsSummary));
   }
-
-  // League-wide engines run only off the COMMISH's uploads.
-  let broadcastSummary: any = null;
-  if (ctx.isCommish && (touchedBestMatchup || touchedSchedule)) {
-    broadcastSummary = await runBroadcastEngine({ sb, ctx, ratingsByName, conferenceByName });
-    await logEngine(sb, ctx, 'broadcast_engine', broadcastSummary?.error ? 'error' : 'success', broadcastSummary?.assigned || 0, broadcastSummary?.error || (broadcastSummary?.issues?.length ? broadcastSummary.issues.join(' | ').slice(0, 4000) : null));
+  if (broadcastSummary.assigned || broadcastSummary.error || broadcastSummary.issues.length) {
+    await logEngine(sb, ctx, 'broadcast_engine', broadcastSummary.error || broadcastSummary.issues.length ? 'error' : 'success', broadcastSummary.assigned, engineErr(broadcastSummary));
   }
 
   let contentSummary: any = null;
@@ -385,197 +377,6 @@ async function runContentEngine({
 // per-file the way the odds engine does. Always recomputes from what's
 // currently in the DB for this season/week, so it's safe to re-run on
 // every "Process Week" batch that touched a best_matchup screenshot.
-async function runBroadcastEngine({
-  sb,
-  ctx,
-  ratingsByName,
-  conferenceByName,
-}: {
-  sb: ReturnType<typeof getSupabase>;
-  ctx: OcrCtx;
-  ratingsByName: Record<string, { overall: number; offense: number; defense: number; homeState: string | null }>;
-  conferenceByName: Record<string, string | null>;
-}) {
-  const toSlateTeam = (name: string | null): SlateTeam | null => {
-    if (!name) return null;
-    const r = ratingsByName[name];
-    if (!r) return null;
-    return { name, overall: r.overall, conference: conferenceByName[name] ?? null };
-  };
-
-  const games: SlateGame[] = [];
-  const issues: string[] = [];
-
-  const { data: matchupRows, error: matchupErr } = await sb
-    .from('best_matchups')
-    .select('id, home_team, away_team, time')
-    .eq('dynasty_id', ctx.dynastyId)
-    .eq('season', ctx.season)
-    .eq('week', ctx.week);
-  if (matchupErr) return { error: `best_matchups: ${matchupErr.message}` };
-
-  (matchupRows || []).forEach((row: any) => {
-    const home = toSlateTeam(row.home_team);
-    const away = toSlateTeam(row.away_team);
-    if (!home || !away) {
-      issues.push(`best_matchups row ${row.id} skipped — missing ratings for "${row.home_team}"/"${row.away_team}"`);
-      return;
-    }
-    games.push({ id: `best_matchups:${row.id}`, homeTeam: home, awayTeam: away, time: row.time });
-  });
-
-  // EVERY member's game for the week competes in the same slate, so time-slot
-  // conflicts resolve across the whole league. Both sides of a user-vs-user
-  // matchup would each have a row; only the first is slated.
-  const { data: previewRows, error: previewErr } = await sb
-    .from('game_preview')
-    .select('id, team, opponent, home_team, game_time')
-    .eq('dynasty_id', ctx.dynastyId)
-    .eq('season', ctx.season)
-    .eq('week', ctx.week);
-  if (previewErr) return { error: `game_preview: ${previewErr.message}` };
-
-  const seenPairs = new Set<string>();
-  const previewIdsByPair = new Map<string, number[]>();
-  for (const preview of previewRows || []) {
-    if (!preview.team || !preview.opponent || !preview.game_time) continue;
-    const pair = [preview.team, preview.opponent].sort().join('|');
-    previewIdsByPair.set(pair, (previewIdsByPair.get(pair) || []).concat(preview.id));
-    if (seenPairs.has(pair)) continue;
-    seenPairs.add(pair);
-    const homeName = preview.home_team || preview.team;
-    const awayName = homeName === preview.team ? preview.opponent : preview.team;
-    const home = toSlateTeam(homeName);
-    const away = toSlateTeam(awayName);
-    if (home && away) {
-      games.push({ id: `game_preview:${preview.id}`, homeTeam: home, awayTeam: away, time: preview.game_time });
-    } else {
-      issues.push(`game_preview row ${preview.id} skipped — missing ratings for "${homeName}"/"${awayName}"`);
-    }
-  }
-
-  if (games.length === 0) return { assigned: 0, issues };
-
-  const assignments = assignBroadcasts(games);
-
-  for (const a of assignments) {
-    const [table, idStr] = a.id.split(':');
-    const id = Number(idStr);
-    const column = table === 'game_preview' ? 'game_broadcast' : 'broadcast';
-    // A user-vs-user game has a row on each side; both get the same network.
-    let ids = [id];
-    if (table === 'game_preview') {
-      for (const group of previewIdsByPair.values()) if (group.indexOf(id) > -1) ids = group;
-    }
-    const { error } = await sb.from(table).update({ [column]: a.broadcast }).in('id', ids);
-    if (error) issues.push(`broadcast write failed for ${a.id}: ${error.message}`);
-  }
-
-  return { assigned: assignments.length, issues };
-}
-
-// Runs the same computeMatchupOdds() used for best_matchups against Mr.
-// Huffman's own current-week game_preview row, filling in the ratings and
-// odds columns that were previously always null there. His schedule
-// (team/opponent/home_team/game_date/game_time) is pre-seeded for the
-// whole season already — this doesn't need any screenshot to run, just
-// ocr_helper ratings, so it's safe to attempt on every batch. There's no
-// record source for either team here yet (no wins/losses columns on
-// game_preview, and no guide supplies them), so both sides default to a
-// neutral 0-0 record — the record nudge is a minor factor in the formula,
-// so this is a reasonable stopgap rather than blocking on a new screenshot
-// type. home_team is trusted as-is (already resolved upstream, no AT/VS
-// ambiguity to resolve the way best_matchups has to).
-async function runGamePreviewOdds({
-  sb,
-  ctx,
-  ratingsByName,
-  onlyTeam,
-}: {
-  sb: ReturnType<typeof getSupabase>;
-  ctx: OcrCtx;
-  ratingsByName: Record<string, { overall: number; offense: number; defense: number; homeState: string | null }>;
-  onlyTeam: string | null;
-}) {
-  let q = sb
-    .from('game_preview')
-    .select('id, team, opponent, home_team')
-    .eq('dynasty_id', ctx.dynastyId)
-    .eq('season', ctx.season)
-    .eq('week', ctx.week);
-  if (onlyTeam) q = q.eq('team', onlyTeam);
-  const { data: rows, error } = await q;
-  if (error) return { error: `game_preview fetch failed: ${error.message}` };
-
-  // Records come from each team's processed schedule: this team's W-L from its
-  // own decided games before this week, the opponent's from the OPP W-L column.
-  const { data: schedRows } = await sb
-    .from('team_schedule')
-    .select('team, week, w_or_l, opponent_wins, opponent_losses')
-    .eq('dynasty_id', ctx.dynastyId)
-    .eq('season', ctx.season);
-  const recordOf = (team: string) => {
-    let w = 0, l = 0;
-    (schedRows || []).forEach((r: any) => {
-      if (r.team !== team || r.week >= ctx.week) return;
-      if (r.w_or_l === 'W') w++;
-      else if (r.w_or_l === 'L') l++;
-    });
-    return { w, l };
-  };
-  const oppRecordFor = (team: string) => {
-    const r = (schedRows || []).find((x: any) => x.team === team && x.week === ctx.week);
-    return { w: Number(r?.opponent_wins ?? 0) || 0, l: Number(r?.opponent_losses ?? 0) || 0 };
-  };
-
-  const issues: string[] = [];
-  let written = 0;
-  for (const preview of rows || []) {
-    if (!preview.team || !preview.opponent || !preview.home_team) continue;
-    const homeName = preview.home_team;
-    const awayName = homeName === preview.team ? preview.opponent : preview.team;
-    const homeRatings = ratingsByName[homeName];
-    const awayRatings = ratingsByName[awayName];
-    if (!homeRatings || !awayRatings) {
-      issues.push(`game_preview row ${preview.id} skipped — missing ratings for "${homeName}"/"${awayName}"`);
-      continue;
-    }
-    const mine = recordOf(preview.team);
-    const theirs = oppRecordFor(preview.team);
-    const teamIsHome = preview.team === homeName;
-    const odds = computeMatchupOdds({
-      homeTeam: { name: homeName, ...homeRatings },
-      awayTeam: { name: awayName, ...awayRatings },
-      connector: 'AT',
-      gameLocation: null,
-      homeWins: teamIsHome ? mine.w : theirs.w,
-      homeLosses: teamIsHome ? mine.l : theirs.l,
-      awayWins: teamIsHome ? theirs.w : mine.w,
-      awayLosses: teamIsHome ? theirs.l : mine.l,
-    });
-    const { error: updErr } = await sb
-      .from('game_preview')
-      .update({
-        team_overall: teamIsHome ? homeRatings.overall : awayRatings.overall,
-        team_offense: teamIsHome ? homeRatings.offense : awayRatings.offense,
-        team_defense: teamIsHome ? homeRatings.defense : awayRatings.defense,
-        opponent_overall: String(teamIsHome ? awayRatings.overall : homeRatings.overall),
-        opponent_offense: String(teamIsHome ? awayRatings.offense : homeRatings.offense),
-        opponent_defense: String(teamIsHome ? awayRatings.defense : homeRatings.defense),
-        favorite: odds.favorite,
-        favorite_spread: String(odds.spread),
-        favorite_moneyline: odds.favoriteMoneyline,
-        total_over_under: odds.totalOverUnder,
-        team_win_probability: odds.favorite === preview.team ? odds.favoriteWinProbability : `${(100 - parseFloat(odds.favoriteWinProbability)).toFixed(1)}%`,
-        opponent_win_probability: odds.favorite === preview.opponent ? odds.favoriteWinProbability : `${(100 - parseFloat(odds.favoriteWinProbability)).toFixed(1)}%`,
-      })
-      .eq('id', preview.id);
-    if (updErr) issues.push(`game_preview odds write failed (row ${preview.id}): ${updErr.message}`);
-    else written++;
-  }
-  return issues.length && !written ? { error: issues.join(' | ').slice(0, 2000) } : { written };
-}
-
 async function logEngine(sb: ReturnType<typeof getSupabase>, ctx: OcrCtx, screenType: string, status: string, rows: number, error: string | null, raw: string | null = null) {
   await sb.from('ocr_audit_log').insert({
     dynasty_id: ctx.dynastyId, uploaded_by: ctx.userId, team: ctx.team,
