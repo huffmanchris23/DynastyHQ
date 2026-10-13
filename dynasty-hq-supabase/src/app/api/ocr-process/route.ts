@@ -16,6 +16,8 @@ import {
   type ScreenType,
 } from '@/lib/ocrShared';
 import { getDynastyCtx } from '@/lib/dynastyContext';
+import { readiness } from '@/lib/readiness';
+import { commishIds, notify } from '@/lib/notify';
 import { completeWeekPreviews } from '@/lib/previewPipeline';
 import { cropForOcr } from '@/lib/ocrCrop';
 import { checkScheduleRows, resolveTeamAlias } from '@/lib/scheduleParse';
@@ -253,6 +255,28 @@ export async function POST() {
     contentEngine: contentSummary?.usage ?? null,
   };
   console.log(`[ocr-usage] TOTAL ${JSON.stringify(usageTotals)}`);
+
+  // Tell the commissioner when a coach finishes their uploads: who is left, or that everyone is ready.
+  if (!ctx.isCommish) {
+    try {
+      const all = await readiness(ctx.dynastyId, ctx.season, ctx.week);
+      const me = all.find((m) => m.userId === ctx.userId);
+      const waiting = all.filter((m) => !m.ready);
+      if (me?.ready) {
+        const msg = waiting.length === 0
+          ? { title: 'Everyone is ready', body: `Week ${ctx.week} uploads are in. You can advance.` }
+          : waiting.length === 1
+            ? { title: `Waiting on ${waiting[0].name || waiting[0].team}`, body: `Everyone else is ready for Week ${ctx.week}.` }
+            : null;
+        if (msg) {
+          const cids = await commishIds(ctx.dynastyId);
+          const since = new Date(Date.now() - 6 * 3600_000).toISOString();
+          const { data: dup } = await sb.from('notifications').select('id').in('user_id', cids.length ? cids : ['00000000-0000-0000-0000-000000000000']).eq('type', 'ready_nudge').eq('title', msg.title).gt('created_at', since).limit(1);
+          if (!dup?.length) await notify(cids, { dynastyId: ctx.dynastyId, type: 'ready_nudge', title: msg.title, body: msg.body, nav: { tab: 'community', subtab: 'users' } });
+        }
+      }
+    } catch { /* nudge is best-effort */ }
+  }
 
   return NextResponse.json({
     season: ctx.season,

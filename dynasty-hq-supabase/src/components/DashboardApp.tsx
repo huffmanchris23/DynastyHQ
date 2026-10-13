@@ -27,6 +27,7 @@ import Upload from '@/components/tabs/Commissioner';
 import Community from '@/components/tabs/Community';
 import Help from '@/components/tabs/Help';
 import NotificationBell from '@/components/NotificationBell';
+import PushPrompt from '@/components/PushPrompt';
 
 // Season/History switcher — built but hidden for now (Cincinnati transition
 // just happened; no history to show yet). Flip back to true to restore the
@@ -234,6 +235,7 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
         </div>
 
         <main>
+          <PushPrompt />
           {SHOW_SEASON_SWITCHER && season === 'history' ? (
             <HistoryPlaceholder />
           ) : (
