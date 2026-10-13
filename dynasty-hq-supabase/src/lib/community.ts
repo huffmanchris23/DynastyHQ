@@ -20,10 +20,10 @@ export async function requireMemberCtx(): Promise<{ ctx: DynastyCtx } | { res: N
 
 export interface PersonInfo { userId: string; name: string; team: string | null; position: string | null; role: string; logo: string | null; image: string | null }
 
-/** Everyone in the dynasty with a display name (coach name > profile name), team, coach position, and logo. */
+/** Everyone in the dynasty with a display name (coach name, else their team; never the Google account name), team, coach position, and logo. */
 export async function peopleOf(ctx: DynastyCtx, includeRemoved = false): Promise<PersonInfo[]> {
   const sb = getSupabase();
-  let mq = sb.from('dynasty_members').select('user_id, team, role, status, profiles(display_name)').eq('dynasty_id', ctx.dynastyId);
+  let mq = sb.from('dynasty_members').select('user_id, team, role, status').eq('dynasty_id', ctx.dynastyId);
   if (!includeRemoved) mq = mq.neq('status', 'removed');
   const [{ data: members }, { data: coaches }, { data: assets }] = await Promise.all([
     mq,
@@ -33,11 +33,10 @@ export async function peopleOf(ctx: DynastyCtx, includeRemoved = false): Promise
   const coachBy = new Map<string, any>((coaches || []).map((c: any) => [c.user_id, c]));
   const logoBy = new Map<string, string>((assets || []).map((a: any) => [a.team_name, a.logo_url]));
   return (members || []).map((m: any) => {
-    const prof = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
     const c = coachBy.get(m.user_id);
     return {
       userId: m.user_id,
-      name: (c?.name || prof?.display_name || 'Coach') as string,
+      name: (c?.name || m.team || 'Coach') as string,
       team: m.team,
       position: c?.title || null,
       role: m.role,
