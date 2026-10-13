@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { pushState, enablePush, disablePush, type PushState } from '@/lib/pushClient';
 
 interface Item { id: string; type: string; title: string; body: string | null; data: any; read_at: string | null; created_at: string }
 
@@ -17,6 +18,8 @@ export default function NotificationBell() {
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Item[] | null>(null);
+  const [push, setPush] = useState<PushState>('unsupported');
+  const [pushBusy, setPushBusy] = useState(false);
 
   const refreshCount = useCallback(() => {
     fetch('/api/notifications?count=1').then((r) => r.json()).then((b) => typeof b.unread === 'number' && setUnread(b.unread)).catch(() => {});
@@ -32,6 +35,7 @@ export default function NotificationBell() {
 
   async function openSheet() {
     setOpen(true);
+    pushState().then(setPush);
     const b = await fetch('/api/notifications').then((r) => r.json()).catch(() => null);
     if (b) { setItems(b.items || []); setUnread(b.unread || 0); }
   }
@@ -64,6 +68,15 @@ export default function NotificationBell() {
               <h3>Notifications</h3>
               {unread > 0 ? <button className="gate-link" onClick={readAll}>Mark all read</button> : null}
             </div>
+            {push === 'on' || push === 'off' ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '6px 0' }}>
+                <span className="gate-hint" style={{ margin: 0 }}>Phone alerts: {push === 'on' ? 'on' : 'off'}</span>
+                <button type="button" className="gate-chip" disabled={pushBusy} onClick={async () => { setPushBusy(true); setPush(push === 'on' ? await disablePush() : await enablePush()); setPushBusy(false); }}>
+                  {push === 'on' ? 'Turn off' : 'Turn on'}
+                </button>
+              </div>
+            ) : null}
+            {push === 'blocked' ? <div className="gate-hint">Phone alerts are blocked. Allow notifications for Dynasty HQ in your phone&rsquo;s settings, then reopen the app.</div> : null}
             {items === null ? <div className="gate-hint">Loading…</div> : null}
             {items && items.length === 0 ? <div className="gate-hint">Nothing yet. You will see week updates, games, and league news here.</div> : null}
             {(items || []).map((n) => (
