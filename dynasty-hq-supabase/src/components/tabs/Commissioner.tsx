@@ -152,24 +152,18 @@ export default function Upload() {
   return (
     <div className="stack-sm">
       <div className="card">
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
-          Weekly Uploads{open !== null ? ` — ${weekLabel(open)}` : ''}
-        </div>
-        <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.55)' }}>
-          {open !== null
-            ? state.isCommish
-              ? 'Upload your screens, then Process. When everyone is ready, Advance & Go Live to publish this week to the whole league.'
-              : 'Upload your team screens, then Process. Your commissioner publishes the week once everyone is ready.'
-            : state.liveWeek !== null
-            ? `Week ${state.liveWeek} is live.${cd ? ` ${cd}.` : ''} Uploads open when your commissioner starts the next week.`
-            : 'Nothing is live yet. Uploads open when your commissioner starts the first week.'}
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Weekly Uploads</div>
+        <div style={{ fontSize: 13, lineHeight: 1.7 }}>
+          <div>Current Week: <strong>{state.liveWeek ?? open ?? '—'}</strong></div>
+          <div>Week Status: <strong>{state.liveWeek !== null ? 'LIVE' : open !== null ? 'NOT LIVE YET' : 'NOT STARTED'}</strong></div>
+          <div>Uploads: <strong>{open !== null ? `Open (${weekLabel(open)})` : 'Closed'}</strong></div>
         </div>
       </div>
 
       {open === null && state.isCommish ? (
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontSize: 13, fontWeight: 600 }}>
-            {state.liveWeek === null ? 'Which week are you on?' : `Open ${weekLabel(state.liveWeek + 1)}`}
+            {state.liveWeek === null ? 'Which week are you on?' : 'Open Next Week'}
           </div>
           {state.liveWeek === null ? (
             <>
@@ -191,7 +185,7 @@ export default function Upload() {
           ) : null}
           <button type="button" style={btn(true, busy)} disabled={busy || (state.liveWeek === null && pickedWeek === null)}
             onClick={() => week('open', state.liveWeek === null ? { week: pickedWeek } : {})}>
-            {busy ? 'Opening…' : 'Open week for uploads'}
+            {busy ? 'Opening…' : 'Open Week'}
           </button>
         </div>
       ) : null}

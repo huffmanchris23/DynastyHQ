@@ -100,9 +100,9 @@ const NATIONAL_LABELS: Record<string, string> = { offense: 'National Off', defen
 /* ============================== SUBTAB BAR ============================== */
 /* Port of renderSubtabBar(). */
 
-function SubtabBar({ subtabs, active, lockedIds, comingSoonIds, onSelect }: { subtabs: { id: string; label: string }[]; active: string | null; lockedIds: string[]; comingSoonIds: string[]; onSelect: (id: string) => void }) {
+function SubtabBar({ subtabs, active, lockedIds, comingSoonIds, onSelect, grid2 }: { subtabs: { id: string; label: string }[]; active: string | null; lockedIds: string[]; comingSoonIds: string[]; onSelect: (id: string) => void; grid2?: boolean }) {
   return (
-    <div className="subtab-bar">
+    <div className={`subtab-bar${grid2 ? ' subtab-grid2' : ''}`}>
       {subtabs.map((s) => {
         const isComingSoon = comingSoonIds.indexOf(s.id) > -1;
         return (
@@ -260,6 +260,7 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
                         lockedIds={subtabLockedIds(currentTabDef.id, g)}
                         comingSoonIds={[]}
                         onSelect={setSubtab}
+                        grid2={currentTabDef.id === 'stats' && isMulti && visibleSubtabs.length === 4}
                       />
                     );
                   })()

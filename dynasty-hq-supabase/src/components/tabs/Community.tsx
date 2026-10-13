@@ -179,9 +179,9 @@ function Users({ d }: { d: DashboardData }) {
     <div className="stack-sm">
       <div className="card">
         <div style={{ fontSize: 14, fontWeight: 600 }}>
-          {data.openWeek !== null ? `${weekLabel(data.openWeek)} is open for uploads` : data.liveWeek !== null ? `${weekLabel(data.liveWeek)} is live` : 'Waiting for the first week'}
+          {data.liveWeek !== null ? `Current Week: ${data.liveWeek}` : data.openWeek !== null ? `Current Week: ${data.openWeek}` : 'Waiting for the first week'}
         </div>
-        {data.openWeek !== null ? <div style={small}>{`${readyCount} of ${withTeam.length} coaches ready`}</div> : null}
+        {data.openWeek !== null ? <div style={small}>{`Uploads open for ${weekLabel(data.openWeek)} · ${readyCount} of ${withTeam.length} coaches ready`}</div> : null}
       </div>
 
       {data.members.map((m: any) => (
@@ -274,7 +274,7 @@ function Rules() {
   return (
     <div className="stack-sm">
       <div className="card">
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Length of each in-game week</div>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Length of Game Week: {data.weekLengthHours ? hoursLabel(data.weekLengthHours) : 'Not set yet'}</div>
         {data.canEdit ? (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {WEEK_OPTIONS.map((h) => (
@@ -282,7 +282,7 @@ function Rules() {
                 style={{ ...btn(data.weekLengthHours === h), padding: '8px 12px' }}>{hoursLabel(h)}</button>
             ))}
           </div>
-        ) : <div style={{ fontSize: 15 }}>{data.weekLengthHours ? hoursLabel(data.weekLengthHours) : 'Not set yet'}</div>}
+        ) : null}
         <div style={{ ...small, marginTop: 6 }}>The countdown starts when the commissioner advances to a new week. The commissioner can advance early once everyone has played.</div>
       </div>
 
@@ -302,10 +302,10 @@ function Rules() {
             </>
           ) : null}
           <div style={{ fontSize: 13, lineHeight: 1.6, display: editSel ? 'none' : 'block' }}>
-            Claiming is {ts.claimsOpen ? 'open' : 'closed'}. {ts.allowPick ? 'Coaches can pick their team. ' : ''}{ts.allowRandom ? `Random draw is allowed${ts.rerollLimit ? ` (${ts.rerollLimit} reroll${ts.rerollLimit === 1 ? '' : 's'})` : ''}. ` : ''}
-            {(pool.conferences || []).length ? `Limited to: ${pool.conferences.join(', ')}. ` : ''}
-            {pool.min_overall != null || pool.max_overall != null ? `Team overall ${pool.min_overall ?? 'any'}–${pool.max_overall ?? 'any'}. ` : ''}
-            One team per coach, one coach per team.
+            <div>Team Selection: <strong>{ts.claimsOpen ? 'Open' : 'Closed'}</strong></div>
+            <div>Random Draw: <strong>{ts.allowRandom ? `Enabled with ${ts.rerollLimit || 0} re-roll${ts.rerollLimit === 1 ? '' : 's'}` : 'Disabled'}</strong></div>
+            <div>Conference Availability: <strong>{(pool.conferences || []).length ? pool.conferences.join(', ') : 'All'}</strong></div>
+            <div>Ranking Availability: <strong>{pool.min_overall != null || pool.max_overall != null ? `${pool.min_overall ?? 'Any'}–${pool.max_overall ?? 'Any'} overall` : 'All'}</strong></div>
           </div>
         </div>
       ) : null}
@@ -472,16 +472,13 @@ function ScheduleAssistant() {
   return (
     <div className="stack-sm">
       <div className="card" style={{ textAlign: 'center' }}>
-        <div style={small}>Countdown to advance</div>
+        <div style={small}>Countdown to Advance</div>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 38, color: cd?.done ? '#b00020' : 'var(--primary)', lineHeight: 1.1, margin: '4px 0' }}>
           {cd ? cd.text : '—'}
         </div>
-        <div style={small}>
-          {data.liveWeek === null ? 'Nothing is live yet.' : cd ? `${weekLabel(data.liveWeek)} · the commissioner advances when it ends or once everyone has played.` : `${weekLabel(data.liveWeek)} · no countdown set.`}
-        </div>
       </div>
 
-      <div style={{ fontSize: 13, fontWeight: 600, padding: '4px 2px' }}>Coach vs. coach this week</div>
+      <div style={{ fontSize: 13, fontWeight: 600, padding: '4px 2px' }}>Coach vs. Coach This Week</div>
       {data.games.length === 0 ? <div className="card" style={small}>{data.liveWeek === null ? 'Games show up once a week is live.' : 'No two coaches in this dynasty play each other this week.'}</div> : null}
 
       {data.games.map((g: any) => {
