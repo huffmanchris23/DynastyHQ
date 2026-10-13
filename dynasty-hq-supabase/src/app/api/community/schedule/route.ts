@@ -56,15 +56,22 @@ export async function POST(req: NextRequest) {
   if (!ctx.isCommish) return NextResponse.json({ error: 'Only the commissioner can change a game.' }, { status: 403 });
   const allowed = ['unscheduled', 'scheduled', 'played', 'simmed', 'forfeit'];
   if (allowed.indexOf(b.action) === -1) return NextResponse.json({ error: 'Unknown action.' }, { status: 400 });
+  // Every finished game (played, simmed, or forced) records who won, so head-to-head records count them all.
   let winner: string | null = null;
-  if (b.action === 'forfeit') {
-    if (b.winner !== g.team_a && b.winner !== g.team_b) return NextResponse.json({ error: 'Choose which team gets the win.' }, { status: 400 });
+  if (b.action === 'forfeit' || b.action === 'played' || b.action === 'simmed') {
+    if (b.winner !== g.team_a && b.winner !== g.team_b) return NextResponse.json({ error: 'Choose which team won.' }, { status: 400 });
     winner = b.winner;
   }
-  const { error } = await sb.from('user_games').update({ status: b.action, winner, decided_by: ctx.userId, updated_at: new Date().toISOString() }).eq('id', g.id);
+  const { data: coaches } = await sb.from('dynasty_members').select('user_id, team').eq('dynasty_id', ctx.dynastyId).in('team', [g.team_a, g.team_b]).eq('status', 'active');
+  const coachOf = (team: string) => (coaches || []).find((m: any) => m.team === team)?.user_id ?? null;
+  const { error } = await sb.from('user_games').update({
+    status: b.action, winner, winner_user: winner ? coachOf(winner) : null,
+    user_a: g.user_a ?? coachOf(g.team_a), user_b: g.user_b ?? coachOf(g.team_b),
+    decided_by: ctx.userId, updated_at: new Date().toISOString(),
+  }).eq('id', g.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  await say(b.action === 'forfeit' ? `Commissioner ruling: forfeit. ${winner} gets the win.` : `Commissioner marked this game ${b.action}.`);
+  await say(b.action === 'forfeit' ? `Commissioner ruling: forfeit. ${winner} gets the win.` : winner ? `Commissioner marked this game ${b.action}. ${winner} wins.` : `Commissioner marked this game ${b.action}.`);
   const { data: mem } = await sb.from('dynasty_members').select('user_id').eq('dynasty_id', ctx.dynastyId).in('team', [g.team_a, g.team_b]).eq('status', 'active');
-  await notify((mem || []).map((x: any) => x.user_id), { dynastyId: ctx.dynastyId, type: 'game_status', title: `${g.team_a} vs ${g.team_b}: ${b.action === 'forfeit' ? `${winner} wins by forfeit` : b.action}`, nav: { tab: 'community', subtab: 'schedule' } });
+  await notify((mem || []).map((x: any) => x.user_id), { dynastyId: ctx.dynastyId, type: 'game_status', title: `${g.team_a} vs ${g.team_b}: ${b.action === 'forfeit' ? `${winner} wins by forfeit` : winner ? `${b.action}, ${winner} wins` : b.action}`, nav: { tab: 'community', subtab: 'schedule' } });
   return NextResponse.json({ ok: true });
 }

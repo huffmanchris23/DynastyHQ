@@ -454,7 +454,7 @@ const STATUS_LABEL: Record<string, string> = { unscheduled: 'Not scheduled', sch
 function ScheduleAssistant() {
   const [data, setData] = useState<any>(null);
   const [openChat, setOpenChat] = useState<string | null>(null);
-  const [forfeitFor, setForfeitFor] = useState<string | null>(null);
+  const [pick, setPick] = useState<{ id: string; action: 'played' | 'simmed' | 'forfeit' } | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const load = useCallback(() => api('/api/community/schedule').then(setData).catch((e) => setErr(e.message)), []);
@@ -463,7 +463,7 @@ function ScheduleAssistant() {
 
   async function act(gameId: string, action: string, extra: any = {}) {
     setBusy(true); setErr(null);
-    try { await api('/api/community/schedule', 'POST', { gameId, action, ...extra }); setForfeitFor(null); await load(); }
+    try { await api('/api/community/schedule', 'POST', { gameId, action, ...extra }); setPick(null); await load(); }
     catch (e: any) { setErr(e.message); } finally { setBusy(false); }
   }
 
@@ -496,7 +496,7 @@ function ScheduleAssistant() {
             </div>
             <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: done ? '#e2f3e7' : g.status === 'scheduled' ? '#fff3d6' : '#fbe6e6', color: done ? '#1b7a3a' : g.status === 'scheduled' ? '#8a6100' : '#b00020' }}>
-                {STATUS_LABEL[g.status] || g.status}{g.status === 'forfeit' && g.winner ? ` · ${g.winner} wins` : ''}
+                {STATUS_LABEL[g.status] || g.status}{done && g.winner ? ` · ${g.winner} wins` : ''}
               </span>
               <button type="button" style={{ ...btn(), padding: '5px 10px', fontSize: 12 }} onClick={() => setOpenChat(openChat === g.id ? null : g.id)}>{openChat === g.id ? 'Hide chat' : 'Find a time'}</button>
               {mine && !done ? <button type="button" style={{ ...btn(), padding: '5px 10px', fontSize: 12 }} disabled={busy} onClick={() => act(g.id, 'agree_sim')}>Agree to sim</button> : null}
@@ -507,17 +507,24 @@ function ScheduleAssistant() {
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(0,0,0,0.08)' }}>
                 <div style={{ ...small, marginBottom: 6 }}>Commissioner</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {(['scheduled', 'played', 'simmed'] as const).map((s) => (
-                    <button key={s} type="button" disabled={busy} style={{ ...btn(g.status === s), padding: '6px 10px', fontSize: 12 }} onClick={() => act(g.id, s)}>{STATUS_LABEL[s]}</button>
+                  <button type="button" disabled={busy} style={{ ...btn(g.status === 'scheduled'), padding: '6px 10px', fontSize: 12 }} onClick={() => act(g.id, 'scheduled')}>{STATUS_LABEL.scheduled}</button>
+                  {(['played', 'simmed'] as const).map((s) => (
+                    <button key={s} type="button" disabled={busy} style={{ ...btn(g.status === s), padding: '6px 10px', fontSize: 12 }} onClick={() => setPick(pick && pick.id === g.id && pick.action === s ? null : { id: g.id, action: s })}>{STATUS_LABEL[s]}…</button>
                   ))}
-                  <button type="button" disabled={busy} style={{ ...btn(g.status === 'forfeit'), padding: '6px 10px', fontSize: 12 }} onClick={() => setForfeitFor(forfeitFor === g.id ? null : g.id)}>Force win…</button>
+                  <button type="button" disabled={busy} style={{ ...btn(g.status === 'forfeit'), padding: '6px 10px', fontSize: 12 }} onClick={() => setPick(pick && pick.id === g.id && pick.action === 'forfeit' ? null : { id: g.id, action: 'forfeit' })}>Force win…</button>
                   {g.status !== 'unscheduled' ? <button type="button" disabled={busy} style={{ ...btn(), padding: '6px 10px', fontSize: 12 }} onClick={() => act(g.id, 'unscheduled')}>Reset</button> : null}
                 </div>
-                {forfeitFor === g.id ? (
-                  <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                    {[g.a, g.b].map((t: any) => (
-                      <button key={t.team} type="button" disabled={busy} style={{ ...btn(), padding: '6px 10px', fontSize: 12, flex: 1 }} onClick={() => act(g.id, 'forfeit', { winner: t.team })}>{t.team} wins</button>
-                    ))}
+                {done && !g.winner && !(pick && pick.id === g.id) ? (
+                  <div style={{ ...small, marginTop: 8, color: '#b00020' }}>No winner recorded yet. Tap {STATUS_LABEL[g.status] || 'the result'}… to set it so it counts in head-to-head records.</div>
+                ) : null}
+                {pick && pick.id === g.id ? (
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ ...small, marginBottom: 6 }}>Who won ({pick.action === 'forfeit' ? 'forced win' : pick.action})?</div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {[g.a, g.b].map((t: any) => (
+                        <button key={t.team} type="button" disabled={busy} style={{ ...btn(g.winner === t.team && g.status === pick.action), padding: '6px 10px', fontSize: 12, flex: 1 }} onClick={() => act(g.id, pick.action, { winner: t.team })}>{t.team} wins</button>
+                      ))}
+                    </div>
                   </div>
                 ) : null}
               </div>

@@ -29,6 +29,8 @@ import Help from '@/components/tabs/Help';
 import NotificationBell from '@/components/NotificationBell';
 import PushPrompt from '@/components/PushPrompt';
 import Tutorial from '@/components/Tutorial';
+import History from '@/components/tabs/History';
+import HistoryUpload from '@/components/tabs/HistoryUpload';
 
 // Season/History switcher — built but hidden for now (Cincinnati transition
 // just happened; no history to show yet). Flip back to true to restore the
@@ -84,7 +86,9 @@ function TabBody({ data, tab, subtab, page }: {
       // Only 'upload' is built — settings/scheduleassistant/leaguehistory
       // are already caught by isComingSoonSubtab above, so reaching this
       // case with any other subtab shouldn't happen, but fall back safely.
-      return subtab === 'upload' ? <Upload /> : <ComingSoon />;
+      return subtab === 'upload' ? <Upload /> : subtab === 'leaguehistory' ? <HistoryUpload d={data} /> : <ComingSoon />;
+    case 'history':
+      return <History d={data} subtab={subtab} />;
     case 'community':
       return <Community d={data} subtab={subtab} />;
     case 'help':
@@ -250,7 +254,8 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
                         (s) =>
                           comingSoonSubtabIds(currentTabDef.id).indexOf(s.id) === -1 &&
                           (s.id !== 'inbox' || !!data.viewer.isOwner) &&
-                          (!s.id.startsWith('dyn_') || isMulti) // dynasty stats: multi-user only
+                          (!s.id.startsWith('dyn_') || isMulti) && // dynasty stats: multi-user only
+                          (currentTabDef.id !== 'history' || s.id !== 'h2h' || isMulti) // coach-vs-coach records: multi-user only
                       )
                       // With Dynasty pages present, the first two become "National".
                       .map((s) => (currentTabDef.id === 'stats' && isMulti && NATIONAL_LABELS[s.id] ? { ...s, label: NATIONAL_LABELS[s.id] } : s));
