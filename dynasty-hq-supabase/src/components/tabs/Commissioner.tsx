@@ -133,6 +133,9 @@ export default function Upload() {
       if (!res.ok) throw new Error(json?.error || 'Could not do that');
       setNotReady(null); setResult(null);
       await refresh();
+      if (action === 'advance' && Array.isArray(json.previewIssues) && json.previewIssues.length) {
+        setError(`The week is live, but some game previews are incomplete: ${json.previewIssues.slice(0, 3).join(' | ')}`);
+      }
     } catch (e: any) {
       setError(e?.message || String(e));
     } finally {
