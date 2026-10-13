@@ -13,6 +13,7 @@ import { getDynastyCtx } from '@/lib/dynastyContext';
 import { openWeekOf, requiredForWeek } from '@/lib/ocrShared';
 import { MIN_WEEK, MAX_WEEK, weekLabel } from '@/lib/weeks';
 import { syncUserGames } from '@/lib/community';
+import { completeWeekPreviews, type PreviewCompletion } from '@/lib/previewPipeline';
 import { memberIds, notify } from '@/lib/notify';
 
 export const runtime = 'nodejs';
@@ -97,6 +98,24 @@ export async function POST(req: NextRequest) {
     if (notReady.length && !body.force) {
       return NextResponse.json({ error: 'Some members are not ready.', notReady }, { status: 409 });
     }
+    // Last chance to guarantee every game preview for this week is complete
+    // (rows, odds, win probability, network) before everyone can see it —
+    // regardless of the order uploads arrived in. Problems are reported back,
+    // never silently dropped, and don't block going live.
+    let previews: PreviewCompletion | null = null;
+    let previewError: string | null = null;
+    try {
+      previews = await completeWeekPreviews(sb, { dynastyId: c.dynastyId, season: c.season, week: open });
+    } catch (err: any) {
+      previewError = err?.message || String(err);
+    }
+    const previewIssues = previewError ? [previewError] : previews ? previews.issues : [];
+    await sb.from('ocr_audit_log').insert({
+      dynasty_id: c.dynastyId, uploaded_by: c.userId, team: c.team, season: c.season, week: open,
+      screen_type: 'preview_finalize', file_path: '(engine)', status: previewIssues.length ? 'error' : 'success',
+      rows_written: previews ? previews.oddsWritten : 0, error_message: previewIssues.length ? previewIssues.join(' | ').slice(0, 4000) : null,
+    });
+
     const { data: d } = await sb.from('dynasties').select('week_length_hours').eq('id', c.dynastyId).single();
     const ends = d?.week_length_hours ? new Date(Date.now() + d.week_length_hours * 3600_000).toISOString() : null;
     const { error } = await sb.from('dynasties').update({ live_week: open, staged_week: open, countdown_ends_at: ends }).eq('id', c.dynastyId);
@@ -104,7 +123,7 @@ export async function POST(req: NextRequest) {
     await notify(await memberIds(c.dynastyId), { dynastyId: c.dynastyId, type: 'week_live', title: `${weekLabel(open)} is live`, body: ends ? 'The countdown to advance has started.' : undefined, nav: { tab: 'home' } });
     // Coach-vs-coach games get their message-board thread as soon as the week goes live.
     try { await syncUserGames({ ...c, liveWeek: open, stagedWeek: open }, open); } catch { /* the Scheduling Assistant retries on first view */ }
-    return NextResponse.json({ liveWeek: open, countdownEndsAt: ends });
+    return NextResponse.json({ liveWeek: open, countdownEndsAt: ends, previewIssues });
   }
 
   return NextResponse.json({ error: 'Unknown action.' }, { status: 400 });
