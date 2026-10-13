@@ -28,6 +28,7 @@ import Community from '@/components/tabs/Community';
 import Help from '@/components/tabs/Help';
 import NotificationBell from '@/components/NotificationBell';
 import PushPrompt from '@/components/PushPrompt';
+import Tutorial from '@/components/Tutorial';
 
 // Season/History switcher — built but hidden for now (Cincinnati transition
 // just happened; no history to show yet). Flip back to true to restore the
@@ -185,6 +186,7 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
 
   return (
     <>
+      <Tutorial isCommish={data.viewer.isCommish} />
       <div className="wrap">
         <div className="header-band">
           <div className="header-inner">

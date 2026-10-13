@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { weekLabel } from '@/lib/weeks';
+import { openTutorial } from '@/components/Tutorial';
 
 type SlotStatus = 'idle' | 'uploading' | 'done' | 'error';
 
@@ -111,6 +112,9 @@ export default function Upload() {
 
   async function handleProcess() {
     setProcessing(true); setResult(null); setError(null);
+    // Ask the phone to keep the screen on while it works (not every browser supports this).
+    let lock: any = null;
+    try { lock = await (navigator as any).wakeLock?.request('screen'); } catch { /* optional */ }
     try {
       const res = await fetch('/api/ocr-process', { method: 'POST' });
       const json = await res.json();
@@ -120,6 +124,7 @@ export default function Upload() {
     } catch (e: any) {
       setError(e?.message || String(e));
     } finally {
+      try { await lock?.release(); } catch { /* ignore */ }
       setProcessing(false);
     }
   }
@@ -152,7 +157,10 @@ export default function Upload() {
   return (
     <div className="stack-sm">
       <div className="card">
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Weekly Uploads</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <div style={{ fontSize: 14, fontWeight: 600 }}>Weekly Uploads</div>
+          <button type="button" className="gate-link" onClick={openTutorial}>How it works</button>
+        </div>
         <div style={{ fontSize: 13, lineHeight: 1.7 }}>
           <div>Current Week: <strong>{state.liveWeek ?? open ?? '—'}</strong></div>
           <div>Week Status: <strong>{state.liveWeek !== null ? 'LIVE' : open !== null ? 'NOT LIVE YET' : 'NOT STARTED'}</strong></div>
@@ -216,6 +224,12 @@ export default function Upload() {
             {processing ? 'Processing…' : checking ? 'Checking…' : 'Process my uploads'}
           </button>
         </>
+      ) : null}
+
+      {processing ? (
+        <div className="card" style={{ fontSize: 13, fontWeight: 600, border: '2px solid var(--dhq-red)' }}>
+          Processing. Keep this screen open: don&rsquo;t leave the app, switch tabs, or let your phone sleep until it&rsquo;s done.
+        </div>
       ) : null}
 
       {error ? <div className="card" style={{ color: '#b00020' }}>{error}</div> : null}
