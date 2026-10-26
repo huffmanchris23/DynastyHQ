@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getBrowserSupabase } from '@/lib/supabase/client';
 import ClaimRulesForm, { matchCount, type ClaimRules, type MetaTeam } from './ClaimRulesForm';
 
 // First screen for someone with no dynasty yet: start one, or join with a code.
@@ -14,6 +15,17 @@ export default function Onboarding({ onDone, canCancel, onCancel }: { onDone: ()
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
+
+  // Show which Google account is signed in, so a wrong-account login is obvious.
+  useEffect(() => {
+    getBrowserSupabase().auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null)).catch(() => {});
+  }, []);
+
+  async function signOut() {
+    await getBrowserSupabase().auth.signOut();
+    window.location.replace('/login');
+  }
 
   useEffect(() => {
     if (view === 'create' && mode === 'multi' && !allConfs.length) {
@@ -58,7 +70,12 @@ export default function Onboarding({ onDone, canCancel, onCancel }: { onDone: ()
             <h2>Get started</h2>
             <button className="gate-btn" onClick={() => setView('create')}>Start a dynasty</button>
             <button className="gate-btn secondary" onClick={() => setView('join')}>Join with an invite code</button>
-            {canCancel ? <button className="gate-link" onClick={onCancel}>Back</button> : null}
+            {canCancel ? <button className="gate-link" onClick={onCancel}>Back</button> : (
+              <>
+                {email ? <p className="gate-hint" style={{ textAlign: 'center' }}>Signed in as {email}. Expecting your dynasties? You may be on the wrong Google account.</p> : null}
+                <button className="gate-link" onClick={signOut}>Sign out / switch account</button>
+              </>
+            )}
           </>
         )}
 
