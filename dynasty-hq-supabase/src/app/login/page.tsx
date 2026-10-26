@@ -31,7 +31,8 @@ function LoginInner() {
     document.cookie = `dhq_next=${encodeURIComponent(next)}; path=/; max-age=600; samesite=lax`;
     const { error } = await getBrowserSupabase().auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      // select_account makes Google always show the account picker instead of silently reusing one.
+      options: { redirectTo: `${window.location.origin}/auth/callback`, queryParams: { prompt: 'select_account' } },
     });
     if (error) setError(error.message);
   }
