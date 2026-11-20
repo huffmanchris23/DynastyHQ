@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { openTutorial } from '@/components/Tutorial';
 
 const small: React.CSSProperties = { fontSize: 12, color: 'rgba(0,0,0,0.55)' };
 const btn = (primary = false, disabled = false): React.CSSProperties => ({
@@ -23,6 +24,13 @@ function Tips() {
   const tips = d.articles.filter((a) => a.kind === 'tip');
   return (
     <div className="stack-sm">
+      <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: 15 }}>How Dynasty HQ works</div>
+          <div style={small}>Getting your screenshots in, step by step.</div>
+        </div>
+        <button type="button" style={btn(true)} onClick={openTutorial}>Replay</button>
+      </div>
       {tips.length === 0 ? <div className="card" style={small}>No tips yet.</div> : null}
       {tips.map((t) => (
         <div className="card" key={t.id}>

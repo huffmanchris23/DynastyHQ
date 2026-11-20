@@ -41,12 +41,20 @@ export const TABS: TabDef[] = [
   },
   { id: 'roster', label: 'Roster', subtabs: [{ id: 'depth', label: 'Depth Charts' }] },
   { id: 'awards', label: 'Heisman' },
+  {
+    id: 'history', label: 'History', subtabs: [
+      { id: 'champs', label: 'Champions' },
+      // Coach-vs-coach records only exist in multi-user dynasties (DashboardApp hides it in solo).
+      { id: 'h2h', label: 'Head-to-Head' },
+      { id: 'awards', label: 'Awards' },
+    ],
+  },
   { id: 'coachingcorner', label: 'Coaching Corner', subtabs: [{ id: 'mycoach', label: 'My Coach' }, { id: 'hotseat', label: 'Hot Seats' }] },
   {
     id: 'commissioner', label: 'Commissioner', subtabs: [
       { id: 'upload', label: 'Upload' },
       { id: 'settings', label: 'Settings' },
-      { id: 'leaguehistory', label: 'League History' },
+      { id: 'leaguehistory', label: 'History Upload' },
     ],
   },
   {
@@ -85,7 +93,7 @@ export const COMING_SOON_SUBTABS: Record<string, string[]> = {
   // Schedule Assistant, and League History stay parked until each gets
   // built out — carved out individually rather than gating the whole
   // Commissioner tab, since Upload needed to ship on its own.
-  commissioner: ['settings', 'leaguehistory'],
+  commissioner: ['settings'],
 };
 
 export function isComingSoonTab(tabId: string): boolean {

@@ -10,43 +10,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUser, unauthorized } from '@/lib/auth';
 import { getSupabase } from '@/lib/supabaseClient';
 import { getDynastyCtx } from '@/lib/dynastyContext';
-import { openWeekOf, requiredForWeek } from '@/lib/ocrShared';
+import { openWeekOf } from '@/lib/ocrShared';
 import { MIN_WEEK, MAX_WEEK, weekLabel } from '@/lib/weeks';
 import { syncUserGames } from '@/lib/community';
 import { completeWeekPreviews, type PreviewCompletion } from '@/lib/previewPipeline';
-import { memberIds, notify } from '@/lib/notify';
+import { notify } from '@/lib/notify';
+import { readiness } from '@/lib/readiness';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-
-// What a member must have processed for the open week comes from requiredForWeek()
-// (ocrShared.ts): no team stats in Week 0, one offense + one defense from Week 1 on.
-
-async function readiness(dynastyId: string, season: number, week: number) {
-  const sb = getSupabase();
-  const REQUIRED = requiredForWeek(week);
-  const [{ data: members }, { data: logs }] = await Promise.all([
-    sb.from('dynasty_members').select('user_id, team, role, status, profiles(display_name)').eq('dynasty_id', dynastyId).eq('status', 'active'),
-    sb.from('ocr_audit_log').select('uploaded_by, screen_type, file_path, status, id').eq('dynasty_id', dynastyId).eq('season', season).eq('week', week).order('id', { ascending: true }),
-  ]);
-
-  // latest status per (uploader, file) wins — a later failed re-run counts against an earlier success
-  const latest = new Map<string, any>();
-  (logs || []).forEach((r: any) => {
-    if (r.file_path === '(engine)') return;
-    latest.set(`${r.uploaded_by}|${r.file_path}`, r);
-  });
-
-  return (members || [])
-    .filter((m: any) => m.team)
-    .map((m: any) => {
-      const mine = Array.from(latest.values()).filter((r: any) => r.uploaded_by === m.user_id && r.status === 'success');
-      const missing = REQUIRED.filter((req) => mine.filter((r: any) => r.screen_type === req.screen).length < req.min).map((r) => r.label);
-      const prof = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
-      return { userId: m.user_id, team: m.team, name: prof?.display_name || '', role: m.role, ready: missing.length === 0, missing };
-    });
-}
 
 export async function GET() {
   const user = await getUser();
@@ -120,7 +93,20 @@ export async function POST(req: NextRequest) {
     const ends = d?.week_length_hours ? new Date(Date.now() + d.week_length_hours * 3600_000).toISOString() : null;
     const { error } = await sb.from('dynasties').update({ live_week: open, staged_week: open, countdown_ends_at: ends }).eq('id', c.dynastyId);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    await notify(await memberIds(c.dynastyId), { dynastyId: c.dynastyId, type: 'week_live', title: `${weekLabel(open)} is live`, body: ends ? 'The countdown to advance has started.' : undefined, nav: { tab: 'home' } });
+    // Each coach hears who they play this week (from their processed schedule); a bye gets the plain message.
+    const [{ data: mems }, { data: gp }] = await Promise.all([
+      sb.from('dynasty_members').select('user_id, team').eq('dynasty_id', c.dynastyId).neq('status', 'removed'),
+      sb.from('game_preview').select('team, opponent').eq('dynasty_id', c.dynastyId).eq('season', c.season).eq('week', open),
+    ]);
+    const oppByTeam = new Map<string, string>();
+    (gp || []).forEach((g: any) => { if (g.team && g.opponent) oppByTeam.set(String(g.team).toLowerCase(), g.opponent); });
+    await Promise.all(
+      (mems || []).map((m: any) => {
+        const opp = m.team ? oppByTeam.get(String(m.team).toLowerCase()) : undefined;
+        const body = opp ? `You play ${opp} this week.${ends ? ' The countdown to advance has started.' : ''}` : ends ? 'The countdown to advance has started.' : undefined;
+        return notify([m.user_id], { dynastyId: c.dynastyId, type: 'week_live', title: `${weekLabel(open)} is live`, body, nav: { tab: 'home' } });
+      })
+    );
     // Coach-vs-coach games get their message-board thread as soon as the week goes live.
     try { await syncUserGames({ ...c, liveWeek: open, stagedWeek: open }, open); } catch { /* the Scheduling Assistant retries on first view */ }
     return NextResponse.json({ liveWeek: open, countdownEndsAt: ends, previewIssues });

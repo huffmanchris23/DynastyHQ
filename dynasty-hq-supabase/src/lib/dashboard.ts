@@ -518,21 +518,21 @@ export async function getDashboardData(ctx: DynastyCtx): Promise<DashboardData> 
      everyone. Already week-gated by statsWeek above. -------- */
   const dynastyStats: DynastyStats = { offense: [], defense: [] };
   if (ctx.mode === 'multi') {
-    const { data: memberRows, error: memberErr } = await sb
-      .from('dynasty_members')
-      .select('user_id, team, profiles(display_name)')
-      .eq('dynasty_id', dynastyId)
-      .eq('status', 'active');
+    const [{ data: memberRows, error: memberErr }, { data: coachRows }] = await Promise.all([
+      sb.from('dynasty_members').select('user_id, team').eq('dynasty_id', dynastyId).eq('status', 'active'),
+      sb.from('my_coach').select('user_id, name').eq('dynasty_id', dynastyId).eq('season', ctx.season),
+    ]);
     if (memberErr) throw new Error(`dynasty_members: ${memberErr.message}`);
+    // Always the coach's in-game name, never the name on their Google account.
+    const coachName = new Map<string, string>((coachRows || []).filter((c: any) => c.name).map((c: any) => [c.user_id, c.name]));
     const people = (memberRows || []).filter((m: any) => m.team);
     (['offense', 'defense'] as const).forEach((kind) => {
       const rows = teamStatsRows.filter((r: any) => norm(r.offense_or_defense_stat) === kind);
       dynastyStats[kind] = people.map((m: any): DynastyStatRow => {
-        const prof = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
         const r = rows.find((x: any) => norm(x.team) === norm(m.team));
         return {
           userId: m.user_id,
-          name: prof?.display_name || m.team,
+          name: coachName.get(m.user_id) || m.team,
           team: m.team,
           isMe: m.user_id === ctx.userId,
           ppg: r ? r.points_per_game : null,

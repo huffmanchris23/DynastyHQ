@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     const { error } = await sb.from('dynasty_members').insert({ dynasty_id: dynasty.id, user_id: user.id, role: 'member', status: 'active' });
     if (error) return fail(500, error.message);
     await sb.from('invites').update({ uses: inv.uses + 1 }).eq('id', inv.id).eq('uses', inv.uses);
-    await notify(await commishIds(dynasty.id), { dynastyId: dynasty.id, type: 'member_joined', title: 'A new coach joined your dynasty', body: user.email ? String(user.email).split('@')[0] : undefined, nav: { tab: 'community', subtab: 'users' } });
+    await notify(await commishIds(dynasty.id), { dynastyId: dynasty.id, type: 'member_joined', title: 'A new coach joined your dynasty', nav: { tab: 'community', subtab: 'users' } });
   }
   return setActiveCookie(NextResponse.json({ dynastyId: dynasty.id, name: dynasty.name }), dynasty.id);
 }

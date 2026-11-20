@@ -110,6 +110,9 @@ const selectStyle: React.CSSProperties = {
   border: '1px solid rgba(0,0,0,0.18)', background: 'transparent', color: 'inherit',
 };
 
+/** Coach first name for the dynasty tables; if the coach has no name yet (we show their team), keep the team. */
+const firstName = (r: { name: string; team: string }) => (r.name && r.name !== r.team ? r.name.trim().split(/\s+/)[0] : r.team);
+
 export function DynastyStats({ d, kind }: { d: DashboardData; kind: 'offense' | 'defense' }) {
   const isDefense = kind === 'defense';
   const rows = (d.dynastyStats && d.dynastyStats[kind]) || [];
@@ -153,7 +156,7 @@ export function DynastyStats({ d, kind }: { d: DashboardData; kind: 'offense' | 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
                   <Badge text={r.team} size={20} mine={r.isMe} logoUrl={logoFor(d.assets, r.team)} />
                   <div style={{ overflow: 'hidden' }}>
-                    <div className="truncate" style={{ fontWeight: 500 }}>{r.name}</div>
+                    <div className="truncate" style={{ fontWeight: 500 }}>{firstName(r)}</div>
                     <div className="truncate" style={{ fontSize: 11, color: 'rgba(0,0,0,0.5)' }}>{r.team}</div>
                   </div>
                 </div>
@@ -172,11 +175,11 @@ export function DynastyStats({ d, kind }: { d: DashboardData; kind: 'offense' | 
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <select aria-label="First coach" value={aRow.userId} onChange={(e) => setAId(e.target.value)} style={selectStyle}>
-                {rows.map((r) => (<option key={r.userId} value={r.userId}>{r.name} · {r.team}</option>))}
+                {rows.map((r) => (<option key={r.userId} value={r.userId}>{firstName(r)} · {r.team}</option>))}
               </select>
               <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.45)' }}>vs</span>
               <select aria-label="Second coach" value={bRow.userId} onChange={(e) => setBId(e.target.value)} style={selectStyle}>
-                {rows.filter((r) => r.userId !== aRow.userId).map((r) => (<option key={r.userId} value={r.userId}>{r.name} · {r.team}</option>))}
+                {rows.filter((r) => r.userId !== aRow.userId).map((r) => (<option key={r.userId} value={r.userId}>{firstName(r)} · {r.team}</option>))}
               </select>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '8px 12px', alignItems: 'center' }}>

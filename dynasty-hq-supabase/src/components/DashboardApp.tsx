@@ -27,6 +27,10 @@ import Upload from '@/components/tabs/Commissioner';
 import Community from '@/components/tabs/Community';
 import Help from '@/components/tabs/Help';
 import NotificationBell from '@/components/NotificationBell';
+import PushPrompt from '@/components/PushPrompt';
+import Tutorial from '@/components/Tutorial';
+import History from '@/components/tabs/History';
+import HistoryUpload from '@/components/tabs/HistoryUpload';
 
 // Season/History switcher — built but hidden for now (Cincinnati transition
 // just happened; no history to show yet). Flip back to true to restore the
@@ -82,7 +86,9 @@ function TabBody({ data, tab, subtab, page }: {
       // Only 'upload' is built — settings/scheduleassistant/leaguehistory
       // are already caught by isComingSoonSubtab above, so reaching this
       // case with any other subtab shouldn't happen, but fall back safely.
-      return subtab === 'upload' ? <Upload /> : <ComingSoon />;
+      return subtab === 'upload' ? <Upload /> : subtab === 'leaguehistory' ? <HistoryUpload d={data} /> : <ComingSoon />;
+    case 'history':
+      return <History d={data} subtab={subtab} />;
     case 'community':
       return <Community d={data} subtab={subtab} />;
     case 'help':
@@ -99,9 +105,9 @@ const NATIONAL_LABELS: Record<string, string> = { offense: 'National Off', defen
 /* ============================== SUBTAB BAR ============================== */
 /* Port of renderSubtabBar(). */
 
-function SubtabBar({ subtabs, active, lockedIds, comingSoonIds, onSelect }: { subtabs: { id: string; label: string }[]; active: string | null; lockedIds: string[]; comingSoonIds: string[]; onSelect: (id: string) => void }) {
+function SubtabBar({ subtabs, active, lockedIds, comingSoonIds, onSelect, grid2 }: { subtabs: { id: string; label: string }[]; active: string | null; lockedIds: string[]; comingSoonIds: string[]; onSelect: (id: string) => void; grid2?: boolean }) {
   return (
-    <div className="subtab-bar">
+    <div className={`subtab-bar${grid2 ? ' subtab-grid2' : ''}`}>
       {subtabs.map((s) => {
         const isComingSoon = comingSoonIds.indexOf(s.id) > -1;
         return (
@@ -184,6 +190,7 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
 
   return (
     <>
+      <Tutorial isCommish={data.viewer.isCommish} />
       <div className="wrap">
         <div className="header-band">
           <div className="header-inner">
@@ -234,6 +241,7 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
         </div>
 
         <main>
+          <PushPrompt />
           {SHOW_SEASON_SWITCHER && season === 'history' ? (
             <HistoryPlaceholder />
           ) : (
@@ -246,7 +254,8 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
                         (s) =>
                           comingSoonSubtabIds(currentTabDef.id).indexOf(s.id) === -1 &&
                           (s.id !== 'inbox' || !!data.viewer.isOwner) &&
-                          (!s.id.startsWith('dyn_') || isMulti) // dynasty stats: multi-user only
+                          (!s.id.startsWith('dyn_') || isMulti) && // dynasty stats: multi-user only
+                          (currentTabDef.id !== 'history' || s.id !== 'h2h' || isMulti) // coach-vs-coach records: multi-user only
                       )
                       // With Dynasty pages present, the first two become "National".
                       .map((s) => (currentTabDef.id === 'stats' && isMulti && NATIONAL_LABELS[s.id] ? { ...s, label: NATIONAL_LABELS[s.id] } : s));
@@ -258,6 +267,7 @@ export default function DashboardApp({ data }: { data: DashboardData }) {
                         lockedIds={subtabLockedIds(currentTabDef.id, g)}
                         comingSoonIds={[]}
                         onSelect={setSubtab}
+                        grid2={currentTabDef.id === 'stats' && isMulti && visibleSubtabs.length === 4}
                       />
                     );
                   })()

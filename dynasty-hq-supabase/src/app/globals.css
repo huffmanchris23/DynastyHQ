@@ -114,6 +114,8 @@ a { color: inherit; }
 /* Renders inside the white main content area (not the red band), so this
    gets the dark-on-light treatment along with everything else below. */
 .subtab-bar { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.subtab-grid2 { display: grid; grid-template-columns: 1fr 1fr; }
+.subtab-grid2 .subtab-btn { text-align: center; padding: 6px 10px; }
 .subtab-btn {
   font-family: var(--font-label);
   padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;

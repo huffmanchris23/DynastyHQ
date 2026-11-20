@@ -4,6 +4,7 @@
  * Failures never block the action that triggered them.
  */
 import { getSupabase } from './supabaseClient';
+import { sendPush } from './push';
 
 export interface NotifyPayload {
   dynastyId: string;
@@ -24,6 +25,8 @@ export async function notify(userIds: (string | null | undefined)[], p: NotifyPa
       }))
     );
   } catch { /* notifications are best-effort */ }
+  // Same message to their phones (no-op until push keys are configured).
+  await sendPush(ids, { title: p.title, body: p.body, nav: p.nav || null, tag: p.type });
 }
 
 /** Active commissioner(s) of a dynasty. */
